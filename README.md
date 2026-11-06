@@ -1,19 +1,32 @@
 # Consumer Billing Dispute Agent
 
-A learning project for building a public, evidence-led agent that helps users understand a billing charge and prepare a next step for their review.
+An evidence-first agent for investigating billing disputes and preparing a clear, reviewable response.
 
-## First release boundary
+## Overview
 
-- Visitors can try a fictional sample billing case without signing in.
-- A user can describe a billing issue, provide relevant records, and review extracted facts.
-- The agent can ask for missing information and prepare an evidence-backed case summary.
-- The agent can draft a message for the user to edit and approve.
-- The first release does not send messages, make payments, access provider accounts, or promise a dispute outcome.
+Billing disputes are often difficult to resolve because the relevant information is scattered across invoices, provider correspondence, and a customer's recollection. This application brings those records into a structured case, identifies gaps, and helps the user prepare an informed next step.
 
-## Learning approach
+The agent analyzes user-provided billing records, asks targeted follow-up questions, builds a source-linked case summary, and drafts a message for the user to review. Its conclusions distinguish documented facts from user statements, inferences, and unresolved questions.
 
-We will build in small steps. Before each step, we will explain the concept in plain language, make a focused change, review it together, and commit the completed step using a conventional commit message.
+## Initial scope
 
-## Current status
+The first release focuses on billing charge disputes and includes:
 
-Project setup is beginning. The application framework and technical stack have not been selected yet.
+- A public sample case that can be explored without an account or personal data.
+- Private cases for users who choose to create an account and provide records.
+- Document extraction with user review and correction of extracted details.
+- Evidence-linked summaries, case status, and suggested next steps.
+- Editable message drafts with explicit user approval before use.
+
+The initial release does not access provider accounts, send messages, make payments, or guarantee dispute outcomes. It supports the user's decision-making and does not provide legal representation.
+
+## Product principles
+
+- **Evidence over assertion:** show the source for important claims and label uncertainty.
+- **User control:** let users correct extracted details and approve any proposed action.
+- **Privacy by default:** collect only case-relevant information and isolate each user's records.
+- **Safe failure:** ask for missing information or stop when the evidence is insufficient.
+
+## Project status
+
+Product scope and build plan are documented locally. Technical architecture and implementation are being established incrementally.
