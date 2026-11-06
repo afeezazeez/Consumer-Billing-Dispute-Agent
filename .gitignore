@@ -20,3 +20,7 @@ coverage/
 # Editor and operating system files
 .vscode/
 .idea/
+
+# Personal planning documents (kept locally, not committed)
+/feature-document.docx
+/build-plan.docx
