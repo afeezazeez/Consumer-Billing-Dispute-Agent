@@ -1,0 +1,22 @@
+# Environment and secrets
+.env
+.env.*
+!.env.example
+
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Build output
+.next/
+dist/
+build/
+coverage/
+
+# Local data and logs
+*.log
+.DS_Store
+
+# Editor and operating system files
+.vscode/
+.idea/
