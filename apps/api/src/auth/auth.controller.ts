@@ -23,7 +23,7 @@ export class AuthController {
       await regenerateSession(request);
       request.session.userId = user.id;
       await saveSession(request);
-      response.redirect(`${this.config.webOrigin}/login?authenticated=1`);
+      response.redirect(`${this.config.webOrigin}/dashboard`);
     } catch {
       console.error(JSON.stringify({ event: "google_oauth_callback_failed" }));
       response.redirect(`${this.config.webOrigin}/login?error=oauth_failed`);

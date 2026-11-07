@@ -1,4 +1,5 @@
 import express, { type Express } from "express";
+import cors from "cors";
 import session from "express-session";
 import type { Store } from "express-session";
 import type { DataSource } from "typeorm";
@@ -7,6 +8,10 @@ import { AuthController } from "./auth/auth.controller";
 import { createAuthRouter } from "./auth/auth.routes";
 import { AuthService } from "./auth/auth.service";
 import { GoogleOAuthProvider } from "./auth/google-oauth.provider";
+import { CaseController } from "./cases/case.controller";
+import { createCaseRouter } from "./cases/case.routes";
+import { CaseService } from "./cases/case.service";
+import { TypeOrmCaseRepository } from "./database/typeorm-case.repository";
 import { TypeOrmUserRepository } from "./database/typeorm-user.repository";
 import { healthRouter } from "./health/health.routes";
 
@@ -15,6 +20,8 @@ export function createApp(config: AppConfig, dataSource: DataSource, sessionStor
 
   app.disable("x-powered-by");
   app.set("trust proxy", config.isProduction ? 1 : false);
+  app.use(cors({ origin: config.webOrigin, credentials: true }));
+  app.use(express.json({ limit: "20kb" }));
   configureSession(app, config, sessionStore);
   mountRoutes(app, config, dataSource);
   return app;
@@ -39,8 +46,10 @@ function configureSession(app: Express, config: AppConfig, sessionStore: Store):
 function mountRoutes(app: Express, config: AppConfig, dataSource: DataSource): void {
   const authService = createAuthService(config, dataSource);
   const authController = new AuthController(authService, config);
+  const caseService = new CaseService(new TypeOrmCaseRepository(dataSource));
   app.use("/health", healthRouter);
   app.use("/auth", createAuthRouter(authController));
+  app.use("/cases", createCaseRouter(new CaseController(caseService)));
 }
 
 function createAuthService(config: AppConfig, dataSource: DataSource): AuthService {

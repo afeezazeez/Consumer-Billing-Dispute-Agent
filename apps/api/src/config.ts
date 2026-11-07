@@ -18,6 +18,7 @@ export interface PostgresConfig {
 }
 
 export function loadConfig(): AppConfig {
+  const isProduction = process.env.NODE_ENV === "production";
   return {
     port: Number(process.env.PORT ?? 3001),
     webOrigin: requiredValue("WEB_ORIGIN"),
@@ -26,14 +27,20 @@ export function loadConfig(): AppConfig {
       port: Number(process.env.DB_PORT ?? 5432),
       database: requiredValue("DB_NAME"),
       username: requiredValue("DB_USER"),
-      password: requiredValue("DB_PASSWORD"),
+      password: readDatabasePassword(isProduction),
     },
     googleClientId: requiredValue("GOOGLE_CLIENT_ID"),
     googleClientSecret: requiredValue("GOOGLE_CLIENT_SECRET"),
     googleRedirectUri: requiredValue("GOOGLE_REDIRECT_URI"),
     sessionSecret: requiredValue("SESSION_SECRET"),
-    isProduction: process.env.NODE_ENV === "production",
+    isProduction,
   };
+}
+
+function readDatabasePassword(isProduction: boolean): string {
+  const password = process.env.DB_PASSWORD?.trim() ?? "";
+  if (isProduction && !password) throw new Error("Missing required environment variable: DB_PASSWORD");
+  return password;
 }
 
 function requiredValue(name: string): string {
