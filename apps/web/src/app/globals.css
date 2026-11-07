@@ -504,3 +504,29 @@ h1, h2, h3, p { margin-top: 0; }
   .account-copy span { font-size: 11px; }
   .dashboard-shell.sidebar-collapsed .dashboard-sidebar-header .case-search-input { left: 48px; top: 0; }
 }
+
+/* Dashboard copy uses readable ink; hierarchy comes from size and weight. */
+.dashboard-sidebar-header, .dashboard-brand, .new-case-button, .case-list-heading,
+.case-list-title, .sidebar-empty, .account-copy strong, .account-copy span,
+.sign-out-button, .sidebar-icon-button, .case-list-icon, .case-search-input,
+.case-list-copy small, .dashboard-loading, .chat-message p, .composer-controls > span,
+.composer-disclaimer, .starter-prompts button, .case-rename-action,
+.confirm-dialog p, .confirm-cancel-button {
+  color: var(--color-ink);
+}
+.case-list-title { font-size: 15px; }
+.sidebar-empty { font-size: 14px; line-height: 1.55; margin: 10px 9px; }
+.case-list-heading { font-size: 14px; }
+.account-copy strong { font-size: 14px; }
+.account-copy span { font-size: 13px; }
+.sign-out-button { font-size: 14px; }
+.sidebar-icon-button { color: var(--color-ink-soft); }
+.case-list-icon { color: var(--color-ink-soft); }
+.chat-message p { font-size: 16px; }
+.chat-composer textarea { font-size: 16px; }
+.chat-composer textarea::placeholder { color: var(--color-ink-soft); }
+.composer-controls > span { font-size: 12px; }
+.starter-prompts button { font-size: 13px; }
+.case-rename-action, .case-delete-action { font-size: 14px; }
+.confirm-dialog p { font-size: 14px; }
+.dashboard-loading { font-size: 16px; }
