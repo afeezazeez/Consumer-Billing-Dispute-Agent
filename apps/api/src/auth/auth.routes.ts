@@ -1,13 +1,14 @@
 import { Router } from "express";
+import type { AuthMiddleware } from "./auth.middleware";
 import type { AuthController } from "./auth.controller";
 
-export function createAuthRouter(controller: AuthController): Router {
+export function createAuthRouter(controller: AuthController, authMiddleware: AuthMiddleware): Router {
   const router = Router();
 
-  router.get("/google", (request, response) => controller.startGoogleSignIn(request, response));
+  router.get("/google", (request, response, next) => controller.startGoogleSignIn(request, response, next));
   router.get("/google/callback", (request, response) => controller.finishGoogleSignIn(request, response));
-  router.get("/me", (request, response) => controller.currentUser(request, response));
-  router.post("/logout", (request, response) => controller.signOut(request, response));
+  router.get("/me", authMiddleware.authenticate, (request, response, next) => controller.currentUser(request, response, next));
+  router.post("/logout", (request, response, next) => controller.signOut(request, response, next));
 
   return router;
 }

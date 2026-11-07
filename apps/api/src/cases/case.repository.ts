@@ -20,6 +20,7 @@ export interface CaseConversation extends CaseSummary {
 
 export interface CaseRepository {
   create(userId: string, title: string, openingMessage: string): Promise<CaseConversation>;
+  appendMessage(userId: string, caseId: string, content: string): Promise<CaseConversation | undefined>;
   listForUser(userId: string): Promise<CaseSummary[]>;
   findForUser(userId: string, caseId: string): Promise<CaseConversation | undefined>;
 }

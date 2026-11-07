@@ -7,6 +7,10 @@ export class CaseService {
     return this.cases.create(userId, createTitle(openingMessage), openingMessage);
   }
 
+  appendMessage(userId: string, caseId: string, content: string): Promise<CaseConversation | undefined> {
+    return this.cases.appendMessage(userId, caseId, content);
+  }
+
   listCases(userId: string): Promise<CaseSummary[]> {
     return this.cases.listForUser(userId);
   }

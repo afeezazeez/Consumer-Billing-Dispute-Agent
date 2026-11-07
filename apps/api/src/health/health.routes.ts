@@ -1,10 +1,11 @@
 import { Router } from "express";
+import { sendSuccessResponse } from "../utils/http/response-handlers";
 
 export const healthRouter = Router();
 
 healthRouter.get("/", (_request, response) => {
-  response.status(200).json({
+  sendSuccessResponse(response, {
     status: "ok",
     service: "billing-agent-api",
-  });
+  }, "Service is healthy");
 });

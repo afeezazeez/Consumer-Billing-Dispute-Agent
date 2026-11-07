@@ -1,49 +1,60 @@
-import type { Request, Response } from "express";
+import type { NextFunction, Request, Response } from "express";
+import { CaseConversationDto } from "../dtos/cases/case-conversation.dto";
+import { CaseSummaryDto } from "../dtos/cases/case-summary.dto";
+import { CreateCaseRequestDto } from "../dtos/cases/create-case-request.dto";
+import { CreateMessageRequestDto } from "../dtos/cases/create-message-request.dto";
+import { ClientErrorException } from "../exceptions/client.error.exception";
+import { ResponseStatus } from "../enums/response-status";
+import { sendSuccessResponse } from "../utils/http/response-handlers";
+import { authenticatedUserId } from "../auth/auth.middleware";
 import type { CaseService } from "./case.service";
 
 export class CaseController {
   constructor(private readonly cases: CaseService) {}
 
-  async list(request: Request, response: Response): Promise<void> {
-    const userId = request.session.userId;
-    if (!userId) return sendUnauthorized(response);
-    response.status(200).json({ cases: await this.cases.listCases(userId) });
+  async list(request: Request, response: Response, next: NextFunction): Promise<void> {
+    try {
+      const records = await this.cases.listCases(authenticatedUserId(request));
+      sendSuccessResponse(response, { cases: CaseSummaryDto.collection(records) }, "Cases retrieved successfully");
+    } catch (error) {
+      next(error);
+    }
   }
 
-  async create(request: Request, response: Response): Promise<void> {
-    const userId = request.session.userId;
-    if (!userId) return sendUnauthorized(response);
-    const message = readOpeningMessage(request.body);
-    if (!message) return sendInvalidMessage(response);
-    const billingCase = await this.cases.createCase(userId, message);
-    response.status(201).json({ case: billingCase });
+  async create(request: Request, response: Response, next: NextFunction): Promise<void> {
+    try {
+      const payload = request.body as CreateCaseRequestDto;
+      const record = await this.cases.createCase(authenticatedUserId(request), payload.openingMessage.trim());
+      sendSuccessResponse(response, { case: CaseConversationDto.make(record) }, "Case created successfully", ResponseStatus.CREATED);
+    } catch (error) {
+      next(error);
+    }
   }
 
-  async read(request: Request, response: Response): Promise<void> {
-    const userId = request.session.userId;
-    if (!userId) return sendUnauthorized(response);
-    const caseId = request.params.caseId;
-    if (typeof caseId !== "string") return sendCaseNotFound(response);
-    const billingCase = await this.cases.findCase(userId, caseId);
-    if (!billingCase) return sendCaseNotFound(response);
-    response.status(200).json({ case: billingCase });
+  async read(request: Request, response: Response, next: NextFunction): Promise<void> {
+    try {
+      const record = await this.cases.findCase(authenticatedUserId(request), readCaseId(request));
+      if (!record) throw new ClientErrorException("Case not found", ResponseStatus.NOT_FOUND);
+      sendSuccessResponse(response, { case: CaseConversationDto.make(record) }, "Case retrieved successfully");
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async addMessage(request: Request, response: Response, next: NextFunction): Promise<void> {
+    try {
+      const payload = request.body as CreateMessageRequestDto;
+      const record = await this.cases.appendMessage(authenticatedUserId(request), readCaseId(request), payload.content.trim());
+      if (!record) throw new ClientErrorException("Case not found", ResponseStatus.NOT_FOUND);
+      sendSuccessResponse(response, { case: CaseConversationDto.make(record) }, "Message added successfully", ResponseStatus.CREATED);
+    } catch (error) {
+      next(error);
+    }
   }
 }
 
-function readOpeningMessage(body: unknown): string {
-  if (typeof body !== "object" || body === null || !("openingMessage" in body)) return "";
-  const message = body.openingMessage;
-  return typeof message === "string" && message.trim().length <= 2000 ? message.trim() : "";
-}
-
-function sendUnauthorized(response: Response): void {
-  response.status(401).json({ error: "not_authenticated" });
-}
-
-function sendInvalidMessage(response: Response): void {
-  response.status(400).json({ error: "opening_message_required" });
-}
-
-function sendCaseNotFound(response: Response): void {
-  response.status(404).json({ error: "case_not_found" });
+function readCaseId(request: Request): string {
+  const caseId = request.params.caseId;
+  if (typeof caseId !== "string") throw new ClientErrorException("Case not found", ResponseStatus.NOT_FOUND);
+  return caseId;
 }

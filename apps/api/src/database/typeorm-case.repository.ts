@@ -10,6 +10,10 @@ export class TypeOrmCaseRepository implements CaseRepository {
     return this.dataSource.transaction((manager) => this.createCase(manager, userId, title, openingMessage));
   }
 
+  appendMessage(userId: string, caseId: string, content: string): Promise<CaseConversation | undefined> {
+    return this.dataSource.transaction((manager) => this.appendCaseMessage(manager, userId, caseId, content));
+  }
+
   async listForUser(userId: string): Promise<CaseSummary[]> {
     const cases = await this.dataSource.getRepository(CaseEntity).find({
       where: { userId },
@@ -46,6 +50,27 @@ export class TypeOrmCaseRepository implements CaseRepository {
     });
     return toConversation(record, [message]);
   }
+
+  private async appendCaseMessage(
+    manager: EntityManager,
+    userId: string,
+    caseId: string,
+    content: string,
+  ): Promise<CaseConversation | undefined> {
+    const cases = manager.getRepository(CaseEntity);
+    const record = await cases.findOneBy({ id: caseId, userId });
+    if (!record) return undefined;
+    await manager.getRepository(CaseMessageEntity).save({
+      id: randomUUID(), caseId, role: "user", content,
+    });
+    await cases.update({ id: caseId, userId }, { updatedAt: new Date() });
+    const updatedRecord = await cases.findOneBy({ id: caseId, userId });
+    return updatedRecord ? toConversation(updatedRecord, [...await loadMessages(manager, caseId)]) : undefined;
+  }
+}
+
+async function loadMessages(manager: EntityManager, caseId: string): Promise<CaseMessageEntity[]> {
+  return manager.getRepository(CaseMessageEntity).find({ where: { caseId }, order: { createdAt: "ASC" } });
 }
 
 function toSummaries(cases: CaseEntity[], messages: CaseMessageEntity[]): CaseSummary[] {

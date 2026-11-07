@@ -1,54 +1,62 @@
 import { randomBytes } from "node:crypto";
-import type { Request, Response } from "express";
+import type { NextFunction, Request, Response } from "express";
+import { GoogleUserDto } from "../dtos/auth/google-user.dto";
+import { sendSuccessResponse } from "../utils/http/response-handlers";
+import { ResponseStatus } from "../enums/response-status";
+import { AuthenticationException } from "../exceptions/authentication.exception";
 import type { AppConfig } from "../config";
 import type { AuthService } from "./auth.service";
+import { authenticatedUserId } from "./auth.middleware";
 
 export class AuthController {
-  constructor(
-    private readonly auth: AuthService,
-    private readonly config: AppConfig,
-  ) {}
+  constructor(private readonly auth: AuthService, private readonly config: AppConfig) {}
 
-  startGoogleSignIn(request: Request, response: Response): void {
-    const state = randomBytes(32).toString("hex");
-    request.session.oauthState = state;
-    response.redirect(this.auth.createGoogleAuthorizationUrl(state));
+  startGoogleSignIn(request: Request, response: Response, next: NextFunction): void {
+    try {
+      const state = randomBytes(32).toString("hex");
+      request.session.oauthState = state;
+      response.redirect(this.auth.createGoogleAuthorizationUrl(state));
+    } catch (error) {
+      next(error);
+    }
   }
 
   async finishGoogleSignIn(request: Request, response: Response): Promise<void> {
     try {
-      const { code, state } = readCallbackParameters(request);
-      validateOAuthState(request.session.oauthState, state);
-      const user = await this.auth.signInWithGoogle(code);
-      await regenerateSession(request);
-      request.session.userId = user.id;
-      await saveSession(request);
+      await this.completeGoogleSignIn(request);
       response.redirect(`${this.config.webOrigin}/dashboard`);
     } catch {
-      console.error(JSON.stringify({ event: "google_oauth_callback_failed" }));
       response.redirect(`${this.config.webOrigin}/login?error=oauth_failed`);
     }
   }
 
-  async currentUser(request: Request, response: Response): Promise<void> {
-    const userId = request.session.userId;
-    if (!userId) {
-      response.status(401).json({ error: "not_authenticated" });
-      return;
+  async currentUser(request: Request, response: Response, next: NextFunction): Promise<void> {
+    try {
+      const user = await this.auth.findUser(authenticatedUserId(request));
+      if (!user) throw new AuthenticationException();
+      sendSuccessResponse(response, GoogleUserDto.make(user), "User retrieved successfully");
+    } catch (error) {
+      next(error);
     }
-
-    const user = await this.auth.findUser(userId);
-    if (!user) {
-      response.status(401).json({ error: "not_authenticated" });
-      return;
-    }
-    response.status(200).json({ user });
   }
 
-  async signOut(request: Request, response: Response): Promise<void> {
-    await destroySession(request);
-    response.clearCookie("billing.sid");
-    response.status(204).end();
+  async signOut(request: Request, response: Response, next: NextFunction): Promise<void> {
+    try {
+      await destroySession(request);
+      response.clearCookie("billing.sid");
+      sendSuccessResponse(response, undefined, "Signed out successfully", ResponseStatus.OK);
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  private async completeGoogleSignIn(request: Request): Promise<void> {
+    const { code, state } = readCallbackParameters(request);
+    validateOAuthState(request.session.oauthState, state);
+    const user = await this.auth.signInWithGoogle(code);
+    await regenerateSession(request);
+    request.session.userId = user.id;
+    await saveSession(request);
   }
 }
 
@@ -66,19 +74,13 @@ function validateOAuthState(expected: string | undefined, received: string): voi
 }
 
 function regenerateSession(request: Request): Promise<void> {
-  return new Promise((resolve, reject) => {
-    request.session.regenerate((error) => (error ? reject(error) : resolve()));
-  });
+  return new Promise((resolve, reject) => request.session.regenerate((error) => error ? reject(error) : resolve()));
 }
 
 function saveSession(request: Request): Promise<void> {
-  return new Promise((resolve, reject) => {
-    request.session.save((error) => (error ? reject(error) : resolve()));
-  });
+  return new Promise((resolve, reject) => request.session.save((error) => error ? reject(error) : resolve()));
 }
 
 function destroySession(request: Request): Promise<void> {
-  return new Promise((resolve, reject) => {
-    request.session.destroy((error) => (error ? reject(error) : resolve()));
-  });
+  return new Promise((resolve, reject) => request.session.destroy((error) => error ? reject(error) : resolve()));
 }
