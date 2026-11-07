@@ -25,7 +25,6 @@ body { margin: 0; background: var(--color-paper); color: var(--color-ink); font-
 a { color: inherit; text-decoration: none; }
 .site-header { align-items: center; display: flex; justify-content: space-between; margin: 0 auto; max-width: 1320px; padding: 26px 48px; }
 .brand { align-items: center; display: inline-flex; font-size: 14px; font-weight: 700; gap: 11px; letter-spacing: -.02em; }
-.brand-mark { align-items: center; background: var(--color-ink); border-radius: 12px 12px 12px 4px; color: white; display: inline-flex; font-family: Georgia, serif; font-size: 19px; height: 34px; justify-content: center; width: 34px; }
 .site-nav { align-items: center; color: var(--color-ink-soft); display: flex; font-size: 13px; gap: 34px; }
 .site-nav a:not(.button):hover, .text-link:hover, .back-to-top:hover { color: var(--color-primary); }
 .button { align-items: center; background: var(--color-primary); border: 1px solid var(--color-primary); border-radius: 999px; color: #fff; display: inline-flex; font-size: 14px; font-weight: 600; gap: 15px; justify-content: center; min-height: 52px; padding: 0 23px; transition: background .18s ease, transform .18s ease; }
@@ -111,7 +110,6 @@ h1, h2, h3, h4, p { margin-top: 0; }
 .commitment p { color: var(--color-ink-soft); font-size: 12px; line-height: 1.65; margin: 0; max-width: 390px; }
 .site-footer { align-items: center; border-top: 1px solid var(--color-line); display: flex; gap: 30px; justify-content: space-between; margin: 0 auto; max-width: 1320px; padding: 27px 48px; }
 .footer-brand { flex-shrink: 0; font-size: 12px; }
-.footer-brand .brand-mark { border-radius: 9px 9px 9px 3px; font-size: 15px; height: 28px; width: 28px; }
 .site-footer p { color: var(--color-muted); font-size: 10px; line-height: 1.5; margin: 0; max-width: 470px; }
 .back-to-top { color: var(--color-ink-soft); flex-shrink: 0; font-size: 10px; font-weight: 600; }
 .login-page { display: grid; min-height: 100vh; padding: 24px; place-items: center; }
@@ -137,7 +135,6 @@ h1, h2, h3, h4, p { margin-top: 0; }
 @media (max-width: 620px) {
   .site-header { gap: 16px; padding: 17px 20px; }
   .brand { font-size: 12px; gap: 8px; }
-  .brand-mark { height: 30px; width: 30px; }
   .site-nav { gap: 0; }
   .site-nav > a:not(.button) { display: none; }
   .button-small { font-size: 10px; min-height: 38px; padding: 0 13px; }

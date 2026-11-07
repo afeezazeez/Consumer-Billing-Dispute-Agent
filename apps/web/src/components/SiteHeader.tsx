@@ -2,7 +2,6 @@ export function SiteHeader() {
   return (
     <header className="site-header">
       <a className="brand" href="#top" aria-label="Billing Case Agent home">
-        <span className="brand-mark" aria-hidden="true">B</span>
         <span>Billing Case Agent</span>
       </a>
       <nav className="site-nav" aria-label="Main navigation">
