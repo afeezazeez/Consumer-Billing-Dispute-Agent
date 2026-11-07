@@ -119,7 +119,8 @@ h1, h2, h3, h4, p { margin-top: 0; }
 .login-card .eyebrow { justify-content: center; }
 .login-card h1 { font-family: Georgia, 'Times New Roman', serif; font-size: 42px; font-weight: 400; letter-spacing: -.045em; line-height: 1.12; margin: 20px 0 14px; }
 .login-description { color: var(--color-ink-soft); font-size: 14px; line-height: 1.7; margin: 0 auto 27px; max-width: 355px; }
-.google-sign-in-button { align-items: center; background: #fff; border: 1px solid #747775; border-radius: 999px; color: #1f1f1f; cursor: not-allowed; display: flex; font: inherit; font-size: 14px; font-weight: 600; gap: 12px; justify-content: center; min-height: 50px; width: 100%; }
+.google-sign-in-button { align-items: center; background: #fff; border: 1px solid #747775; border-radius: 999px; color: #1f1f1f; cursor: pointer; display: flex; font: inherit; font-size: 14px; font-weight: 600; gap: 12px; justify-content: center; min-height: 50px; width: 100%; }
+.google-sign-in-button:hover { background: #f8faff; }
 .login-status { background: var(--color-paper); border: 1px solid var(--color-line); border-radius: 12px; color: var(--color-muted); font-size: 11px; line-height: 1.6; margin: 16px 0 22px; padding: 12px 14px; }
 .login-back-link { color: var(--color-primary); font-size: 12px; font-weight: 600; }
 @media (max-width: 850px) {
