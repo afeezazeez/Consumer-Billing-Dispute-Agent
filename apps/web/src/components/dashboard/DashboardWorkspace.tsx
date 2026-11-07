@@ -99,7 +99,7 @@ export function DashboardWorkspace() {
     <main className={`dashboard-shell${isSidebarCollapsed ? " sidebar-collapsed" : ""}`}>
       <CaseSidebar cases={cases} activeCaseId={activeCase?.id ?? ""} user={user} isSigningOut={isSigningOut} signOutError={signOutError} isCollapsed={isSidebarCollapsed} onToggleCollapse={handleToggleSidebar} onNewCase={handleNewCase} onSelectCase={handleSelectCase} onSignOut={handleSignOut} />
       <section className="dashboard-main" aria-label="Billing case chat">
-        {activeCase ? <CaseConversation billingCase={activeCase} isSending={isSending} error={error} onSendMessage={handleSendMessage} onDeleteCase={handleDeleteCase} /> : <DashboardEmptyState isSending={isSending} error={error} onSendMessage={handleSendMessage} />}
+        {activeCase ? <CaseConversation billingCase={activeCase} isSending={isSending} error={error} onSendMessage={handleSendMessage} onDeleteCase={handleDeleteCase} /> : <DashboardEmptyState firstName={getFirstName(user.displayName)} isSending={isSending} error={error} onSendMessage={handleSendMessage} />}
       </section>
     </main>
   );
@@ -125,6 +125,10 @@ function upsertCase(current: CaseSummary[], billingCase: CaseConversationData): 
 
 function toSummary(billingCase: CaseConversationData): CaseSummary {
   return { id: billingCase.id, title: billingCase.title, status: billingCase.status, updatedAt: billingCase.updatedAt, lastMessage: billingCase.lastMessage };
+}
+
+function getFirstName(displayName: string): string {
+  return displayName.trim().split(/\s+/)[0] || "there";
 }
 
 function handleLoadError(error: unknown, router: ReturnType<typeof useRouter>, setError: (message: string) => void, setIsLoading: (loading: boolean) => void): void {

@@ -6,9 +6,10 @@ interface CaseComposerProps {
   isSending: boolean;
   error: string;
   onSendMessage: (message: string) => Promise<boolean>;
+  variant?: "conversation" | "welcome";
 }
 
-export function CaseComposer({ isSending, error, onSendMessage }: CaseComposerProps) {
+export function CaseComposer({ isSending, error, onSendMessage, variant = "conversation" }: CaseComposerProps) {
   const [message, setMessage] = useState("");
   const handleChange = useCallback((event: ChangeEvent<HTMLTextAreaElement>) => setMessage(event.target.value), []);
   const handleSubmit = useCallback(async (event: FormEvent<HTMLFormElement>) => {
@@ -26,9 +27,9 @@ export function CaseComposer({ isSending, error, onSendMessage }: CaseComposerPr
   return (
     <div className="composer-region">
       {error && <p className="dashboard-error" role="alert">{error}</p>}
-      <form aria-busy={isSending} className="chat-composer" onSubmit={handleSubmit}>
+      <form aria-busy={isSending} className={`chat-composer${variant === "welcome" ? " welcome-composer" : ""}`} onSubmit={handleSubmit}>
         <label className="visually-hidden" htmlFor="case-message">Message about your billing case</label>
-        <textarea id="case-message" maxLength={2000} onChange={handleChange} onKeyDown={handleKeyDown} placeholder="Tell me about the charge…" rows={1} value={message} />
+        <textarea id="case-message" maxLength={2000} onChange={handleChange} onKeyDown={handleKeyDown} placeholder={variant === "welcome" ? "Describe the charge and what seems wrong…" : "Tell me about the charge…"} rows={variant === "welcome" ? 3 : 1} value={message} />
         <div className="composer-controls">
           <span>Shift + Enter for a new line</span>
           <button aria-label={isSending ? "Sending message" : "Send message"} className="composer-send" disabled={!message.trim() || isSending} type="submit">
