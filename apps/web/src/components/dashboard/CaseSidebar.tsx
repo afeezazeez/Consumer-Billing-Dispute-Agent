@@ -38,10 +38,10 @@ export function CaseSidebar(props: CaseSidebarProps) {
         <button aria-label={props.isCollapsed ? "Expand sidebar" : "Collapse sidebar"} className="sidebar-icon-button" onClick={props.onToggleCollapse} type="button"><SidebarIcon /></button>
       </header>
       <button aria-label="New case" className="new-case-button" onClick={props.onNewCase} type="button">
-        <span aria-hidden="true">✎</span><span className="new-case-label">New case</span>
+        <span aria-hidden="true">＋</span><span className="new-case-label">New case</span>
       </button>
       {isSearchOpen && <input aria-label="Search cases" className="case-search-input" onChange={handleSearchChange} placeholder="Search cases" value={searchTerm} />}
-      <div className="case-list-heading"><span>Recent cases</span>{props.cases.length > 0 && <span>{props.cases.length}</span>}</div>
+      <div className="case-list-heading"><span>Recent</span></div>
       {filteredCases.length === 0 ? (
         <p className="sidebar-empty">{searchTerm ? "No cases match your search." : "Your saved cases will appear here."}</p>
       ) : (
@@ -55,6 +55,7 @@ export function CaseSidebar(props: CaseSidebarProps) {
               onClick={handleCaseSelection}
               type="button"
             >
+              <span aria-hidden="true" className="case-list-icon">▱</span>
               <strong>{item.title}</strong>
               <span>{item.lastMessage}</span>
             </button>

@@ -372,3 +372,25 @@ h1, h2, h3, p { margin-top: 0; }
 @media (max-width: 700px) {
   .case-title-trigger { max-width: calc(100vw - 48px); }
 }
+
+/* Replit-inspired sidebar hierarchy, using Bill Agent's existing palette. */
+.dashboard-sidebar { padding: 12px 10px; }
+.dashboard-sidebar-header { gap: 5px; margin-bottom: 12px; min-height: 44px; }
+.dashboard-brand { font-size: 16px; font-weight: 650; margin-left: 5px; }
+.new-case-button { align-items: center; align-self: stretch; background: var(--color-white); border: 1px solid var(--color-line); border-radius: 10px; box-shadow: 0 1px 2px color-mix(in srgb, var(--color-ink) 5%, transparent); color: var(--color-ink-soft); font-size: 13px; font-weight: 550; gap: 8px; justify-content: center; min-height: 44px; padding: 0 12px; }
+.new-case-button:hover { background: var(--color-white); border-color: var(--color-google-line); }
+.new-case-button span:first-child { align-items: center; background: var(--color-dashboard-selected); border-radius: 50%; display: inline-flex; font-size: 17px; height: 21px; justify-content: center; width: 21px; }
+.case-list-heading { color: var(--color-muted); font-size: 12px; font-weight: 550; margin: 23px 9px 9px; }
+.case-list { gap: 3px; }
+.case-list-item { align-items: center; display: flex; gap: 9px; min-height: 40px; padding: 8px 9px; }
+.case-list-item:hover, .case-list-item.is-active { background: var(--color-dashboard-selected); }
+.case-list-icon { color: var(--color-muted); flex: 0 0 18px; font-size: 18px; line-height: 1; }
+.case-list-item strong { flex: 1; font-size: 12px; font-weight: 450; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.case-list-item span:not(.case-list-icon) { display: none; }
+.dashboard-account { margin-top: auto; }
+
+@media (max-width: 700px) {
+  .dashboard-sidebar { padding: 10px 13px 8px; }
+  .dashboard-sidebar-header { margin-bottom: 9px; }
+  .case-list-heading { margin: 12px 7px 7px; }
+}
