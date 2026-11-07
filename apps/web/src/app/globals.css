@@ -534,3 +534,4 @@ h1, h2, h3, p { margin-top: 0; }
 .case-list-item.is-active { background: transparent; border: 0; padding-left: 9px; }
 .case-list-item.is-active:hover { background: var(--color-dashboard-selected); }
 .case-list-item strong, .case-list-title { font-size: 18px; }
+.case-list-item strong, .case-list-title { font-size: 16px; }
