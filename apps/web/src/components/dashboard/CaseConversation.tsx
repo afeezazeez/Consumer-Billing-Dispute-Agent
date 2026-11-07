@@ -45,10 +45,10 @@ export function CaseConversation({ billingCase, isSending, error, onSendMessage,
       <header className="chat-header">
         <div className="case-title-menu" onKeyDown={handleMenuKeyDown} onPointerDown={handleMenuPointerDown} ref={menuRef}>
           <button aria-expanded={isMenuOpen} aria-haspopup="menu" className="case-title-trigger" id="active-case-title" onClick={handleToggleMenu} type="button">
-            <span>{billingCase.title}</span><span aria-hidden="true">⌄</span>
+            <span>{billingCase.title}</span><svg aria-hidden="true" viewBox="0 0 16 16"><path d="m4 6 4 4 4-4" /></svg>
           </button>
           {isMenuOpen && <div aria-label="Case actions" className="case-title-dropdown" role="group">
-            <button className="case-delete-action" onClick={handleDelete} type="button">Delete case</button>
+            <button className="case-delete-action" onClick={handleDelete} type="button"><svg aria-hidden="true" viewBox="0 0 20 20"><path d="M4 6h12M8 6V4h4v2m-7 0 .8 10h8.4L15 6M8 9v4m4-4v4" /></svg>Delete case</button>
           </div>}
         </div>
       </header>
