@@ -18,6 +18,10 @@ export class CaseService {
   findCase(userId: string, caseId: string): Promise<CaseConversation | undefined> {
     return this.cases.findForUser(userId, caseId);
   }
+
+  deleteCase(userId: string, caseId: string): Promise<boolean> {
+    return this.cases.deleteForUser(userId, caseId);
+  }
 }
 
 function createTitle(message: string): string {

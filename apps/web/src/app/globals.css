@@ -353,3 +353,20 @@ h1, h2, h3, p { margin-top: 0; }
   .chat-workspace.is-empty { padding-top: 52px; }
   .chat-history { padding-top: 26px; }
 }
+
+/* Case title menu sits beside the sidebar divider, like a lightweight chat menu. */
+.chat-workspace:not(.is-empty) { max-width: none; }
+.chat-workspace:not(.is-empty) .chat-header { border-bottom: 0; flex-basis: 58px; }
+.case-title-menu { position: relative; }
+.case-title-trigger { align-items: center; background: transparent; border: 0; border-radius: 9px; color: var(--color-ink); cursor: pointer; display: flex; font: inherit; font-size: 14px; font-weight: 550; gap: 12px; max-width: min(560px, calc(100vw - 360px)); min-height: 40px; padding: 0 12px; }
+.case-title-trigger:hover, .case-title-trigger[aria-expanded="true"] { background: var(--color-dashboard-sidebar); }
+.case-title-trigger span:first-child { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.case-title-trigger span:last-child { color: var(--color-muted); font-size: 17px; }
+.case-title-dropdown { background: var(--color-white); border: 1px solid var(--color-line); border-radius: 12px; box-shadow: 0 12px 32px color-mix(in srgb, var(--color-ink) 12%, transparent); left: 0; min-width: 190px; padding: 6px; position: absolute; top: calc(100% + 5px); z-index: 20; }
+.case-delete-action { background: transparent; border: 0; border-radius: 7px; color: var(--color-error-text); cursor: pointer; font: inherit; font-size: 13px; min-height: 40px; padding: 0 10px; text-align: left; width: 100%; }
+.case-delete-action:hover { background: var(--color-error-background); }
+.case-title-trigger:focus-visible, .case-delete-action:focus-visible { outline: 3px solid var(--color-primary); outline-offset: 2px; }
+
+@media (max-width: 700px) {
+  .case-title-trigger { max-width: calc(100vw - 48px); }
+}

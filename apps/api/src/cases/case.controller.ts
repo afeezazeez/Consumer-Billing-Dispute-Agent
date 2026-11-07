@@ -51,6 +51,16 @@ export class CaseController {
       next(error);
     }
   }
+
+  async delete(request: Request, response: Response, next: NextFunction): Promise<void> {
+    try {
+      const deleted = await this.cases.deleteCase(authenticatedUserId(request), readCaseId(request));
+      if (!deleted) throw new ClientErrorException("Case not found", ResponseStatus.NOT_FOUND);
+      sendSuccessResponse(response, {}, "Case deleted successfully");
+    } catch (error) {
+      next(error);
+    }
+  }
 }
 
 function readCaseId(request: Request): string {

@@ -38,6 +38,11 @@ export class TypeOrmCaseRepository implements CaseRepository {
     return toConversation(record, messages);
   }
 
+  async deleteForUser(userId: string, caseId: string): Promise<boolean> {
+    const result = await this.dataSource.getRepository(CaseEntity).delete({ id: caseId, userId });
+    return (result.affected ?? 0) > 0;
+  }
+
   private async createCase(
     manager: EntityManager,
     userId: string,

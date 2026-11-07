@@ -65,6 +65,17 @@ export function DashboardWorkspace() {
     }
   }, [activeCase]);
 
+  const handleDeleteCase = useCallback(async (caseId: string): Promise<void> => {
+    try {
+      await requestData(`/cases/${caseId}`, { method: "DELETE" });
+      setCases((current) => current.filter((item) => item.id !== caseId));
+      setActiveCase((current) => current?.id === caseId ? undefined : current);
+      setError("");
+    } catch {
+      setError("We couldn’t delete this case. Please try again.");
+    }
+  }, []);
+
   const handleSignOut = useCallback(async () => {
     setIsSigningOut(true);
     setSignOutError("");
@@ -88,7 +99,7 @@ export function DashboardWorkspace() {
     <main className={`dashboard-shell${isSidebarCollapsed ? " sidebar-collapsed" : ""}`}>
       <CaseSidebar cases={cases} activeCaseId={activeCase?.id ?? ""} user={user} isSigningOut={isSigningOut} signOutError={signOutError} isCollapsed={isSidebarCollapsed} onToggleCollapse={handleToggleSidebar} onNewCase={handleNewCase} onSelectCase={handleSelectCase} onSignOut={handleSignOut} />
       <section className="dashboard-main" aria-label="Billing case chat">
-        {activeCase ? <CaseConversation billingCase={activeCase} isSending={isSending} error={error} onSendMessage={handleSendMessage} /> : <DashboardEmptyState isSending={isSending} error={error} onSendMessage={handleSendMessage} />}
+        {activeCase ? <CaseConversation billingCase={activeCase} isSending={isSending} error={error} onSendMessage={handleSendMessage} onDeleteCase={handleDeleteCase} /> : <DashboardEmptyState isSending={isSending} error={error} onSendMessage={handleSendMessage} />}
       </section>
     </main>
   );

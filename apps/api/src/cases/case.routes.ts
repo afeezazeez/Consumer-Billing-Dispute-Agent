@@ -12,5 +12,6 @@ export function createCaseRouter(controller: CaseController, authMiddleware: Aut
   router.post("/", validateBody(CreateCaseRequestDto), (request, response, next) => controller.create(request, response, next));
   router.get("/:caseId", (request, response, next) => controller.read(request, response, next));
   router.post("/:caseId/messages", validateBody(CreateMessageRequestDto), (request, response, next) => controller.addMessage(request, response, next));
+  router.delete("/:caseId", (request, response, next) => controller.delete(request, response, next));
   return router;
 }

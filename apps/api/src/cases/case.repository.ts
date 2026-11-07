@@ -23,4 +23,5 @@ export interface CaseRepository {
   appendMessage(userId: string, caseId: string, content: string): Promise<CaseConversation | undefined>;
   listForUser(userId: string): Promise<CaseSummary[]>;
   findForUser(userId: string, caseId: string): Promise<CaseConversation | undefined>;
+  deleteForUser(userId: string, caseId: string): Promise<boolean>;
 }
