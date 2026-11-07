@@ -2,29 +2,35 @@ import "dotenv/config";
 import session from "express-session";
 import connectPgSimple from "connect-pg-simple";
 import { Pool } from "pg";
-import { loadConfig } from "./config";
+import { loadConfig, type PostgresConfig } from "./config";
 import { createDataSource } from "./database/data-source";
 import { createApp } from "./app";
 
 async function startServer(): Promise<void> {
   const config = loadConfig();
-  const dataSource = await connectDatabase(config.databaseUrl);
-  const sessionStore = createPostgresSessionStore(config.databaseUrl);
+  const dataSource = await connectDatabase(config.database);
+  const sessionStore = createPostgresSessionStore(config.database);
   const app = createApp(config, dataSource, sessionStore);
   listen(app, config.port);
 }
 
-async function connectDatabase(databaseUrl: string) {
-  const dataSource = createDataSource(databaseUrl);
+async function connectDatabase(database: PostgresConfig) {
+  const dataSource = createDataSource(database);
   await dataSource.initialize();
   await dataSource.runMigrations();
   return dataSource;
 }
 
-function createPostgresSessionStore(databaseUrl: string) {
+function createPostgresSessionStore(database: PostgresConfig) {
   const PostgreSqlStore = connectPgSimple(session);
   return new PostgreSqlStore({
-    pool: new Pool({ connectionString: databaseUrl }),
+    pool: new Pool({
+      host: database.host,
+      port: database.port,
+      database: database.database,
+      user: database.username,
+      password: database.password,
+    }),
     tableName: "user_sessions",
     createTableIfMissing: true,
   });
