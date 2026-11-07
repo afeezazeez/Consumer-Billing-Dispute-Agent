@@ -27,6 +27,17 @@ The initial release does not access provider accounts, send messages, make payme
 - **Privacy by default:** collect only case-relevant information and isolate each user's records.
 - **Safe failure:** ask for missing information or stop when the evidence is insufficient.
 
+## Repository structure
+
+```text
+apps/
+  web/       Next.js user interface
+  api/       Node.js + Express API (next implementation phase)
+packages/    Shared TypeScript contracts and validation (added when needed)
+```
+
+The frontend and API will be separate deployable services in Railway. PostgreSQL will run as a separate Railway database service. They remain in one Git repository so a feature and its related frontend/backend changes can be reviewed and committed together.
+
 ## Project status
 
-Product scope and build plan are documented locally. Technical architecture and implementation are being established incrementally.
+The Next.js application is being moved into the monorepo structure. The API and database services have not been created yet.
