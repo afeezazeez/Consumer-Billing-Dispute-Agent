@@ -530,3 +530,13 @@ h1, h2, h3, p { margin-top: 0; }
 .case-rename-action, .case-delete-action { font-size: 14px; }
 .confirm-dialog p { font-size: 14px; }
 .dashboard-loading { font-size: 16px; }
+
+.chat-message.user p {
+  background: transparent;
+  border-left: 3px solid var(--color-primary);
+  border-radius: 10px 0 0 10px;
+  color: var(--color-ink);
+  font-size: 20px;
+  line-height: 1.6;
+  padding: 17px 20px;
+}
