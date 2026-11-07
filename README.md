@@ -12,8 +12,8 @@ The agent analyzes user-provided billing records, asks targeted follow-up questi
 
 The first release focuses on billing charge disputes and includes:
 
-- A public sample case that can be explored without an account or personal data.
-- Private cases for users who choose to create an account and provide records.
+- A public landing page with a fictional case preview; it does not create or process a sample case.
+- Private cases that require Google sign-in before users provide records.
 - Document extraction with user review and correction of extracted details.
 - Evidence-linked summaries, case status, and suggested next steps.
 - Editable message drafts with explicit user approval before use.
@@ -40,4 +40,4 @@ The frontend and API will be separate deployable services in Railway. PostgreSQL
 
 ## Project status
 
-The Next.js application is being moved into the monorepo structure. The API and database services have not been created yet.
+The Next.js application lives in `apps/web`. The Express API and database services have not been created yet.

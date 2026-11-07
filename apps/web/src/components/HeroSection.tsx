@@ -9,7 +9,7 @@ export function HeroSection() {
           <a className="button" href="#sample-case">Explore the sample case <span aria-hidden="true">↗</span></a>
           <a className="text-link" href="#how-it-works">See how it works <span aria-hidden="true">↓</span></a>
         </div>
-        <p className="hero-note">No provider login required · You review every proposed response</p>
+        <p className="hero-note">No billing provider connection needed · You review every proposed response</p>
       </div>
       <div className="hero-art" role="img" aria-label="Preview of a fictional billing dispute case">
         <div className="art-orbit orbit-one" />
