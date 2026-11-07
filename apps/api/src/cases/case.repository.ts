@@ -24,4 +24,5 @@ export interface CaseRepository {
   listForUser(userId: string): Promise<CaseSummary[]>;
   findForUser(userId: string, caseId: string): Promise<CaseConversation | undefined>;
   deleteForUser(userId: string, caseId: string): Promise<boolean>;
+  renameForUser(userId: string, caseId: string, title: string): Promise<boolean>;
 }

@@ -43,6 +43,11 @@ export class TypeOrmCaseRepository implements CaseRepository {
     return (result.affected ?? 0) > 0;
   }
 
+  async renameForUser(userId: string, caseId: string, title: string): Promise<boolean> {
+    const result = await this.dataSource.getRepository(CaseEntity).update({ id: caseId, userId }, { title, updatedAt: new Date() });
+    return (result.affected ?? 0) > 0;
+  }
+
   private async createCase(
     manager: EntityManager,
     userId: string,

@@ -3,6 +3,7 @@ import { CaseConversationDto } from "../dtos/cases/case-conversation.dto";
 import { CaseSummaryDto } from "../dtos/cases/case-summary.dto";
 import { CreateCaseRequestDto } from "../dtos/cases/create-case-request.dto";
 import { CreateMessageRequestDto } from "../dtos/cases/create-message-request.dto";
+import { RenameCaseRequestDto } from "../dtos/cases/rename-case-request.dto";
 import { ClientErrorException } from "../exceptions/client.error.exception";
 import { ResponseStatus } from "../enums/response-status";
 import { sendSuccessResponse } from "../utils/http/response-handlers";
@@ -57,6 +58,17 @@ export class CaseController {
       const deleted = await this.cases.deleteCase(authenticatedUserId(request), readCaseId(request));
       if (!deleted) throw new ClientErrorException("Case not found", ResponseStatus.NOT_FOUND);
       sendSuccessResponse(response, {}, "Case deleted successfully");
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async rename(request: Request, response: Response, next: NextFunction): Promise<void> {
+    try {
+      const payload = request.body as RenameCaseRequestDto;
+      const renamed = await this.cases.renameCase(authenticatedUserId(request), readCaseId(request), payload.title);
+      if (!renamed) throw new ClientErrorException("Case not found", ResponseStatus.NOT_FOUND);
+      sendSuccessResponse(response, {}, "Case renamed successfully");
     } catch (error) {
       next(error);
     }

@@ -22,6 +22,10 @@ export class CaseService {
   deleteCase(userId: string, caseId: string): Promise<boolean> {
     return this.cases.deleteForUser(userId, caseId);
   }
+
+  renameCase(userId: string, caseId: string, title: string): Promise<boolean> {
+    return this.cases.renameForUser(userId, caseId, title.trim());
+  }
 }
 
 function createTitle(message: string): string {

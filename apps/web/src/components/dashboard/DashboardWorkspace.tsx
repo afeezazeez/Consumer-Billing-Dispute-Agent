@@ -76,6 +76,19 @@ export function DashboardWorkspace() {
     }
   }, []);
 
+  const handleRenameCase = useCallback(async (caseId: string, title: string): Promise<boolean> => {
+    try {
+      await requestData(`/cases/${caseId}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ title }) });
+      setCases((current) => current.map((item) => item.id === caseId ? { ...item, title } : item));
+      setActiveCase((current) => current?.id === caseId ? { ...current, title } : current);
+      setError("");
+      return true;
+    } catch {
+      setError("We couldn’t rename this case. Please try again.");
+      return false;
+    }
+  }, []);
+
   const handleSignOut = useCallback(async () => {
     setIsSigningOut(true);
     setSignOutError("");
@@ -97,9 +110,9 @@ export function DashboardWorkspace() {
 
   return (
     <main className={`dashboard-shell${isSidebarCollapsed ? " sidebar-collapsed" : ""}`}>
-      <CaseSidebar cases={cases} activeCaseId={activeCase?.id ?? ""} user={user} isSigningOut={isSigningOut} signOutError={signOutError} isCollapsed={isSidebarCollapsed} onToggleCollapse={handleToggleSidebar} onNewCase={handleNewCase} onSelectCase={handleSelectCase} onSignOut={handleSignOut} />
+      <CaseSidebar cases={cases} activeCaseId={activeCase?.id ?? ""} user={user} isSigningOut={isSigningOut} signOutError={signOutError} isCollapsed={isSidebarCollapsed} onToggleCollapse={handleToggleSidebar} onNewCase={handleNewCase} onSelectCase={handleSelectCase} onRenameCase={handleRenameCase} onSignOut={handleSignOut} />
       <section className="dashboard-main" aria-label="Billing case chat">
-        {activeCase ? <CaseConversation billingCase={activeCase} isSending={isSending} error={error} onSendMessage={handleSendMessage} onDeleteCase={handleDeleteCase} /> : <DashboardEmptyState firstName={getFirstName(user.displayName)} isSending={isSending} error={error} onSendMessage={handleSendMessage} />}
+        {activeCase ? <CaseConversation billingCase={activeCase} isSending={isSending} error={error} onSendMessage={handleSendMessage} onDeleteCase={handleDeleteCase} onRenameCase={handleRenameCase} /> : <DashboardEmptyState firstName={getFirstName(user.displayName)} isSending={isSending} error={error} onSendMessage={handleSendMessage} />}
       </section>
     </main>
   );

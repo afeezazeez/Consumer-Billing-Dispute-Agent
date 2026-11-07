@@ -2,6 +2,7 @@ import { Router } from "express";
 import type { AuthMiddleware } from "../auth/auth.middleware";
 import { CreateCaseRequestDto } from "../dtos/cases/create-case-request.dto";
 import { CreateMessageRequestDto } from "../dtos/cases/create-message-request.dto";
+import { RenameCaseRequestDto } from "../dtos/cases/rename-case-request.dto";
 import { validateBody } from "../middlewares/request-validator";
 import type { CaseController } from "./case.controller";
 
@@ -13,5 +14,6 @@ export function createCaseRouter(controller: CaseController, authMiddleware: Aut
   router.get("/:caseId", (request, response, next) => controller.read(request, response, next));
   router.post("/:caseId/messages", validateBody(CreateMessageRequestDto), (request, response, next) => controller.addMessage(request, response, next));
   router.delete("/:caseId", (request, response, next) => controller.delete(request, response, next));
+  router.patch("/:caseId", validateBody(RenameCaseRequestDto), (request, response, next) => controller.rename(request, response, next));
   return router;
 }

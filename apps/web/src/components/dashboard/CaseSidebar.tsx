@@ -1,7 +1,8 @@
 "use client";
 
-import { useCallback, useMemo, useState, type ChangeEvent, type MouseEvent } from "react";
+import { useCallback, useMemo, useState, type ChangeEvent } from "react";
 import Link from "next/link";
+import { CaseListItem } from "./CaseListItem";
 import type { CaseSummary, DashboardUser } from "./dashboard.types";
 
 interface CaseSidebarProps {
@@ -14,6 +15,7 @@ interface CaseSidebarProps {
   onToggleCollapse: () => void;
   onNewCase: () => void;
   onSelectCase: (caseId: string) => void;
+  onRenameCase: (caseId: string, title: string) => Promise<boolean>;
   onSignOut: () => void;
 }
 
@@ -25,11 +27,6 @@ export function CaseSidebar(props: CaseSidebarProps) {
 
   const handleSearchToggle = useCallback(() => setIsSearchOpen((current) => !current), []);
   const handleSearchChange = useCallback((event: ChangeEvent<HTMLInputElement>) => setSearchTerm(event.target.value), []);
-  const handleCaseSelection = useCallback((event: MouseEvent<HTMLElement>) => {
-    const caseId = event.currentTarget.dataset.caseId;
-    if (caseId) onSelectCase(caseId);
-  }, [onSelectCase]);
-
   return (
     <aside className={`dashboard-sidebar${props.isCollapsed ? " is-collapsed" : ""}`}>
       <header className="dashboard-sidebar-header">
@@ -47,18 +44,13 @@ export function CaseSidebar(props: CaseSidebarProps) {
       ) : (
         <nav aria-label="Saved billing cases" className="case-list">
           {filteredCases.map((item) => (
-            <button
-              aria-current={item.id === props.activeCaseId ? "page" : undefined}
-              className={`case-list-item${item.id === props.activeCaseId ? " is-active" : ""}`}
-              data-case-id={item.id}
+            <CaseListItem
+              billingCase={item}
+              isActive={item.id === props.activeCaseId}
               key={item.id}
-              onClick={handleCaseSelection}
-              type="button"
-            >
-              <span aria-hidden="true" className="case-list-icon">▱</span>
-              <strong>{item.title}</strong>
-              <span>{item.lastMessage}</span>
-            </button>
+              onOpen={onSelectCase}
+              onRename={props.onRenameCase}
+            />
           ))}
         </nav>
       )}
