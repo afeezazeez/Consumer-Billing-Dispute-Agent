@@ -430,3 +430,5 @@ h1, h2, h3, p { margin-top: 0; }
   .dashboard-shell.sidebar-collapsed .dashboard-sidebar-header { align-items: center; flex-direction: column; margin: 0 auto 9px; }
   .dashboard-shell.sidebar-collapsed .case-search-input { left: 13px; top: 52px; width: min(220px, calc(100vw - 26px)); }
 }
+
+.dashboard-shell.sidebar-collapsed .dashboard-sidebar-header .sidebar-icon-button[aria-label="Expand sidebar"] { order: -1; }
