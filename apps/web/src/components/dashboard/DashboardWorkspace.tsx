@@ -105,7 +105,7 @@ export function DashboardWorkspace() {
     void Promise.resolve().then(loadWorkspace).catch((requestError: unknown) => handleLoadError(requestError, router, setError, setIsLoading));
   }, [loadWorkspace, router]);
 
-  if (isLoading) return <main className="dashboard-loading" aria-live="polite">Loading your workspace…</main>;
+  if (isLoading) return <main className="dashboard-loading" aria-live="polite"><span aria-hidden="true" className="loading-spinner" /><span>Loading your workspace…</span></main>;
   if (!user) return <main className="dashboard-loading" role="alert">We couldn’t load your account. Please sign in again.</main>;
 
   return (

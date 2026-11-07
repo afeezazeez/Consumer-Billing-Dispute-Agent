@@ -457,3 +457,50 @@ h1, h2, h3, p { margin-top: 0; }
 .confirm-delete-button { background: var(--color-error-text); border-color: var(--color-error-text) !important; color: var(--color-white); }
 .confirm-delete-button:hover { filter: brightness(.92); }
 .confirm-dialog-actions button:focus-visible, .case-rename-action:focus-visible, .case-list-title:focus-visible, .case-list-open:focus-visible { outline: 3px solid var(--color-primary); outline-offset: 2px; }
+
+/* Dashboard text and controls need to stay readable at everyday viewing size. */
+.case-list-title { font-size: 14px; }
+.case-list-open { flex-basis: 32px; height: 36px; }
+.case-list-icon { font-size: 20px; }
+.case-list-item { min-height: 44px; }
+.case-list-heading { font-size: 13px; }
+.new-case-button { font-size: 14px; min-height: 46px; }
+.case-search-input { font-size: 14px; min-height: 42px; }
+.account-copy { flex: 1; }
+.account-copy strong { font-size: 13px; }
+.account-copy span { font-size: 12px; }
+.sign-out-button { font-size: 13px; white-space: nowrap; }
+.chat-message p { font-size: 15px; }
+.chat-composer textarea { font-size: 15px; }
+.starter-prompts button { font-size: 12px; }
+
+.case-list-item { background: transparent; border-color: transparent; }
+.case-list-item.is-active { background: transparent; border-left: 2px solid var(--color-primary); color: var(--color-ink); }
+.case-list-item:hover { background: var(--color-dashboard-selected); }
+.case-list-item.is-active:hover { background: var(--color-dashboard-selected); }
+
+.sidebar-search-wrap { position: relative; }
+.dashboard-sidebar-header .case-search-input { left: auto; margin: 0; position: absolute; right: 0; top: calc(100% + 5px); width: 230px; z-index: 35; }
+.dashboard-shell.sidebar-collapsed .dashboard-sidebar-header .case-search-input { left: 50px; right: auto; top: 0; width: 220px; }
+
+.dashboard-loading { gap: 11px; font-size: 15px; }
+.loading-spinner { animation: dashboard-spin .75s linear infinite; border: 2px solid var(--color-line); border-right-color: var(--color-primary); border-radius: 50%; height: 20px; width: 20px; }
+@keyframes dashboard-spin { to { transform: rotate(360deg); } }
+
+.confirm-dialog { max-width: min(390px, calc(100vw - 32px)); }
+.confirm-dialog-content { padding: 20px; }
+.confirm-dialog-heading { align-items: center; display: flex; gap: 12px; margin-bottom: 12px; }
+.confirm-dialog-icon { flex: 0 0 30px; font-size: 14px; height: 30px; margin: 0; width: 30px; }
+.confirm-dialog h2 { font-size: 17px; margin: 0; }
+.confirm-dialog p { font-size: 13px; }
+.confirm-dialog-actions { margin-top: 19px; }
+.confirm-dialog-actions button { min-height: 38px; }
+
+@media (prefers-reduced-motion: reduce) {
+  .loading-spinner { animation-duration: 1.8s; }
+}
+@media (max-width: 700px) {
+  .dashboard-account { align-items: center; }
+  .account-copy span { font-size: 11px; }
+  .dashboard-shell.sidebar-collapsed .dashboard-sidebar-header .case-search-input { left: 48px; top: 0; }
+}

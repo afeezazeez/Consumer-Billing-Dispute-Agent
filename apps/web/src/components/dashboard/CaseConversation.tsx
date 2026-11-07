@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState, type ChangeEvent, type PointerEvent as ReactPointerEvent, type KeyboardEvent as ReactKeyboardEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type ChangeEvent, type MouseEvent, type PointerEvent as ReactPointerEvent, type KeyboardEvent as ReactKeyboardEvent } from "react";
 import { CaseComposer } from "./CaseComposer";
 import type { CaseConversation as CaseConversationData } from "./dashboard.types";
 
@@ -52,6 +52,9 @@ export function CaseConversation({ billingCase, isSending, error, onSendMessage,
     void onDeleteCase(billingCase.id);
   }, [billingCase.id, onDeleteCase]);
   const handleCancelDelete = useCallback(() => deleteDialogRef.current?.close(), []);
+  const handleDialogBackdropClick = useCallback((event: MouseEvent<HTMLDialogElement>) => {
+    if (event.target === event.currentTarget) deleteDialogRef.current?.close();
+  }, []);
   useEffect(() => {
     document.addEventListener("pointerdown", handleOutsidePointer);
     document.addEventListener("keydown", handleEscape);
@@ -89,10 +92,9 @@ export function CaseConversation({ billingCase, isSending, error, onSendMessage,
         ))}
       </div>
       <CaseComposer error={error} isSending={isSending} onSendMessage={onSendMessage} />
-      <dialog aria-describedby="delete-case-description" aria-labelledby="delete-case-title" className="confirm-dialog" ref={deleteDialogRef}>
+      <dialog aria-describedby="delete-case-description" aria-labelledby="delete-case-title" className="confirm-dialog" onClick={handleDialogBackdropClick} ref={deleteDialogRef}>
         <div className="confirm-dialog-content">
-          <span aria-hidden="true" className="confirm-dialog-icon">!</span>
-          <h2 id="delete-case-title">Delete this case?</h2>
+          <div className="confirm-dialog-heading"><span aria-hidden="true" className="confirm-dialog-icon">!</span><h2 id="delete-case-title">Delete this case?</h2></div>
           <p id="delete-case-description">This will permanently delete “{billingCase.title}” and its conversation.</p>
           <div className="confirm-dialog-actions">
             <button className="confirm-cancel-button" onClick={handleCancelDelete} type="button">Cancel</button>
