@@ -16,7 +16,7 @@ export function DashboardEmptyState({ isSending, error, onSendMessage }: Dashboa
   return (
     <section className="chat-workspace is-empty" aria-labelledby="new-chat-heading">
       <div className="new-chat-intro">
-        <h1 id="new-chat-heading">Where should we begin?</h1>
+        <h1 id="new-chat-heading">What seems wrong with your bill?</h1>
       </div>
       <CaseComposer error={error} isSending={isSending} onSendMessage={onSendMessage} />
       <div aria-label="Try a starting point" className="starter-prompts">

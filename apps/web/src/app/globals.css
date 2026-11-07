@@ -335,3 +335,21 @@ h1, h2, h3, p { margin-top: 0; }
   .starter-prompts { gap: 7px; margin-top: 12px; }
   .starter-prompts button { font-size: 10px; min-height: 36px; padding: 0 10px; }
 }
+
+/* Chat workspace refinements: keep the conversation focused and quiet. */
+.sidebar-icon-button { flex-basis: 42px; height: 42px; }
+.sidebar-icon-button svg { fill: none; height: 24px; stroke: currentColor; stroke-linecap: round; stroke-linejoin: round; stroke-width: 1.8; width: 24px; }
+.chat-header { flex-basis: 58px; }
+.chat-header h1 { font-size: 14px; font-weight: 550; }
+.chat-history { padding-top: 42px; }
+.chat-message { margin-bottom: 24px; max-width: 760px; }
+.chat-message p { background: transparent; border-radius: 0; font-size: 14px; line-height: 1.75; padding: 0; }
+.chat-message.assistant { padding: 5px 0; }
+.chat-message.user { max-width: min(82%, 620px); }
+.chat-message.user p { background: var(--color-primary-soft); border-radius: 18px; padding: 12px 16px; }
+.chat-workspace.is-empty { justify-content: flex-start; padding-top: clamp(70px, 16vh, 140px); }
+
+@media (max-width: 700px) {
+  .chat-workspace.is-empty { padding-top: 52px; }
+  .chat-history { padding-top: 26px; }
+}

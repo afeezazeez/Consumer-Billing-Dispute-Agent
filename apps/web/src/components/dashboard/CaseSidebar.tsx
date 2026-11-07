@@ -33,9 +33,9 @@ export function CaseSidebar(props: CaseSidebarProps) {
   return (
     <aside className={`dashboard-sidebar${props.isCollapsed ? " is-collapsed" : ""}`}>
       <header className="dashboard-sidebar-header">
-        <Link className="dashboard-brand" href="/">Billing Case Agent</Link>
-        <button aria-label="Search cases" className="sidebar-icon-button" onClick={handleSearchToggle} type="button">⌕</button>
-        <button aria-label={props.isCollapsed ? "Expand sidebar" : "Collapse sidebar"} className="sidebar-icon-button" onClick={props.onToggleCollapse} type="button">◫</button>
+        <Link className="dashboard-brand" href="/">Bill Agent</Link>
+        <button aria-label="Search cases" className="sidebar-icon-button" onClick={handleSearchToggle} type="button"><SearchIcon /></button>
+        <button aria-label={props.isCollapsed ? "Expand sidebar" : "Collapse sidebar"} className="sidebar-icon-button" onClick={props.onToggleCollapse} type="button"><SidebarIcon /></button>
       </header>
       <button aria-label="New case" className="new-case-button" onClick={props.onNewCase} type="button">
         <span aria-hidden="true">✎</span><span className="new-case-label">New case</span>
@@ -81,4 +81,12 @@ function filterCases(cases: CaseSummary[], searchTerm: string): CaseSummary[] {
 
 function getInitials(name: string): string {
   return name.split(/\s+/).slice(0, 2).map((part) => part[0]?.toUpperCase() ?? "").join("");
+}
+
+function SearchIcon() {
+  return <svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="10.8" cy="10.8" r="6.8" /><path d="m16 16 4.5 4.5" /></svg>;
+}
+
+function SidebarIcon() {
+  return <svg aria-hidden="true" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2.5" /><path d="M9 4v16" /></svg>;
 }
