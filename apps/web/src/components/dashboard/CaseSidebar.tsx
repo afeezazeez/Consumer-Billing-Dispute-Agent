@@ -15,7 +15,6 @@ interface CaseSidebarProps {
   onToggleCollapse: () => void;
   onNewCase: () => void;
   onSelectCase: (caseId: string) => void;
-  onRenameCase: (caseId: string, title: string) => Promise<boolean>;
   onSignOut: () => void;
 }
 
@@ -64,7 +63,6 @@ export function CaseSidebar(props: CaseSidebarProps) {
               isActive={item.id === props.activeCaseId}
               key={item.id}
               onOpen={onSelectCase}
-              onRename={props.onRenameCase}
             />
           ))}
         </nav>
