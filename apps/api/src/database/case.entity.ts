@@ -1,4 +1,5 @@
 import { EntitySchema } from "typeorm";
+import type { CaseIntakeState } from "../cases/case-intake";
 
 export class CaseEntity {
   id!: string;
@@ -7,6 +8,7 @@ export class CaseEntity {
   status!: string;
   createdAt!: Date;
   updatedAt!: Date;
+  intakeState!: CaseIntakeState;
 }
 
 export class CaseMessageEntity {
@@ -28,6 +30,11 @@ export const caseSchema = new EntitySchema<CaseEntity>({
     status: { type: "varchar", length: 24, default: "open" },
     createdAt: { name: "created_at", type: "timestamptz", createDate: true },
     updatedAt: { name: "updated_at", type: "timestamptz", updateDate: true },
+    intakeState: {
+      name: "intake_state",
+      type: "jsonb",
+      default: () => `'{"status":"collecting","facts":{}}'::jsonb`,
+    },
   },
   indices: [{ columns: ["userId", "updatedAt"] }],
 });

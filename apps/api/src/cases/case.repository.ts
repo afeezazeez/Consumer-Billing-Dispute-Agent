@@ -1,3 +1,5 @@
+import type { CaseIntakeState } from "./case-intake";
+
 export interface CaseMessageRecord {
   id: string;
   role: "user" | "assistant";
@@ -16,6 +18,7 @@ export interface CaseSummary {
 export interface CaseConversation extends CaseSummary {
   createdAt: Date;
   messages: CaseMessageRecord[];
+  intake: CaseIntakeState;
 }
 
 export interface CaseRepository {

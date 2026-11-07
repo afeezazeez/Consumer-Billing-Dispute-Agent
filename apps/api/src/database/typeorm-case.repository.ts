@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { In, type DataSource, type EntityManager } from "typeorm";
+import { createEmptyCaseIntake } from "../cases/case-intake";
 import type { CaseConversation, CaseMessageRecord, CaseRepository, CaseSummary } from "../cases/case.repository";
 import { CaseEntity, CaseMessageEntity } from "./case.entity";
 
@@ -54,7 +55,13 @@ export class TypeOrmCaseRepository implements CaseRepository {
     title: string,
     openingMessage: string,
   ): Promise<CaseConversation> {
-    const record = await manager.getRepository(CaseEntity).save({ id: randomUUID(), userId, title, status: "open" });
+    const record = await manager.getRepository(CaseEntity).save({
+      id: randomUUID(),
+      userId,
+      title,
+      status: "open",
+      intakeState: createEmptyCaseIntake(),
+    });
     const message = await manager.getRepository(CaseMessageEntity).save({
       id: randomUUID(), caseId: record.id, role: "user", content: openingMessage,
     });
@@ -96,7 +103,13 @@ function toSummaries(cases: CaseEntity[], messages: CaseMessageEntity[]): CaseSu
 
 function toConversation(record: CaseEntity, messages: CaseMessageEntity[]): CaseConversation {
   const latestMessage = messages.at(-1)?.content ?? "No messages yet";
-  return { ...toCaseFields(record), createdAt: record.createdAt, lastMessage: latestMessage, messages: messages.map(toMessage) };
+  return {
+    ...toCaseFields(record),
+    createdAt: record.createdAt,
+    lastMessage: latestMessage,
+    messages: messages.map(toMessage),
+    intake: record.intakeState,
+  };
 }
 
 function toCaseFields(record: CaseEntity): Omit<CaseSummary, "lastMessage"> {
