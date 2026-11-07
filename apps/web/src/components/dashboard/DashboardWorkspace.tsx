@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { CaseConversation } from "./CaseConversation";
 import { CaseSidebar } from "./CaseSidebar";
 import { DashboardEmptyState } from "./DashboardEmptyState";
-import { NewCasePanel } from "./NewCasePanel";
 import type { CaseConversation as CaseConversationData, CaseSummary, DashboardUser } from "./dashboard.types";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
@@ -16,62 +15,56 @@ export function DashboardWorkspace() {
   const [cases, setCases] = useState<CaseSummary[]>([]);
   const [activeCase, setActiveCase] = useState<CaseConversationData>();
   const [isLoading, setIsLoading] = useState(true);
-  const [isCreating, setIsCreating] = useState(false);
+  const [isSending, setIsSending] = useState(false);
   const [isSigningOut, setIsSigningOut] = useState(false);
-  const [isNewCase, setIsNewCase] = useState(false);
   const [error, setError] = useState("");
   const [signOutError, setSignOutError] = useState("");
 
   const selectCase = useCallback(async (caseId: string) => {
-    const result = await requestJson<{ case: CaseConversationData }>(`/cases/${caseId}`);
+    const result = await requestData<{ case: CaseConversationData }>(`/cases/${caseId}`);
     setActiveCase(result.case);
-    setIsNewCase(false);
+    setError("");
   }, []);
 
   const loadWorkspace = useCallback(async () => {
-    const currentUser = await requestJson<{ user: DashboardUser }>("/auth/me");
-    setUser(currentUser.user);
-    const savedCases = await requestJson<{ cases: CaseSummary[] }>("/cases");
+    const currentUser = await requestData<DashboardUser>("/auth/me");
+    setUser(currentUser);
+    const savedCases = await requestData<{ cases: CaseSummary[] }>("/cases");
     setCases(savedCases.cases);
     if (savedCases.cases[0]) await selectCase(savedCases.cases[0].id);
     setIsLoading(false);
   }, [selectCase]);
 
   const handleSelectCase = useCallback((caseId: string) => {
-    setError("");
     void selectCase(caseId).catch(() => setError("We couldn’t open that case. Please try again."));
   }, [selectCase]);
 
   const handleNewCase = useCallback(() => {
     setActiveCase(undefined);
-    setIsNewCase(true);
     setError("");
   }, []);
 
-  const handleCreateCase = useCallback(async (message: string) => {
-    setIsCreating(true);
+  const handleSendMessage = useCallback(async (content: string): Promise<boolean> => {
+    setIsSending(true);
     setError("");
     try {
-      const result = await requestJson<{ case: CaseConversationData }>("/cases", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ openingMessage: message }),
-      });
+      const result = await sendCaseMessage(activeCase, content);
       setActiveCase(result.case);
-      setCases((current) => [toSummary(result.case), ...current]);
-      setIsNewCase(false);
+      setCases((current) => upsertCase(current, result.case));
+      return true;
     } catch {
-      setError("We couldn’t save this case. Please try again.");
+      setError("We couldn’t save your message. Please try again.");
+      return false;
     } finally {
-      setIsCreating(false);
+      setIsSending(false);
     }
-  }, []);
+  }, [activeCase]);
 
   const handleSignOut = useCallback(async () => {
     setIsSigningOut(true);
     setSignOutError("");
     try {
-      await request("/auth/logout", { method: "POST" });
+      await requestData<undefined>("/auth/logout", { method: "POST" });
       router.replace("/login");
     } catch {
       setSignOutError("We couldn’t sign you out. Please try again.");
@@ -89,23 +82,29 @@ export function DashboardWorkspace() {
   return (
     <main className="dashboard-shell">
       <CaseSidebar cases={cases} activeCaseId={activeCase?.id ?? ""} user={user} isSigningOut={isSigningOut} signOutError={signOutError} onNewCase={handleNewCase} onSelectCase={handleSelectCase} onSignOut={handleSignOut} />
-      <section className="dashboard-main" aria-label="Billing case workspace">
-        {error && !isNewCase && <p className="dashboard-global-error" role="alert">{error}</p>}
-        {isNewCase ? <NewCasePanel isSubmitting={isCreating} error={error} onCreateCase={handleCreateCase} /> : activeCase ? <CaseConversation billingCase={activeCase} /> : <DashboardEmptyState onNewCase={handleNewCase} />}
+      <section className="dashboard-main" aria-label="Billing case chat">
+        {activeCase ? <CaseConversation billingCase={activeCase} isSending={isSending} error={error} onSendMessage={handleSendMessage} /> : <DashboardEmptyState isSending={isSending} error={error} onSendMessage={handleSendMessage} />}
       </section>
     </main>
   );
 }
 
-async function requestJson<T>(path: string, options?: RequestInit): Promise<T> {
-  const response = await request(path, options);
-  return response.json() as Promise<T>;
+async function sendCaseMessage(activeCase: CaseConversationData | undefined, content: string): Promise<{ case: CaseConversationData }> {
+  const url = activeCase ? `/cases/${activeCase.id}/messages` : "/cases";
+  const payload = activeCase ? { content } : { openingMessage: content };
+  return requestData(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
 }
 
-async function request(path: string, options?: RequestInit): Promise<Response> {
+async function requestData<T>(path: string, options?: RequestInit): Promise<T> {
   const response = await fetch(`${API_URL}${path}`, { ...options, credentials: "include" });
-  if (!response.ok) throw new DashboardRequestError(response.status);
-  return response;
+  const payload = await response.json() as ApiResponse<T>;
+  if (!response.ok || !payload.success) throw new DashboardRequestError(response.status);
+  return payload.data as T;
+}
+
+function upsertCase(current: CaseSummary[], billingCase: CaseConversationData): CaseSummary[] {
+  const summary = toSummary(billingCase);
+  return [summary, ...current.filter((item) => item.id !== summary.id)];
 }
 
 function toSummary(billingCase: CaseConversationData): CaseSummary {
@@ -119,6 +118,11 @@ function handleLoadError(error: unknown, router: ReturnType<typeof useRouter>, s
   }
   setError("We couldn’t load your cases. Refresh the page to try again.");
   setIsLoading(false);
+}
+
+interface ApiResponse<T> {
+  success: boolean;
+  data?: T;
 }
 
 class DashboardRequestError extends Error {

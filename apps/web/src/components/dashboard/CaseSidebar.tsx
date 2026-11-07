@@ -28,7 +28,7 @@ export function CaseSidebar(props: CaseSidebarProps) {
       <button className="new-case-button" onClick={props.onNewCase} type="button">
         <span aria-hidden="true">＋</span> New case
       </button>
-      <div className="case-list-heading"><span>YOUR CASES</span><span>{props.cases.length}</span></div>
+      <div className="case-list-heading"><span>Recent cases</span>{props.cases.length > 0 && <span>{props.cases.length}</span>}</div>
       {props.cases.length === 0 ? (
         <p className="sidebar-empty">Your saved cases will appear here.</p>
       ) : (
@@ -44,7 +44,6 @@ export function CaseSidebar(props: CaseSidebarProps) {
             >
               <strong>{item.title}</strong>
               <span>{item.lastMessage}</span>
-              <small>{formatCaseDate(item.updatedAt)}</small>
             </button>
           ))}
         </nav>
@@ -54,15 +53,11 @@ export function CaseSidebar(props: CaseSidebarProps) {
         <div className="account-avatar" aria-hidden="true">{getInitials(props.user.displayName)}</div>
         <div className="account-copy"><strong>{props.user.displayName}</strong><span>{props.user.email}</span></div>
         <button aria-label="Sign out" className="sign-out-button" disabled={props.isSigningOut} onClick={props.onSignOut} type="button">
-          {props.isSigningOut ? "…" : "↗"}
+          {props.isSigningOut ? "Signing out…" : "Sign out"}
         </button>
       </div>
     </aside>
   );
-}
-
-function formatCaseDate(date: string): string {
-  return new Intl.DateTimeFormat(undefined, { month: "short", day: "numeric" }).format(new Date(date));
 }
 
 function getInitials(name: string): string {

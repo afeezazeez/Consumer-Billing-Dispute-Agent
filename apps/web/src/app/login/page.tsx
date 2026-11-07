@@ -1,5 +1,4 @@
 import Image from "next/image";
-import Link from "next/link";
 
 interface LoginPageProps {
   searchParams: Promise<{ authenticated?: string; error?: string }>;
@@ -14,13 +13,8 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
 
   return (
     <main className="login-page">
-      <header className="login-header">
-        <Link className="brand" href="/">Billing Case Agent</Link>
-        <Link className="login-home-link" href="/">Back to home</Link>
-      </header>
       <div className="login-layout">
         <section className="login-intro" aria-labelledby="login-title">
-          <p className="eyebrow"><span className="eyebrow-dot" /> Billing cases</p>
           <h1 id="login-title">Start with the records you have.</h1>
           <p>Sign in to organize a billing question and work through the next step.</p>
         </section>
@@ -44,7 +38,6 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
           <p className="login-note">You can review and approve every proposed response before using it.</p>
         </section>
       </div>
-      <footer className="login-footer"><span>Billing Case Agent</span><span>Billing clarity, with you in control.</span></footer>
     </main>
   );
 }

@@ -1,15 +1,20 @@
+import { CaseComposer } from "./CaseComposer";
+
 interface DashboardEmptyStateProps {
-  onNewCase: () => void;
+  isSending: boolean;
+  error: string;
+  onSendMessage: (message: string) => Promise<boolean>;
 }
 
-export function DashboardEmptyState({ onNewCase }: DashboardEmptyStateProps) {
+export function DashboardEmptyState({ isSending, error, onSendMessage }: DashboardEmptyStateProps) {
   return (
-    <section className="dashboard-empty-state">
-      <span className="empty-state-mark" aria-hidden="true">＋</span>
-      <p className="dashboard-eyebrow">YOUR CASE WORKSPACE</p>
-      <h1>Start with a billing charge.</h1>
-      <p>Your cases and their details will stay organized here.</p>
-      <button className="button" onClick={onNewCase} type="button">Start a case <span aria-hidden="true">→</span></button>
+    <section className="chat-workspace is-empty" aria-labelledby="new-chat-heading">
+      <div className="new-chat-intro">
+        <span className="new-chat-symbol" aria-hidden="true">↗</span>
+        <h1 id="new-chat-heading">What charge are you looking at?</h1>
+        <p>Describe what seems wrong. You can add the bill or other records as you work through the case.</p>
+      </div>
+      <CaseComposer error={error} isSending={isSending} onSendMessage={onSendMessage} />
     </section>
   );
 }
