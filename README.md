@@ -32,7 +32,7 @@ The initial release does not access provider accounts, send messages, make payme
 ```text
 apps/
   web/       Next.js user interface
-  api/       Node.js + Express API (next implementation phase)
+  api/       Node.js + Express API
 packages/    Shared TypeScript contracts and validation (added when needed)
 ```
 
@@ -40,4 +40,15 @@ The frontend and API will be separate deployable services in Railway. PostgreSQL
 
 ## Project status
 
-The Next.js application lives in `apps/web`. The Express API and database services have not been created yet.
+The Next.js application lives in `apps/web`; the TypeScript Express API lives in `apps/api`. The API currently exposes a health check. PostgreSQL has not been added yet.
+
+## Local development
+
+Install dependencies at the repository root with `npm install`, then run the apps in separate terminals:
+
+```bash
+npm run dev:web
+npm run dev:api
+```
+
+The frontend runs at `http://localhost:3000`; the API runs at `http://localhost:3001`. Check the API at `http://localhost:3001/health`.

@@ -10,7 +10,11 @@
     "dev:web": "npm run dev --workspace=@billing-agent/web",
     "build:web": "npm run build --workspace=@billing-agent/web",
     "start:web": "npm run start --workspace=@billing-agent/web",
-    "lint:web": "npm run lint --workspace=@billing-agent/web"
+    "lint:web": "npm run lint --workspace=@billing-agent/web",
+    "dev:api": "npm run dev --workspace=@billing-agent/api",
+    "build:api": "npm run build --workspace=@billing-agent/api",
+    "start:api": "npm run start --workspace=@billing-agent/api",
+    "lint:api": "npm run lint --workspace=@billing-agent/api"
   },
   "devDependencies": {
     "eslint": "^9",
