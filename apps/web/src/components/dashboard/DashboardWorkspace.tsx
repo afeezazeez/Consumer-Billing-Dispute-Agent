@@ -17,6 +17,7 @@ export function DashboardWorkspace() {
   const [isLoading, setIsLoading] = useState(true);
   const [isSending, setIsSending] = useState(false);
   const [isSigningOut, setIsSigningOut] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [error, setError] = useState("");
   const [signOutError, setSignOutError] = useState("");
 
@@ -42,6 +43,10 @@ export function DashboardWorkspace() {
   const handleNewCase = useCallback(() => {
     setActiveCase(undefined);
     setError("");
+  }, []);
+
+  const handleToggleSidebar = useCallback(() => {
+    setIsSidebarCollapsed((current) => !current);
   }, []);
 
   const handleSendMessage = useCallback(async (content: string): Promise<boolean> => {
@@ -80,8 +85,8 @@ export function DashboardWorkspace() {
   if (!user) return <main className="dashboard-loading" role="alert">We couldn’t load your account. Please sign in again.</main>;
 
   return (
-    <main className="dashboard-shell">
-      <CaseSidebar cases={cases} activeCaseId={activeCase?.id ?? ""} user={user} isSigningOut={isSigningOut} signOutError={signOutError} onNewCase={handleNewCase} onSelectCase={handleSelectCase} onSignOut={handleSignOut} />
+    <main className={`dashboard-shell${isSidebarCollapsed ? " sidebar-collapsed" : ""}`}>
+      <CaseSidebar cases={cases} activeCaseId={activeCase?.id ?? ""} user={user} isSigningOut={isSigningOut} signOutError={signOutError} isCollapsed={isSidebarCollapsed} onToggleCollapse={handleToggleSidebar} onNewCase={handleNewCase} onSelectCase={handleSelectCase} onSignOut={handleSignOut} />
       <section className="dashboard-main" aria-label="Billing case chat">
         {activeCase ? <CaseConversation billingCase={activeCase} isSending={isSending} error={error} onSendMessage={handleSendMessage} /> : <DashboardEmptyState isSending={isSending} error={error} onSendMessage={handleSendMessage} />}
       </section>

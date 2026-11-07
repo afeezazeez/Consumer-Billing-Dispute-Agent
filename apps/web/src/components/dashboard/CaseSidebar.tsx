@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, type MouseEvent } from "react";
+import { useCallback, useMemo, useState, type ChangeEvent, type MouseEvent } from "react";
 import Link from "next/link";
 import type { CaseSummary, DashboardUser } from "./dashboard.types";
 
@@ -10,6 +10,8 @@ interface CaseSidebarProps {
   user: DashboardUser;
   isSigningOut: boolean;
   signOutError: string;
+  isCollapsed: boolean;
+  onToggleCollapse: () => void;
   onNewCase: () => void;
   onSelectCase: (caseId: string) => void;
   onSignOut: () => void;
@@ -17,23 +19,34 @@ interface CaseSidebarProps {
 
 export function CaseSidebar(props: CaseSidebarProps) {
   const { onSelectCase } = props;
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const filteredCases = useMemo(() => filterCases(props.cases, searchTerm), [props.cases, searchTerm]);
+
+  const handleSearchToggle = useCallback(() => setIsSearchOpen((current) => !current), []);
+  const handleSearchChange = useCallback((event: ChangeEvent<HTMLInputElement>) => setSearchTerm(event.target.value), []);
   const handleCaseSelection = useCallback((event: MouseEvent<HTMLElement>) => {
     const caseId = event.currentTarget.dataset.caseId;
     if (caseId) onSelectCase(caseId);
   }, [onSelectCase]);
 
   return (
-    <aside className="dashboard-sidebar">
-      <Link className="dashboard-brand" href="/">Billing Case Agent</Link>
-      <button className="new-case-button" onClick={props.onNewCase} type="button">
-        <span aria-hidden="true">＋</span> New case
+    <aside className={`dashboard-sidebar${props.isCollapsed ? " is-collapsed" : ""}`}>
+      <header className="dashboard-sidebar-header">
+        <Link className="dashboard-brand" href="/">Billing Case Agent</Link>
+        <button aria-label="Search cases" className="sidebar-icon-button" onClick={handleSearchToggle} type="button">⌕</button>
+        <button aria-label={props.isCollapsed ? "Expand sidebar" : "Collapse sidebar"} className="sidebar-icon-button" onClick={props.onToggleCollapse} type="button">◫</button>
+      </header>
+      <button aria-label="New case" className="new-case-button" onClick={props.onNewCase} type="button">
+        <span aria-hidden="true">✎</span><span className="new-case-label">New case</span>
       </button>
+      {isSearchOpen && <input aria-label="Search cases" className="case-search-input" onChange={handleSearchChange} placeholder="Search cases" value={searchTerm} />}
       <div className="case-list-heading"><span>Recent cases</span>{props.cases.length > 0 && <span>{props.cases.length}</span>}</div>
-      {props.cases.length === 0 ? (
-        <p className="sidebar-empty">Your saved cases will appear here.</p>
+      {filteredCases.length === 0 ? (
+        <p className="sidebar-empty">{searchTerm ? "No cases match your search." : "Your saved cases will appear here."}</p>
       ) : (
         <nav aria-label="Saved billing cases" className="case-list">
-          {props.cases.map((item) => (
+          {filteredCases.map((item) => (
             <button
               aria-current={item.id === props.activeCaseId ? "page" : undefined}
               className={`case-list-item${item.id === props.activeCaseId ? " is-active" : ""}`}
@@ -53,11 +66,17 @@ export function CaseSidebar(props: CaseSidebarProps) {
         <div className="account-avatar" aria-hidden="true">{getInitials(props.user.displayName)}</div>
         <div className="account-copy"><strong>{props.user.displayName}</strong><span>{props.user.email}</span></div>
         <button aria-label="Sign out" className="sign-out-button" disabled={props.isSigningOut} onClick={props.onSignOut} type="button">
-          {props.isSigningOut ? "Signing out…" : "Sign out"}
+          <span className="sign-out-label">{props.isSigningOut ? "Signing out…" : "Sign out"}</span><span aria-hidden="true">↗</span>
         </button>
       </div>
     </aside>
   );
+}
+
+function filterCases(cases: CaseSummary[], searchTerm: string): CaseSummary[] {
+  const query = searchTerm.trim().toLocaleLowerCase();
+  if (!query) return cases;
+  return cases.filter((item) => `${item.title} ${item.lastMessage}`.toLocaleLowerCase().includes(query));
 }
 
 function getInitials(name: string): string {

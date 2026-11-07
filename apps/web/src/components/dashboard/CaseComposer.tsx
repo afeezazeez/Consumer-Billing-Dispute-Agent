@@ -28,9 +28,9 @@ export function CaseComposer({ isSending, error, onSendMessage }: CaseComposerPr
       {error && <p className="dashboard-error" role="alert">{error}</p>}
       <form aria-busy={isSending} className="chat-composer" onSubmit={handleSubmit}>
         <label className="visually-hidden" htmlFor="case-message">Message about your billing case</label>
-        <textarea id="case-message" maxLength={2000} onChange={handleChange} onKeyDown={handleKeyDown} placeholder="Describe the charge or add a detail…" rows={1} value={message} />
+        <textarea id="case-message" maxLength={2000} onChange={handleChange} onKeyDown={handleKeyDown} placeholder="Message Billing Case Agent…" rows={1} value={message} />
         <div className="composer-controls">
-          <span>Billing guidance based on the details you share</span>
+          <span>Shift + Enter for a new line</span>
           <button aria-label={isSending ? "Sending message" : "Send message"} className="composer-send" disabled={!message.trim() || isSending} type="submit">
             {isSending ? "…" : "↑"}
           </button>
