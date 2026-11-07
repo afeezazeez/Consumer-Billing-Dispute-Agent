@@ -1,4 +1,3 @@
-import { EvidencePreview } from "@/components/EvidencePreview";
 import { HeroSection } from "@/components/HeroSection";
 import { HowItWorks } from "@/components/HowItWorks";
 import { SiteFooter } from "@/components/SiteFooter";
@@ -11,7 +10,6 @@ export default function Home() {
       <SiteHeader />
       <main>
         <HeroSection />
-        <EvidencePreview />
         <HowItWorks />
         <TrustSection />
       </main>
