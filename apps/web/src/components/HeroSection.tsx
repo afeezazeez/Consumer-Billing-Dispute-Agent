@@ -6,7 +6,7 @@ export function HeroSection() {
         <h1 id="hero-title">A charge doesn’t add up. <em>Start with the facts.</em></h1>
         <p className="hero-description">Bring together the bill, the details, and the questions. Get a clearer picture of what happened and a considered next step.</p>
         <div className="hero-actions">
-          <a className="button" href="#sample-case">Explore the sample case <span aria-hidden="true">↗</span></a>
+          <a className="button" href="/login">Get started <span aria-hidden="true">↗</span></a>
           <a className="text-link" href="#how-it-works">See how it works <span aria-hidden="true">↓</span></a>
         </div>
         <p className="hero-note">No billing provider connection needed · You review every proposed response</p>

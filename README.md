@@ -52,3 +52,5 @@ npm run dev:api
 ```
 
 The frontend runs at `http://localhost:3000`; the API runs at `http://localhost:3001`. Check the API at `http://localhost:3001/health`.
+
+Backend environment variable names are documented in `apps/api/.env.example`. The local `apps/api/.env` file is ignored by Git. Google sign-in and database integration are the next implementation step; the API does not consume those settings yet.

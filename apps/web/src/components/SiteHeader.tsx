@@ -8,7 +8,7 @@ export function SiteHeader() {
       <nav className="site-nav" aria-label="Main navigation">
         <a href="#how-it-works">How it works</a>
         <a href="#your-control">Your control</a>
-        <a className="button button-small" href="#sample-case">Explore a sample</a>
+        <a className="button button-small" href="/login">Log in</a>
       </nav>
     </header>
   );
