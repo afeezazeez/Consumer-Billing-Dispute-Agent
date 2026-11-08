@@ -566,14 +566,15 @@ button, a {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  margin-bottom: 12px;
+  margin-bottom: 8px;
 }
 
 .claude-brand-row {
   align-items: center;
   display: flex;
-  justify-content: space-between;
-  padding: 4px 6px 6px;
+  gap: 8px;
+  height: 48px;
+  padding: 0 4px;
 }
 
 .claude-brand {
@@ -581,26 +582,23 @@ button, a {
   color: var(--dash-ink);
   display: flex;
   font-size: 15px;
-  font-weight: 700;
-  gap: 8px;
+  font-weight: 600;
   letter-spacing: -0.02em;
 }
 
-.claude-logo-icon {
-  border-radius: 6px;
-  height: 22px;
-  width: 22px;
-}
-
 .claude-collapse-btn {
+  align-items: center;
   background: transparent;
   border: 0;
   border-radius: 6px;
   color: var(--dash-muted);
   cursor: pointer;
   display: flex;
-  padding: 4px;
+  height: 28px;
+  justify-content: center;
+  padding: 0;
   transition: background 0.15s ease, color 0.15s ease;
+  width: 28px;
 }
 
 .claude-collapse-btn:hover {
@@ -1346,20 +1344,25 @@ button, a {
 }
 
 /* Active Case Conversation View */
-.claude-chat-workspace {
+.claude-chat-viewport {
   display: flex;
   flex: 1;
   flex-direction: column;
   height: 100vh;
-  margin: 0 auto;
-  max-width: 800px;
-  padding: 0 24px;
+  min-height: 0;
   width: 100%;
 }
 
-.claude-chat-header {
+.claude-chat-top-bar {
+  align-items: center;
+  background: var(--dash-bg);
   border-bottom: 1px solid var(--dash-line);
-  padding: 16px 0;
+  display: flex;
+  height: 48px;
+  justify-content: space-between;
+  padding: 0 20px;
+  width: 100%;
+  z-index: 10;
 }
 
 .claude-title-menu {
@@ -1375,10 +1378,10 @@ button, a {
   color: var(--dash-ink);
   cursor: pointer;
   display: flex;
-  font-size: 15px;
-  font-weight: 700;
-  gap: 8px;
-  padding: 4px 8px;
+  font-size: 14px;
+  font-weight: 500;
+  gap: 6px;
+  padding: 5px 8px;
   transition: background 0.12s ease;
 }
 
@@ -1387,6 +1390,7 @@ button, a {
 }
 
 .claude-chevron-down {
+  color: var(--dash-muted);
   height: 12px;
   width: 12px;
 }
@@ -1396,11 +1400,77 @@ button, a {
   border: 1px solid var(--dash-primary);
   border-radius: 6px;
   color: var(--dash-ink);
-  font-size: 15px;
-  font-weight: 700;
+  font-size: 14px;
+  font-weight: 500;
   outline: none;
   padding: 4px 8px;
   width: 280px;
+}
+
+.claude-chat-top-actions {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+}
+
+.claude-top-icon-btn {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  border-radius: 6px;
+  color: var(--dash-muted);
+  cursor: pointer;
+  display: flex;
+  height: 28px;
+  justify-content: center;
+  transition: all 0.12s ease;
+  width: 28px;
+}
+
+.claude-top-icon-btn:hover {
+  background: var(--dash-sidebar-bg);
+  color: var(--dash-ink);
+}
+
+.claude-top-icon-btn svg {
+  height: 16px;
+  width: 16px;
+}
+
+.claude-top-share-btn {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  border-radius: 6px;
+  color: var(--dash-ink-soft);
+  cursor: pointer;
+  display: flex;
+  font-size: 13px;
+  font-weight: 500;
+  gap: 6px;
+  padding: 4px 8px;
+  transition: all 0.12s ease;
+}
+
+.claude-top-share-btn:hover {
+  background: var(--dash-sidebar-bg);
+  color: var(--dash-ink);
+}
+
+.claude-top-share-btn svg {
+  height: 15px;
+  width: 15px;
+}
+
+.claude-chat-workspace {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  margin: 0 auto;
+  max-width: 800px;
+  min-height: 0;
+  padding: 0 24px;
+  width: 100%;
 }
 
 .claude-title-dropdown {

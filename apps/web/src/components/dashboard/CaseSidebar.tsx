@@ -67,13 +67,9 @@ export function CaseSidebar({
   return (
     <>
       <aside className={`claude-sidebar${isCollapsed ? " is-collapsed" : ""}`}>
-        {/* Top Header */}
+        {/* Top Header - Aligned horizontally with Main Chat Top Bar */}
         <div className="claude-sidebar-top">
           <div className="claude-brand-row">
-            <Link className="claude-brand" href="/">
-              <AgentBrandLogo />
-              <span className="claude-brand-text">Billing Agent</span>
-            </Link>
             <button
               aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
               className="claude-collapse-btn"
@@ -83,6 +79,9 @@ export function CaseSidebar({
             >
               <SidebarToggleIcon />
             </button>
+            <Link className="claude-brand" href="/">
+              <span className="claude-brand-text">Billing Agent</span>
+            </Link>
           </div>
 
           {/* + New Button */}
@@ -185,29 +184,10 @@ function getInitials(name: string): string {
     .join("");
 }
 
-function AgentBrandLogo() {
-  return (
-    <svg
-      aria-hidden="true"
-      className="claude-logo-icon"
-      fill="none"
-      viewBox="0 0 24 24"
-    >
-      <rect fill="#2563eb" height="20" rx="5" width="20" x="2" y="2" />
-      <path
-        d="M7 8h10M7 12h7M7 16h4"
-        stroke="#ffffff"
-        strokeLinecap="round"
-        strokeWidth="2"
-      />
-    </svg>
-  );
-}
-
 function SidebarToggleIcon() {
   return (
-    <svg aria-hidden="true" className="claude-icon" viewBox="0 0 24 24">
-      <rect height="16" rx="2" stroke="currentColor" strokeWidth="1.75" width="18" x="3" y="4" fill="none" />
+    <svg aria-hidden="true" className="claude-icon" viewBox="0 0 24 24" fill="none">
+      <rect height="16" rx="2.5" stroke="currentColor" strokeWidth="1.75" width="18" x="3" y="4" />
       <path d="M9 4v16" stroke="currentColor" strokeWidth="1.75" />
     </svg>
   );

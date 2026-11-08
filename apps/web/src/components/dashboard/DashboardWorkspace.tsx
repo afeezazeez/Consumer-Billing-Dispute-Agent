@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { CaseConversation } from "./CaseConversation";
+import { CaseDeleteModal } from "./CaseDeleteModal";
 import { CaseSidebar } from "./CaseSidebar";
 import { DashboardEmptyState } from "./DashboardEmptyState";
 import type { CaseConversation as CaseConversationData, CaseSummary, DashboardUser } from "./dashboard.types";
@@ -14,6 +15,7 @@ export function DashboardWorkspace() {
   const [user, setUser] = useState<DashboardUser>();
   const [cases, setCases] = useState<CaseSummary[]>([]);
   const [activeCase, setActiveCase] = useState<CaseConversationData>();
+  const [casePendingDelete, setCasePendingDelete] = useState<CaseSummary>();
   const [isLoading, setIsLoading] = useState(true);
   const [isSending, setIsSending] = useState(false);
   const [isSigningOut, setIsSigningOut] = useState(false);
@@ -76,6 +78,24 @@ export function DashboardWorkspace() {
     }
   }, []);
 
+  const promptDeleteCase = useCallback((caseId: string) => {
+    const target = cases.find((c) => c.id === caseId) || (activeCase?.id === caseId ? activeCase : undefined);
+    if (target) {
+      setCasePendingDelete(target);
+    }
+  }, [cases, activeCase]);
+
+  const handleConfirmDeleteModal = useCallback(async () => {
+    if (!casePendingDelete) return;
+    const targetId = casePendingDelete.id;
+    setCasePendingDelete(undefined);
+    await handleDeleteCase(targetId);
+  }, [casePendingDelete, handleDeleteCase]);
+
+  const handleCancelDeleteModal = useCallback(() => {
+    setCasePendingDelete(undefined);
+  }, []);
+
   const handleRenameCase = useCallback(async (caseId: string, title: string): Promise<boolean> => {
     try {
       await requestData(`/cases/${caseId}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ title }) });
@@ -115,7 +135,7 @@ export function DashboardWorkspace() {
         cases={cases}
         isCollapsed={isSidebarCollapsed}
         isSigningOut={isSigningOut}
-        onDeleteCase={handleDeleteCase}
+        onDeleteCase={promptDeleteCase}
         onNewCase={handleNewCase}
         onRenameCase={handleRenameCase}
         onSelectCase={handleSelectCase}
@@ -130,7 +150,7 @@ export function DashboardWorkspace() {
             billingCase={activeCase}
             error={error}
             isSending={isSending}
-            onDeleteCase={handleDeleteCase}
+            onDeleteCase={promptDeleteCase}
             onRenameCase={handleRenameCase}
             onSendMessage={handleSendMessage}
           />
@@ -143,6 +163,14 @@ export function DashboardWorkspace() {
           />
         )}
       </section>
+
+      {/* Global Delete Confirmation Modal */}
+      <CaseDeleteModal
+        billingCase={casePendingDelete}
+        isOpen={Boolean(casePendingDelete)}
+        onCancel={handleCancelDeleteModal}
+        onConfirm={handleConfirmDeleteModal}
+      />
     </main>
   );
 }

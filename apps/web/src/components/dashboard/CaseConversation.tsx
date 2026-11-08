@@ -6,7 +6,6 @@ import {
   useRef,
   useState,
   type ChangeEvent,
-  type MouseEvent,
   type PointerEvent as ReactPointerEvent,
   type KeyboardEvent as ReactKeyboardEvent,
 } from "react";
@@ -18,7 +17,7 @@ interface CaseConversationProps {
   isSending: boolean;
   error: string;
   onSendMessage: (message: string) => Promise<boolean>;
-  onDeleteCase: (caseId: string) => Promise<void>;
+  onDeleteCase: (caseId: string) => void;
   onRenameCase: (caseId: string, title: string) => Promise<boolean>;
 }
 
@@ -31,7 +30,6 @@ export function CaseConversation({
   onRenameCase,
 }: CaseConversationProps) {
   const menuRef = useRef<HTMLDivElement>(null);
-  const deleteDialogRef = useRef<HTMLDialogElement>(null);
   const [isRenaming, setIsRenaming] = useState(false);
   const [draftTitle, setDraftTitle] = useState(billingCase.title);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -52,8 +50,8 @@ export function CaseConversation({
 
   const handleOpenDeleteConfirmation = useCallback(() => {
     setIsMenuOpen(false);
-    deleteDialogRef.current?.showModal();
-  }, []);
+    onDeleteCase(billingCase.id);
+  }, [billingCase.id, onDeleteCase]);
 
   const handleOpenRename = useCallback(() => {
     setDraftTitle(billingCase.title);
@@ -86,19 +84,6 @@ export function CaseConversation({
     [billingCase.title],
   );
 
-  const handleConfirmDelete = useCallback(() => {
-    deleteDialogRef.current?.close();
-    void onDeleteCase(billingCase.id);
-  }, [billingCase.id, onDeleteCase]);
-
-  const handleCancelDelete = useCallback(() => {
-    deleteDialogRef.current?.close();
-  }, []);
-
-  const handleDialogBackdropClick = useCallback((event: MouseEvent<HTMLDialogElement>) => {
-    if (event.target === event.currentTarget) deleteDialogRef.current?.close();
-  }, []);
-
   useEffect(() => {
     document.addEventListener("pointerdown", handleOutsidePointer);
     document.addEventListener("keydown", handleEscape);
@@ -117,9 +102,9 @@ export function CaseConversation({
   }, []);
 
   return (
-    <div className="claude-chat-workspace">
-      {/* Header with Case Title and Menu */}
-      <header className="claude-chat-header">
+    <div className="claude-chat-viewport">
+      {/* Top Bar - Full Width, Aligned with Sidebar Header */}
+      <header className="claude-chat-top-bar">
         <div
           className="claude-title-menu"
           onKeyDown={handleMenuKeyDown}
@@ -172,59 +157,54 @@ export function CaseConversation({
             </div>
           )}
         </div>
+
+        {/* Right side utility icons matching Claude Image 1 */}
+        <div className="claude-chat-top-actions">
+          <button aria-label="Case document" className="claude-top-icon-btn" title="Case details" type="button">
+            <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+              <polyline points="14 2 14 8 20 8" />
+            </svg>
+          </button>
+          <button aria-label="Share case" className="claude-top-share-btn" type="button">
+            <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75">
+              <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" />
+              <polyline points="16 6 12 2 8 6" />
+              <line x1="12" y1="2" x2="12" y2="15" />
+            </svg>
+            <span>Share</span>
+          </button>
+        </div>
       </header>
 
-      {/* Messages Feed */}
-      <div className="claude-chat-history" aria-live="polite">
-        <div className="claude-chat-history-inner">
-          {billingCase.messages.map((message) => (
-            <article
-              className={`claude-message-row ${message.role}`}
-              key={message.id}
-            >
-              <div className="claude-message-bubble">
-                <p>{message.content}</p>
-              </div>
-            </article>
-          ))}
-        </div>
-      </div>
-
-      {/* Anchored Composer */}
-      <div className="claude-chat-composer-container">
-        <CaseComposer
-          error={error}
-          isSending={isSending}
-          onSendMessage={onSendMessage}
-          variant="conversation"
-        />
-      </div>
-
-      {/* Delete Confirmation Modal */}
-      <dialog
-        aria-describedby="delete-case-description"
-        aria-labelledby="delete-case-title"
-        className="claude-confirm-dialog"
-        onClick={handleDialogBackdropClick}
-        ref={deleteDialogRef}
-      >
-        <div className="claude-confirm-content">
-          <div className="claude-confirm-header">
-            <h2 id="delete-case-title">Delete this case?</h2>
-          </div>
-          <p id="delete-case-description">
-            This will permanently remove <strong>“{billingCase.title}”</strong> and all records associated with it. This cannot be undone.
-          </p>
-          <div className="claude-confirm-actions">
-            <button className="claude-btn-secondary" onClick={handleCancelDelete} type="button">
-              Cancel
-            </button>
-            <button className="claude-btn-danger" onClick={handleConfirmDelete} type="button">
-              Delete
-            </button>
+      {/* Main Chat Workspace */}
+      <div className="claude-chat-workspace">
+        {/* Messages Feed */}
+        <div className="claude-chat-history" aria-live="polite">
+          <div className="claude-chat-history-inner">
+            {billingCase.messages.map((message) => (
+              <article
+                className={`claude-message-row ${message.role}`}
+                key={message.id}
+              >
+                <div className="claude-message-bubble">
+                  <p>{message.content}</p>
+                </div>
+              </article>
+            ))}
           </div>
         </div>
-      </dialog>
+
+        {/* Anchored Composer */}
+        <div className="claude-chat-composer-container">
+          <CaseComposer
+            error={error}
+            isSending={isSending}
+            onSendMessage={onSendMessage}
+            variant="conversation"
+          />
+        </div>
+      </div>
     </div>
   );
 }

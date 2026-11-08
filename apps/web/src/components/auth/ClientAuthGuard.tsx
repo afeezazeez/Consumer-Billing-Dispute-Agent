@@ -38,3 +38,4 @@ export function ClientAuthGuard({ apiUrl }: ClientAuthGuardProps) {
 
   return null;
 }
+
