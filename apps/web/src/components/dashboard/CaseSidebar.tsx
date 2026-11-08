@@ -4,7 +4,6 @@ import {
   useCallback,
   useEffect,
   useMemo,
-  useRef,
   useState,
 } from "react";
 import Link from "next/link";
@@ -42,8 +41,6 @@ export function CaseSidebar({
   onSignOut,
 }: CaseSidebarProps) {
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
-  const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
-  const accountMenuRef = useRef<HTMLDivElement>(null);
 
   const initials = useMemo(() => getInitials(user.displayName), [user.displayName]);
 
@@ -59,28 +56,12 @@ export function CaseSidebar({
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, []);
 
-  // Close account menu on outside click
-  useEffect(() => {
-    if (!isAccountMenuOpen) return;
-    function handlePointerDown(e: PointerEvent) {
-      if (accountMenuRef.current && !accountMenuRef.current.contains(e.target as Node)) {
-        setIsAccountMenuOpen(false);
-      }
-    }
-    document.addEventListener("pointerdown", handlePointerDown);
-    return () => document.removeEventListener("pointerdown", handlePointerDown);
-  }, [isAccountMenuOpen]);
-
   const handleOpenSearch = useCallback(() => {
     setIsSearchModalOpen(true);
   }, []);
 
   const handleCloseSearch = useCallback(() => {
     setIsSearchModalOpen(false);
-  }, []);
-
-  const handleToggleAccountMenu = useCallback(() => {
-    setIsAccountMenuOpen((curr) => !curr);
   }, []);
 
   return (
@@ -150,63 +131,34 @@ export function CaseSidebar({
           )}
         </div>
 
-        {/* Bottom User Account Row */}
-        <div className="claude-sidebar-bottom" ref={accountMenuRef}>
+        {/* Bottom User Account Row with Always-Visible Sign out option */}
+        <div className="claude-sidebar-bottom">
           {signOutError && (
             <div className="claude-signout-error" role="alert">
               {signOutError}
             </div>
           )}
 
-          {isAccountMenuOpen && (
-            <div className="claude-account-popover" role="menu">
-              <div className="claude-account-info">
-                <strong>{user.displayName}</strong>
-                <span>{user.email}</span>
-              </div>
-              <div className="claude-account-divider" />
-              <button
-                className="claude-account-menu-item"
-                disabled={isSigningOut}
-                onClick={onSignOut}
-                role="menuitem"
-                type="button"
-              >
-                <span>{isSigningOut ? "Signing out..." : "Sign out"}</span>
-                <span aria-hidden="true">↗</span>
-              </button>
-            </div>
-          )}
-
-          <div
-            className="claude-user-row"
-            onClick={handleToggleAccountMenu}
-            role="button"
-            tabIndex={0}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" || e.key === " ") {
-                e.preventDefault();
-                handleToggleAccountMenu();
-              }
-            }}
-          >
+          <div className="claude-user-row">
             <div className="claude-avatar" aria-hidden="true">
               {initials}
             </div>
             <div className="claude-user-details">
               <span className="claude-username">{user.displayName}</span>
+              <span className="claude-user-email">{user.email}</span>
             </div>
             <button
-              aria-label="Toggle sidebar"
-              className="claude-bottom-collapse-btn"
-              onClick={(e) => {
-                e.stopPropagation();
-                onToggleCollapse();
-              }}
-              title="Toggle sidebar"
+              aria-label="Sign out"
+              className="claude-sign-out-btn"
+              disabled={isSigningOut}
+              onClick={onSignOut}
+              title="Sign out"
               type="button"
             >
-              <SidebarPanelIcon />
+              <SignOutIcon />
+              <span className="claude-sign-out-text">
+                {isSigningOut ? "Signing out…" : "Sign out"}
+              </span>
             </button>
           </div>
         </div>
@@ -261,20 +213,25 @@ function SidebarToggleIcon() {
   );
 }
 
-function SidebarPanelIcon() {
-  return (
-    <svg aria-hidden="true" className="claude-icon-small" viewBox="0 0 24 24">
-      <rect height="14" rx="2" stroke="currentColor" strokeWidth="1.75" width="16" x="4" y="5" fill="none" />
-      <path d="M10 5v14" stroke="currentColor" strokeWidth="1.75" />
-    </svg>
-  );
-}
-
 function SearchIcon() {
   return (
     <svg aria-hidden="true" className="claude-icon" viewBox="0 0 24 24">
       <circle cx="11" cy="11" r="7" stroke="currentColor" strokeWidth="1.75" fill="none" />
       <path d="m16 16 4.5 4.5" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function SignOutIcon() {
+  return (
+    <svg aria-hidden="true" className="claude-sign-out-icon" viewBox="0 0 24 24" fill="none">
+      <path
+        d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"
+        stroke="currentColor"
+        strokeWidth="1.75"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
     </svg>
   );
 }

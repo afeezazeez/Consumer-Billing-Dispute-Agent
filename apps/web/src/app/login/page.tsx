@@ -1,5 +1,8 @@
+import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
+import { ClientAuthGuard } from "@/components/auth/ClientAuthGuard";
 
 interface LoginPageProps {
   searchParams: Promise<{ authenticated?: string; error?: string }>;
@@ -12,8 +15,36 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
   const statusMessage = getStatusMessage(query.authenticated, query.error);
   const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
 
+  // Server-side authentication check: redirect logged-in users away from /login
+  let isServerAuthenticated = false;
+  try {
+    const cookieStore = await cookies();
+    const sessionCookie = cookieStore.get("billing.sid");
+    if (sessionCookie) {
+      const authResponse = await fetch(`${apiUrl}/auth/me`, {
+        headers: { Cookie: `billing.sid=${sessionCookie.value}` },
+        cache: "no-store",
+      });
+      if (authResponse.ok) {
+        const payload = (await authResponse.json()) as { success?: boolean };
+        if (payload.success) {
+          isServerAuthenticated = true;
+        }
+      }
+    }
+  } catch {
+    // If auth server is unreachable or cookie invalid, proceed to login form
+  }
+
+  if (isServerAuthenticated) {
+    redirect("/dashboard");
+  }
+
   return (
     <div className="modern-page-wrapper">
+      {/* Client-side guard for browser sessions */}
+      <ClientAuthGuard apiUrl={apiUrl} />
+
       {/* Header */}
       <header className="modern-site-header">
         <Link className="modern-brand" href="/" aria-label="Billing Case Agent home">

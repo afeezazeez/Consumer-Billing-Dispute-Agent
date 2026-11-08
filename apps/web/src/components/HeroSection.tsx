@@ -1,6 +1,10 @@
-import Link from "next/link";
+import { StartCaseLink } from "./StartCaseLink";
 
-export function HeroSection() {
+interface HeroSectionProps {
+  initialHref?: string;
+}
+
+export function HeroSection({ initialHref = "/login" }: HeroSectionProps) {
   return (
     <section className="modern-hero-section" id="top" aria-labelledby="hero-title">
       <div className="modern-hero-grid">
@@ -15,9 +19,9 @@ export function HeroSection() {
             from what you remember, flags the gaps, and drafts a message you approve.
           </p>
           <div className="modern-hero-actions">
-            <Link className="modern-btn-primary" href="/login">
+            <StartCaseLink className="modern-btn-primary" initialHref={initialHref}>
               Start a case
-            </Link>
+            </StartCaseLink>
             <a className="modern-text-link" href="#how-it-works">
               See how it works
             </a>

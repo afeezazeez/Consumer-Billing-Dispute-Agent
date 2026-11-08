@@ -1,6 +1,10 @@
-import Link from "next/link";
+import { StartCaseLink } from "./StartCaseLink";
 
-export function CtaSection() {
+interface CtaSectionProps {
+  initialHref?: string;
+}
+
+export function CtaSection({ initialHref = "/login" }: CtaSectionProps) {
   return (
     <section className="modern-cta-section" aria-labelledby="cta-title">
       <div className="modern-cta-container">
@@ -10,11 +14,10 @@ export function CtaSection() {
         <p className="modern-cta-desc">
           Start a case in a few minutes. No provider login needed.
         </p>
-        <Link className="modern-btn-primary" href="/login">
+        <StartCaseLink className="modern-btn-primary" initialHref={initialHref}>
           Start a case
-        </Link>
+        </StartCaseLink>
       </div>
     </section>
   );
 }
-

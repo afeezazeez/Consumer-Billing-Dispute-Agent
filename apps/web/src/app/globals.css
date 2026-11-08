@@ -887,72 +887,50 @@ button, a {
   white-space: nowrap;
 }
 
-.claude-bottom-collapse-btn {
-  background: transparent;
-  border: 0;
-  border-radius: 4px;
-  color: var(--dash-muted);
-  cursor: pointer;
-  display: flex;
-  padding: 4px;
-}
-
-.claude-bottom-collapse-btn:hover {
-  color: var(--dash-ink);
-}
-
-.claude-account-popover {
-  background: #ffffff;
-  border: 1px solid var(--dash-line);
-  border-radius: 12px;
-  box-shadow: 0 10px 30px rgba(15, 23, 42, 0.08);
-  bottom: calc(100% + 8px);
-  left: 0;
-  min-width: 200px;
-  padding: 8px;
-  position: absolute;
-  z-index: 50;
-}
-
-.claude-account-info {
-  padding: 6px 8px;
-}
-
-.claude-account-info strong {
-  color: var(--dash-ink);
-  display: block;
-  font-size: 13px;
-}
-
-.claude-account-info span {
+.claude-user-email {
   color: var(--dash-muted);
   display: block;
   font-size: 11px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.claude-account-divider {
-  background: var(--dash-line-subtle);
-  height: 1px;
-  margin: 6px 0;
-}
-
-.claude-account-menu-item {
+.claude-sign-out-btn {
   align-items: center;
   background: transparent;
-  border: 0;
+  border: 1px solid transparent;
   border-radius: 6px;
-  color: var(--dash-ink);
+  color: var(--dash-muted);
   cursor: pointer;
   display: flex;
-  font-size: 12px;
-  justify-content: space-between;
-  padding: 7px 8px;
-  transition: background 0.12s ease;
-  width: 100%;
+  font-size: 11px;
+  font-weight: 600;
+  gap: 5px;
+  margin-left: auto;
+  padding: 5px 8px;
+  shrink: 0;
+  transition: all 0.15s ease;
 }
 
-.claude-account-menu-item:hover {
-  background: var(--dash-sidebar-bg);
+.claude-sign-out-btn:hover {
+  background: #ffffff;
+  border-color: var(--dash-line);
+  color: var(--dash-danger);
+}
+
+.claude-sign-out-icon {
+  height: 14px;
+  width: 14px;
+}
+
+.dashboard-shell.sidebar-collapsed .claude-sign-out-text {
+  display: none;
+}
+
+.dashboard-shell.sidebar-collapsed .claude-sign-out-btn {
+  margin-left: 0;
+  padding: 6px;
 }
 
 .claude-signout-error {
@@ -1298,11 +1276,11 @@ button, a {
 
 .claude-composer-bottom-bar {
   align-items: center;
-  border-top: 1px solid #f1f5f9;
+  border-top: none;
   display: flex;
   justify-content: space-between;
-  margin-top: 10px;
-  padding-top: 8px;
+  margin-top: 6px;
+  padding-top: 0;
 }
 
 .claude-attachment-btn {
