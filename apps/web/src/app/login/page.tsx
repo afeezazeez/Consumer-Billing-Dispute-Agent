@@ -1,4 +1,5 @@
 import Image from "next/image";
+import Link from "next/link";
 
 interface LoginPageProps {
   searchParams: Promise<{ authenticated?: string; error?: string }>;
@@ -12,33 +13,82 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
   const apiUrl = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
 
   return (
-    <main className="login-page">
-      <div className="login-layout">
-        <section className="login-intro" aria-labelledby="login-title">
-          <h1 id="login-title">Start with the records you have.</h1>
-          <p>Sign in to organize a billing question and work through the next step.</p>
-        </section>
-        <section className="login-card" aria-labelledby="login-card-title">
-          <div className="login-card-heading">
-            <span className="login-card-kicker">SIGN IN</span>
-            <h2 id="login-card-title">Welcome back.</h2>
-            <p>Use Google to create or return to a case.</p>
+    <div className="modern-page-wrapper">
+      {/* Header */}
+      <header className="modern-site-header">
+        <Link className="modern-brand" href="/" aria-label="Billing Case Agent home">
+          Billing Case Agent
+        </Link>
+        <nav className="modern-nav" aria-label="Navigation">
+          <Link className="modern-nav-link" href="/">
+            Back to home
+          </Link>
+        </nav>
+      </header>
+
+      {/* Main Login Body */}
+      <main className="modern-login-main">
+        <div className="modern-login-container">
+          <div className="modern-hero-copy">
+            <p className="modern-eyebrow">BILLING DISPUTES, EVIDENCE FIRST</p>
+            <h1 className="modern-hero-title">
+              Every claim in your dispute, backed by a record.
+            </h1>
+            <p className="modern-hero-desc">
+              Sign in to organize a billing question and work through the next step.
+            </p>
+            <p className="modern-hero-note">
+              No provider login. Nothing is sent unless you send it.
+            </p>
           </div>
-          <a className="google-sign-in-button" href={`${apiUrl}/auth/google`}>
-            <Image
-              src="/google-g-logo.png"
-              alt=""
-              aria-hidden="true"
-              width={20}
-              height={20}
-            />
-            Continue with Google
-          </a>
-          {statusMessage && <p className="login-status" role="status">{statusMessage}</p>}
-          <p className="login-note">You can review and approve every proposed response before using it.</p>
-        </section>
-      </div>
-    </main>
+
+          <div className="modern-auth-card" role="region" aria-labelledby="login-card-title">
+            <div className="modern-auth-card-header">
+              <span className="modern-tag tag-documented">SIGN IN</span>
+              <h2 className="modern-auth-card-title" id="login-card-title">
+                Welcome back.
+              </h2>
+              <p className="modern-auth-card-subtitle">
+                Use Google to create or return to your cases.
+              </p>
+            </div>
+
+            <a className="modern-google-btn" href={`${apiUrl}/auth/google`}>
+              <Image
+                alt=""
+                aria-hidden="true"
+                height={20}
+                src="/google-g-logo.png"
+                width={20}
+              />
+              <span>Continue with Google</span>
+            </a>
+
+            {statusMessage && (
+              <p className="modern-auth-status" role="status">
+                {statusMessage}
+              </p>
+            )}
+
+            <div className="modern-auth-card-footer">
+              <span>You review and approve every message before using it.</span>
+            </div>
+          </div>
+        </div>
+      </main>
+
+      {/* Footer */}
+      <footer className="modern-footer">
+        <div className="modern-footer-container">
+          <Link className="modern-footer-brand" href="/">
+            Billing Case Agent
+          </Link>
+          <p className="modern-footer-tagline">
+            Evidence organized. Next steps for you to decide.
+          </p>
+        </div>
+      </footer>
+    </div>
   );
 }
 

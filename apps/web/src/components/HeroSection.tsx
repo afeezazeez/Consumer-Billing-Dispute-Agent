@@ -1,32 +1,76 @@
+import Link from "next/link";
+
 export function HeroSection() {
   return (
-    <section className="hero-section" id="top" aria-labelledby="hero-title">
-      <div className="hero-copy">
-        <p className="eyebrow"><span className="eyebrow-dot" /> Billing dispute help, backed by your records</p>
-        <h1 id="hero-title">Make sense of a charge. <em>Know what to ask next.</em></h1>
-        <p className="hero-description">Add the bill and related messages. The agent organizes the facts, shows what’s still unclear, and prepares a response for you to review.</p>
-        <div className="hero-actions">
-          <a className="button" href="/login">Start a case <span aria-hidden="true">↗</span></a>
-          <a className="text-link" href="#how-it-works">See how it works <span aria-hidden="true">↓</span></a>
-        </div>
-        <p className="hero-note">No provider login. Drafts are yours to approve.</p>
-      </div>
-      <div className="workflow-visual" role="img" aria-label="Bills and messages are organized into sourced facts, open questions, and a response draft for review">
-        <div className="workflow-visual-top"><span>FROM YOUR RECORDS</span><span className="visual-live"><i /> CASE WORKSPACE</span></div>
-        <div className="workflow-source-list">
-          <div className="workflow-source"><span className="source-glyph glyph-bill">▤</span><span><strong>Bills & statements</strong><small>Charges, dates, line items</small></span><span className="source-arrow">↘</span></div>
-          <div className="workflow-source"><span className="source-glyph glyph-message">▱</span><span><strong>Messages & receipts</strong><small>What was promised or paid</small></span><span className="source-arrow">↘</span></div>
-          <div className="workflow-source"><span className="source-glyph glyph-guidance">⌕</span><span><strong>Relevant guidance</strong><small>Sources linked to findings</small></span><span className="source-arrow">↘</span></div>
-        </div>
-        <div className="workflow-bridge"><span /> <small>ORGANIZED INTO</small> <span /></div>
-        <div className="workflow-output">
-          <div className="output-heading"><span>YOUR CASE SUMMARY</span><span className="output-spark" aria-hidden="true">✳</span></div>
-          <div className="output-items">
-            <div><span className="output-check">01</span><span><strong>What the records show</strong><small>Facts linked to their source</small></span></div>
-            <div><span className="output-question">02</span><span><strong>What needs checking</strong><small>Questions before conclusions</small></span></div>
-            <div><span className="output-draft">03</span><span><strong>A draft for you</strong><small>Edit it before you use it</small></span></div>
+    <section className="modern-hero-section" id="top" aria-labelledby="hero-title">
+      <div className="modern-hero-grid">
+        {/* Left Column: Headline and Actions */}
+        <div className="modern-hero-copy">
+          <p className="modern-eyebrow">BILLING DISPUTES, EVIDENCE FIRST</p>
+          <h1 className="modern-hero-title" id="hero-title">
+            Every claim in your dispute, backed by a record.
+          </h1>
+          <p className="modern-hero-desc">
+            Upload the bill and related messages. The agent separates what is documented
+            from what you remember, flags the gaps, and drafts a message you approve.
+          </p>
+          <div className="modern-hero-actions">
+            <Link className="modern-btn-primary" href="/login">
+              Start a case
+            </Link>
+            <a className="modern-text-link" href="#how-it-works">
+              See how it works
+            </a>
           </div>
-          <div className="output-footer"><span /> Review every draft before using it</div>
+          <p className="modern-hero-note">
+            No provider login. Nothing is sent unless you send it.
+          </p>
+        </div>
+
+        {/* Right Column: Case Card Preview */}
+        <div className="modern-case-preview-card" role="region" aria-label="Example dispute breakdown">
+          <header className="modern-preview-header">
+            <strong className="modern-preview-title">Duplicate charge</strong>
+            <span className="modern-preview-badge">Example case</span>
+          </header>
+
+          <div className="modern-preview-rows">
+            {/* Row 1: Documented */}
+            <div className="modern-preview-row">
+              <span className="modern-tag tag-documented">DOCUMENTED</span>
+              <div className="modern-preview-row-content">
+                <strong>Two identical charges on the same date</strong>
+                <p>Invoice, page 2, lines 3 and 4</p>
+              </div>
+            </div>
+
+            {/* Row 2: You said */}
+            <div className="modern-preview-row">
+              <span className="modern-tag tag-you-said">YOU SAID</span>
+              <div className="modern-preview-row-content">
+                <strong>You cancelled by phone in March</strong>
+                <p>Your account, no record attached yet</p>
+              </div>
+            </div>
+
+            {/* Row 3: Inferred */}
+            <div className="modern-preview-row">
+              <span className="modern-tag tag-inferred">INFERRED</span>
+              <div className="modern-preview-row-content">
+                <strong>The second charge may be a duplicate</strong>
+                <p>Based on matching amounts and dates</p>
+              </div>
+            </div>
+
+            {/* Row 4: Open */}
+            <div className="modern-preview-row">
+              <span className="modern-tag tag-open">OPEN</span>
+              <div className="modern-preview-row-content">
+                <strong>Did you receive a cancellation confirmation?</strong>
+                <p>Check your email, then add it to the case</p>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </section>

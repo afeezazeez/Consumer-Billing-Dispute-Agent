@@ -1,23 +1,36 @@
-const commitments = [
-  { icon: "↗", title: "Sources stay attached", body: "See which record supports each important detail." },
-  { icon: "?", title: "Gaps stay visible", body: "The agent flags what the records do not answer." },
-  { icon: "✓", title: "You make the call", body: "Review and approve a draft before using it." },
+const principles = [
+  {
+    title: "Sources stay attached",
+    desc: "Every finding points to the invoice line or message it came from.",
+  },
+  {
+    title: "Gaps stay visible",
+    desc: "What the records cannot show is marked as open, not guessed.",
+  },
+  {
+    title: "Nothing goes out without you",
+    desc: "Drafts are yours to edit and approve. This is not legal advice.",
+  },
 ];
 
 export function TrustSection() {
   return (
-    <section className="trust-section" id="your-control" aria-labelledby="trust-title">
-      <div className="trust-intro">
-        <p className="eyebrow">Your case. Your decision.</p>
-        <h2 id="trust-title">The agent organizes the work. You stay in charge.</h2>
-      </div>
-      <div className="commitment-list">
-        {commitments.map((item) => (
-          <article className="commitment" key={item.title}>
-            <span className="commitment-icon" aria-hidden="true">{item.icon}</span>
-            <div><h3>{item.title}</h3><p>{item.body}</p></div>
-          </article>
-        ))}
+    <section className="modern-trust-section" id="your-control" aria-labelledby="trust-headline">
+      <div className="modern-trust-container">
+        <div className="modern-trust-left">
+          <h2 className="modern-trust-headline" id="trust-headline">
+            The agent organizes the work. You make the call.
+          </h2>
+        </div>
+
+        <div className="modern-trust-right">
+          {principles.map((item) => (
+            <div className="modern-trust-item" key={item.title}>
+              <h3 className="modern-trust-item-title">{item.title}</h3>
+              <p className="modern-trust-item-desc">{item.desc}</p>
+            </div>
+          ))}
+        </div>
       </div>
     </section>
   );

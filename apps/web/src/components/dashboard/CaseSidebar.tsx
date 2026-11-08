@@ -1,8 +1,15 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent, type PointerEvent as ReactPointerEvent } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import Link from "next/link";
 import { CaseListItem } from "./CaseListItem";
+import { CaseSearchModal } from "./CaseSearchModal";
 import type { CaseSummary, DashboardUser } from "./dashboard.types";
 
 interface CaseSidebarProps {
@@ -15,84 +22,259 @@ interface CaseSidebarProps {
   onToggleCollapse: () => void;
   onNewCase: () => void;
   onSelectCase: (caseId: string) => void;
+  onRenameCase: (caseId: string, title: string) => Promise<boolean>;
+  onDeleteCase: (caseId: string) => void;
   onSignOut: () => void;
 }
 
-export function CaseSidebar(props: CaseSidebarProps) {
-  const { onSelectCase, onToggleCollapse } = props;
-  const searchRef = useRef<HTMLDivElement>(null);
-  const [isSearchOpen, setIsSearchOpen] = useState(false);
-  const [searchTerm, setSearchTerm] = useState("");
-  const filteredCases = useMemo(() => filterCases(props.cases, searchTerm), [props.cases, searchTerm]);
+export function CaseSidebar({
+  cases,
+  activeCaseId,
+  user,
+  isSigningOut,
+  signOutError,
+  isCollapsed,
+  onToggleCollapse,
+  onNewCase,
+  onSelectCase,
+  onRenameCase,
+  onDeleteCase,
+  onSignOut,
+}: CaseSidebarProps) {
+  const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
+  const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
+  const accountMenuRef = useRef<HTMLDivElement>(null);
 
-  const handleSearchToggle = useCallback(() => setIsSearchOpen((current) => !current), []);
-  const handleSearchChange = useCallback((event: ChangeEvent<HTMLInputElement>) => setSearchTerm(event.target.value), []);
-  const handleOutsidePointer = useCallback((event: PointerEvent) => {
-    if (!searchRef.current?.contains(event.target as Node)) setIsSearchOpen(false);
-  }, []);
-  const handleSidebarPointerDown = useCallback((event: ReactPointerEvent<HTMLDivElement>) => event.stopPropagation(), []);
-  const handleToggleSidebar = useCallback(() => {
-    setIsSearchOpen(false);
-    onToggleCollapse();
-  }, [onToggleCollapse]);
+  const initials = useMemo(() => getInitials(user.displayName), [user.displayName]);
+
+  // Open search via Cmd+K or Ctrl+K
   useEffect(() => {
-    document.addEventListener("pointerdown", handleOutsidePointer);
-    return () => document.removeEventListener("pointerdown", handleOutsidePointer);
-  }, [handleOutsidePointer]);
+    function handleKeyDown(e: KeyboardEvent) {
+      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+        e.preventDefault();
+        setIsSearchModalOpen((curr) => !curr);
+      }
+    }
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, []);
+
+  // Close account menu on outside click
+  useEffect(() => {
+    if (!isAccountMenuOpen) return;
+    function handlePointerDown(e: PointerEvent) {
+      if (accountMenuRef.current && !accountMenuRef.current.contains(e.target as Node)) {
+        setIsAccountMenuOpen(false);
+      }
+    }
+    document.addEventListener("pointerdown", handlePointerDown);
+    return () => document.removeEventListener("pointerdown", handlePointerDown);
+  }, [isAccountMenuOpen]);
+
+  const handleOpenSearch = useCallback(() => {
+    setIsSearchModalOpen(true);
+  }, []);
+
+  const handleCloseSearch = useCallback(() => {
+    setIsSearchModalOpen(false);
+  }, []);
+
+  const handleToggleAccountMenu = useCallback(() => {
+    setIsAccountMenuOpen((curr) => !curr);
+  }, []);
+
   return (
-    <aside className={`dashboard-sidebar${props.isCollapsed ? " is-collapsed" : ""}`}>
-      <header className="dashboard-sidebar-header">
-        <Link className="dashboard-brand" href="/">Bill Agent</Link>
-        <div className="sidebar-search-wrap" onPointerDown={handleSidebarPointerDown} ref={searchRef}>
-          <button aria-label="Search cases" className="sidebar-icon-button" onClick={handleSearchToggle} type="button"><SearchIcon /></button>
-          {isSearchOpen && <input aria-label="Search cases" className="case-search-input" onChange={handleSearchChange} placeholder="Search cases" value={searchTerm} />}
+    <>
+      <aside className={`claude-sidebar${isCollapsed ? " is-collapsed" : ""}`}>
+        {/* Top Header */}
+        <div className="claude-sidebar-top">
+          <div className="claude-brand-row">
+            <Link className="claude-brand" href="/">
+              <AgentBrandLogo />
+              <span className="claude-brand-text">Billing Agent</span>
+            </Link>
+            <button
+              aria-label={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+              className="claude-collapse-btn"
+              onClick={onToggleCollapse}
+              title={isCollapsed ? "Expand sidebar" : "Collapse sidebar"}
+              type="button"
+            >
+              <SidebarToggleIcon />
+            </button>
+          </div>
+
+          {/* + New Button */}
+          <button
+            aria-label="New case"
+            className="claude-new-btn"
+            onClick={onNewCase}
+            type="button"
+          >
+            <span className="claude-new-plus">＋</span>
+            <span className="claude-new-text">New case</span>
+          </button>
+
+          {/* Search Button */}
+          <button
+            aria-label="Search"
+            className="claude-nav-item"
+            onClick={handleOpenSearch}
+            type="button"
+          >
+            <SearchIcon />
+            <span className="claude-nav-text">Search</span>
+            <kbd className="claude-shortcut-hint">⌘K</kbd>
+          </button>
         </div>
-        <button aria-label={props.isCollapsed ? "Expand sidebar" : "Collapse sidebar"} className="sidebar-icon-button" onClick={handleToggleSidebar} type="button"><SidebarIcon /></button>
-      </header>
-      <button aria-label="New case" className="new-case-button" onClick={props.onNewCase} type="button">
-        <span aria-hidden="true">＋</span><span className="new-case-label">New case</span>
-      </button>
-      <div className="case-list-heading"><span>Recent</span></div>
-      {filteredCases.length === 0 ? (
-        <p className="sidebar-empty">{searchTerm ? "No cases match your search." : "Your saved cases will appear here."}</p>
-      ) : (
-        <nav aria-label="Saved billing cases" className="case-list">
-          {filteredCases.map((item) => (
-            <CaseListItem
-              billingCase={item}
-              isActive={item.id === props.activeCaseId}
-              key={item.id}
-              onOpen={onSelectCase}
-            />
-          ))}
-        </nav>
-      )}
-      <div className="dashboard-account">
-        {props.signOutError && <p className="sidebar-error" role="alert">{props.signOutError}</p>}
-        <div className="account-avatar" aria-hidden="true">{getInitials(props.user.displayName)}</div>
-        <div className="account-copy"><strong>{props.user.displayName}</strong><span>{props.user.email}</span></div>
-        <button aria-label="Sign out" className="sign-out-button" disabled={props.isSigningOut} onClick={props.onSignOut} type="button">
-          <span className="sign-out-label">{props.isSigningOut ? "Signing out…" : "Sign out"}</span><span aria-hidden="true">↗</span>
-        </button>
-      </div>
-    </aside>
+
+        {/* Case List (No "Chats and tasks" heading, clean list) */}
+        <div className="claude-sidebar-cases">
+          {cases.length === 0 ? (
+            <div className="claude-empty-cases">
+              <span>Your cases will appear here.</span>
+            </div>
+          ) : (
+            <div className="claude-case-list" role="list">
+              {cases.map((c) => (
+                <CaseListItem
+                  billingCase={c}
+                  isActive={c.id === activeCaseId}
+                  key={c.id}
+                  onDelete={onDeleteCase}
+                  onOpen={onSelectCase}
+                  onRename={onRenameCase}
+                />
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Bottom User Account Row */}
+        <div className="claude-sidebar-bottom" ref={accountMenuRef}>
+          {signOutError && (
+            <div className="claude-signout-error" role="alert">
+              {signOutError}
+            </div>
+          )}
+
+          {isAccountMenuOpen && (
+            <div className="claude-account-popover" role="menu">
+              <div className="claude-account-info">
+                <strong>{user.displayName}</strong>
+                <span>{user.email}</span>
+              </div>
+              <div className="claude-account-divider" />
+              <button
+                className="claude-account-menu-item"
+                disabled={isSigningOut}
+                onClick={onSignOut}
+                role="menuitem"
+                type="button"
+              >
+                <span>{isSigningOut ? "Signing out..." : "Sign out"}</span>
+                <span aria-hidden="true">↗</span>
+              </button>
+            </div>
+          )}
+
+          <div
+            className="claude-user-row"
+            onClick={handleToggleAccountMenu}
+            role="button"
+            tabIndex={0}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                handleToggleAccountMenu();
+              }
+            }}
+          >
+            <div className="claude-avatar" aria-hidden="true">
+              {initials}
+            </div>
+            <div className="claude-user-details">
+              <span className="claude-username">{user.displayName}</span>
+            </div>
+            <button
+              aria-label="Toggle sidebar"
+              className="claude-bottom-collapse-btn"
+              onClick={(e) => {
+                e.stopPropagation();
+                onToggleCollapse();
+              }}
+              title="Toggle sidebar"
+              type="button"
+            >
+              <SidebarPanelIcon />
+            </button>
+          </div>
+        </div>
+      </aside>
+
+      {/* Global Search Modal */}
+      <CaseSearchModal
+        cases={cases}
+        isOpen={isSearchModalOpen}
+        onClose={handleCloseSearch}
+        onNewCase={onNewCase}
+        onSelectCase={onSelectCase}
+      />
+    </>
   );
 }
 
-function filterCases(cases: CaseSummary[], searchTerm: string): CaseSummary[] {
-  const query = searchTerm.trim().toLocaleLowerCase();
-  if (!query) return cases;
-  return cases.filter((item) => `${item.title} ${item.lastMessage}`.toLocaleLowerCase().includes(query));
+function getInitials(name: string): string {
+  return name
+    .trim()
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() ?? "")
+    .join("");
 }
 
-function getInitials(name: string): string {
-  return name.split(/\s+/).slice(0, 2).map((part) => part[0]?.toUpperCase() ?? "").join("");
+function AgentBrandLogo() {
+  return (
+    <svg
+      aria-hidden="true"
+      className="claude-logo-icon"
+      fill="none"
+      viewBox="0 0 24 24"
+    >
+      <rect fill="#2563eb" height="20" rx="5" width="20" x="2" y="2" />
+      <path
+        d="M7 8h10M7 12h7M7 16h4"
+        stroke="#ffffff"
+        strokeLinecap="round"
+        strokeWidth="2"
+      />
+    </svg>
+  );
+}
+
+function SidebarToggleIcon() {
+  return (
+    <svg aria-hidden="true" className="claude-icon" viewBox="0 0 24 24">
+      <rect height="16" rx="2" stroke="currentColor" strokeWidth="1.75" width="18" x="3" y="4" fill="none" />
+      <path d="M9 4v16" stroke="currentColor" strokeWidth="1.75" />
+    </svg>
+  );
+}
+
+function SidebarPanelIcon() {
+  return (
+    <svg aria-hidden="true" className="claude-icon-small" viewBox="0 0 24 24">
+      <rect height="14" rx="2" stroke="currentColor" strokeWidth="1.75" width="16" x="4" y="5" fill="none" />
+      <path d="M10 5v14" stroke="currentColor" strokeWidth="1.75" />
+    </svg>
+  );
 }
 
 function SearchIcon() {
-  return <svg aria-hidden="true" viewBox="0 0 24 24"><circle cx="10.8" cy="10.8" r="6.8" /><path d="m16 16 4.5 4.5" /></svg>;
-}
-
-function SidebarIcon() {
-  return <svg aria-hidden="true" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="2.5" /><path d="M9 4v16" /></svg>;
+  return (
+    <svg aria-hidden="true" className="claude-icon" viewBox="0 0 24 24">
+      <circle cx="11" cy="11" r="7" stroke="currentColor" strokeWidth="1.75" fill="none" />
+      <path d="m16 16 4.5 4.5" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" />
+    </svg>
+  );
 }

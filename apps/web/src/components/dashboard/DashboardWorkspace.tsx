@@ -110,9 +110,38 @@ export function DashboardWorkspace() {
 
   return (
     <main className={`dashboard-shell${isSidebarCollapsed ? " sidebar-collapsed" : ""}`}>
-      <CaseSidebar cases={cases} activeCaseId={activeCase?.id ?? ""} user={user} isSigningOut={isSigningOut} signOutError={signOutError} isCollapsed={isSidebarCollapsed} onToggleCollapse={handleToggleSidebar} onNewCase={handleNewCase} onSelectCase={handleSelectCase} onSignOut={handleSignOut} />
+      <CaseSidebar
+        activeCaseId={activeCase?.id ?? ""}
+        cases={cases}
+        isCollapsed={isSidebarCollapsed}
+        isSigningOut={isSigningOut}
+        onDeleteCase={handleDeleteCase}
+        onNewCase={handleNewCase}
+        onRenameCase={handleRenameCase}
+        onSelectCase={handleSelectCase}
+        onSignOut={handleSignOut}
+        onToggleCollapse={handleToggleSidebar}
+        signOutError={signOutError}
+        user={user}
+      />
       <section className="dashboard-main" aria-label="Billing case chat">
-        {activeCase ? <CaseConversation billingCase={activeCase} isSending={isSending} error={error} onSendMessage={handleSendMessage} onDeleteCase={handleDeleteCase} onRenameCase={handleRenameCase} /> : <DashboardEmptyState firstName={getFirstName(user.displayName)} isSending={isSending} error={error} onSendMessage={handleSendMessage} />}
+        {activeCase ? (
+          <CaseConversation
+            billingCase={activeCase}
+            error={error}
+            isSending={isSending}
+            onDeleteCase={handleDeleteCase}
+            onRenameCase={handleRenameCase}
+            onSendMessage={handleSendMessage}
+          />
+        ) : (
+          <DashboardEmptyState
+            error={error}
+            firstName={getFirstName(user.displayName)}
+            isSending={isSending}
+            onSendMessage={handleSendMessage}
+          />
+        )}
       </section>
     </main>
   );
