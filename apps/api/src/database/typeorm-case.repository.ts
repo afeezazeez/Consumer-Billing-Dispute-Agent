@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { In, type DataSource, type EntityManager } from "typeorm";
+import type { CaseAgentToolActivity } from "../cases/case-intake-agent";
 import type {
   AppendPendingMessage,
   CaseConversation,
@@ -10,7 +11,7 @@ import type {
   CreatePendingCase,
   UpdateFailedMessage,
 } from "../cases/case.repository";
-import { CaseEntity, CaseMessageEntity } from "./entities/case.entity";
+import { AgentTurnJobEntity, CaseEntity, CaseMessageEntity } from "./entities/case.entity";
 
 export class TypeOrmCaseRepository implements CaseRepository {
   constructor(private readonly dataSource: DataSource) {}
@@ -27,12 +28,20 @@ export class TypeOrmCaseRepository implements CaseRepository {
     return this.dataSource.transaction((manager) => this.completeCaseTurn(manager, input));
   }
 
-  markMessageFailed(input: UpdateFailedMessage): Promise<CaseConversation | undefined> {
-    return this.dataSource.transaction((manager) => this.changeMessageStatus(manager, input, "failed"));
-  }
-
   prepareFailedMessageRetry(input: UpdateFailedMessage): Promise<CaseConversation | undefined> {
     return this.dataSource.transaction((manager) => this.resetFailedMessage(manager, input));
+  }
+
+  async updatePendingMessageActivities(userId: string, caseId: string, messageId: string, activities: CaseAgentToolActivity[]): Promise<void> {
+    await this.dataSource.query(
+      `UPDATE case_messages AS messages
+       SET tool_activities = $1
+       FROM billing_cases AS cases
+       WHERE messages.id = $2 AND messages.case_id = $3
+       AND messages.role = 'user' AND messages.processing_status = 'pending'
+       AND cases.id = messages.case_id AND cases.user_id = $4`,
+      [JSON.stringify(activities), messageId, caseId, userId],
+    );
   }
 
   async listForUser(userId: string): Promise<CaseSummary[]> {
@@ -78,6 +87,7 @@ export class TypeOrmCaseRepository implements CaseRepository {
       intakeState: input.intake,
     });
     const message = await manager.getRepository(CaseMessageEntity).save(toMessageEntity(input.userMessage, record.id));
+    await enqueueTurn(manager, input.userId, record.id, message.id);
     return toConversation(record, [message]);
   }
 
@@ -86,6 +96,7 @@ export class TypeOrmCaseRepository implements CaseRepository {
     const record = await cases.findOneBy({ id: input.caseId, userId: input.userId });
     if (!record) return undefined;
     await manager.getRepository(CaseMessageEntity).save(toMessageEntity(input.userMessage, input.caseId));
+    await enqueueTurn(manager, input.userId, input.caseId, input.userMessage.id);
     await cases.update({ id: input.caseId, userId: input.userId }, { updatedAt: input.userMessage.createdAt });
     return readConversation(manager, input.userId, input.caseId);
   }
@@ -105,18 +116,6 @@ export class TypeOrmCaseRepository implements CaseRepository {
     return readConversation(manager, input.userId, input.caseId);
   }
 
-  private async changeMessageStatus(
-    manager: EntityManager,
-    input: UpdateFailedMessage,
-    processingStatus: "failed",
-  ): Promise<CaseConversation | undefined> {
-    const result = await manager.getRepository(CaseMessageEntity).update(
-      { id: input.messageId, caseId: input.caseId, role: "user", processingStatus: "pending" },
-      { processingStatus },
-    );
-    return result.affected ? readConversation(manager, input.userId, input.caseId) : undefined;
-  }
-
   private async resetFailedMessage(manager: EntityManager, input: UpdateFailedMessage): Promise<CaseConversation | undefined> {
     const messageUpdate: Partial<CaseMessageEntity> = { processingStatus: "pending" };
     if (input.content) messageUpdate.content = input.content;
@@ -125,6 +124,13 @@ export class TypeOrmCaseRepository implements CaseRepository {
       messageUpdate,
     );
     if (!result.affected) return undefined;
+    const jobs = manager.getRepository(AgentTurnJobEntity);
+    const queuedJob = await jobs.findOneBy({ messageId: input.messageId });
+    if (queuedJob) await jobs.update(
+      { messageId: input.messageId, status: "failed" },
+      { status: "queued", lockedUntil: null, createdAt: new Date(), updatedAt: new Date() },
+    );
+    else await enqueueTurn(manager, input.userId, input.caseId, input.messageId);
     await manager.getRepository(CaseEntity).update({ id: input.caseId, userId: input.userId }, { updatedAt: new Date() });
     return readConversation(manager, input.userId, input.caseId);
   }
@@ -150,6 +156,7 @@ function toMessageEntity(message: CaseMessageRecord, caseId: string): CaseMessag
     processingStatus: message.processingStatus,
     sources: message.sources ?? [],
     toolActivities: message.toolActivities ?? [],
+    emailDraft: message.emailDraft ?? null,
   };
 }
 
@@ -159,12 +166,15 @@ async function loadMessages(manager: EntityManager, caseId: string): Promise<Cas
 
 function toSummaries(cases: CaseEntity[], messages: CaseMessageEntity[]): CaseSummary[] {
   const latestByCase = new Map<string, CaseMessageEntity>();
+  const processingCases = new Set<string>();
   for (const message of messages) {
     if (!latestByCase.has(message.caseId)) latestByCase.set(message.caseId, message);
+    if (message.role === "user" && message.processingStatus === "pending") processingCases.add(message.caseId);
   }
   return cases.map((record) => ({
     ...toCaseFields(record),
     lastMessage: latestByCase.get(record.id)?.content ?? "No messages yet",
+    isProcessing: processingCases.has(record.id),
   }));
 }
 
@@ -174,12 +184,13 @@ function toConversation(record: CaseEntity, messages: CaseMessageEntity[]): Case
     ...toCaseFields(record),
     createdAt: record.createdAt,
     lastMessage: latestMessage,
+    isProcessing: messages.some((message) => message.role === "user" && message.processingStatus === "pending"),
     messages: messages.map(toMessage),
     intake: record.intakeState,
   };
 }
 
-function toCaseFields(record: CaseEntity): Omit<CaseSummary, "lastMessage"> {
+function toCaseFields(record: CaseEntity): Omit<CaseSummary, "lastMessage" | "isProcessing"> {
   return { id: record.id, title: record.title, status: record.status, updatedAt: record.updatedAt };
 }
 
@@ -192,5 +203,17 @@ function toMessage(message: CaseMessageEntity): CaseMessageRecord {
     processingStatus: message.processingStatus,
     sources: message.sources ?? [],
     toolActivities: message.toolActivities ?? [],
+    emailDraft: message.emailDraft ?? undefined,
   };
+}
+
+async function enqueueTurn(manager: EntityManager, userId: string, caseId: string, messageId: string): Promise<void> {
+  await manager.getRepository(AgentTurnJobEntity).save({
+    id: randomUUID(),
+    userId,
+    caseId,
+    messageId,
+    status: "queued",
+    lockedUntil: null,
+  });
 }

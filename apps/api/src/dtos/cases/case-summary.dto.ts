@@ -6,6 +6,7 @@ export class CaseSummaryDto {
   status: string;
   updatedAt: Date;
   lastMessage: string;
+  isProcessing: boolean;
 
   constructor(billingCase: CaseSummary) {
     this.id = billingCase.id;
@@ -13,6 +14,7 @@ export class CaseSummaryDto {
     this.status = billingCase.status;
     this.updatedAt = billingCase.updatedAt;
     this.lastMessage = billingCase.lastMessage;
+    this.isProcessing = billingCase.isProcessing;
   }
 
   static make(billingCase: CaseSummary): CaseSummaryDto {

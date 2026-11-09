@@ -8,8 +8,7 @@ import { RetryCaseMessageRequestDto } from "../dtos/cases/retry-case-message-req
 import { ClientErrorException } from "../exceptions/client.error.exception";
 import { ResponseStatus } from "../enums/response-status";
 import { sendSuccessResponse } from "../utils/http/response-handlers";
-import { authenticatedFirstName, authenticatedUserId } from "../auth/auth.middleware";
-import type { CaseAgentProgressHandler } from "./case-intake-agent";
+import { authenticatedUserId } from "../auth/auth.middleware";
 import type { CaseConversation } from "./case.repository";
 import type { CaseService } from "./case.service";
 
@@ -32,7 +31,6 @@ export class CaseController {
         openingMessage: payload.openingMessage.trim(),
         caseId: payload.caseId,
         messageId: payload.messageId,
-        userFirstName: authenticatedFirstName(request),
       };
       const record = await this.caseService.createCase(authenticatedUserId(request), input);
       sendSuccessResponse(response, { case: CaseConversationDto.make(record) }, "Case created successfully", ResponseStatus.CREATED);
@@ -43,12 +41,10 @@ export class CaseController {
 
   async createStream(request: Request, response: Response): Promise<void> {
     const payload = request.body as CreateCaseRequestDto;
-    await streamCaseTurn(response, (onProgress) => this.caseService.createCase(authenticatedUserId(request), {
+    await streamCaseTurn(response, () => this.caseService.createCase(authenticatedUserId(request), {
       openingMessage: payload.openingMessage.trim(),
       caseId: payload.caseId,
       messageId: payload.messageId,
-      userFirstName: authenticatedFirstName(request),
-      onProgress,
     }));
   }
 
@@ -68,7 +64,6 @@ export class CaseController {
       const input = {
         caseId: readCaseId(request),
         content: payload.content.trim(),
-        userFirstName: authenticatedFirstName(request),
       };
       const record = await this.caseService.appendMessage(authenticatedUserId(request), input);
       if (!record) throw new ClientErrorException("Case not found", ResponseStatus.NOT_FOUND);
@@ -80,11 +75,9 @@ export class CaseController {
 
   async addMessageStream(request: Request, response: Response): Promise<void> {
     const payload = request.body as CreateMessageRequestDto;
-    await streamCaseTurn(response, (onProgress) => this.caseService.appendMessage(authenticatedUserId(request), {
+    await streamCaseTurn(response, () => this.caseService.appendMessage(authenticatedUserId(request), {
       caseId: readCaseId(request),
       content: payload.content.trim(),
-      userFirstName: authenticatedFirstName(request),
-      onProgress,
     }));
   }
 
@@ -95,7 +88,6 @@ export class CaseController {
         caseId: readCaseId(request),
         messageId: readMessageId(request),
         content: payload.content,
-        userFirstName: authenticatedFirstName(request),
       });
       if (!result) throw new ClientErrorException("Message is no longer available to retry", ResponseStatus.CONFLICT);
       sendSuccessResponse(response, { case: CaseConversationDto.make(result) }, "Message retry completed");
@@ -106,12 +98,10 @@ export class CaseController {
 
   async retryMessageStream(request: Request, response: Response): Promise<void> {
     const payload = request.body as RetryCaseMessageRequestDto;
-    await streamCaseTurn(response, (onProgress) => this.caseService.retryFailedMessage(authenticatedUserId(request), {
+    await streamCaseTurn(response, () => this.caseService.retryFailedMessage(authenticatedUserId(request), {
       caseId: readCaseId(request),
       messageId: readMessageId(request),
       content: payload.content,
-      userFirstName: authenticatedFirstName(request),
-      onProgress,
     }));
   }
 
@@ -137,12 +127,12 @@ export class CaseController {
   }
 }
 
-type StreamCaseOperation = (onProgress: CaseAgentProgressHandler) => Promise<CaseConversation | undefined>;
+type StreamCaseOperation = () => Promise<CaseConversation | undefined>;
 
 async function streamCaseTurn(response: Response, operation: StreamCaseOperation): Promise<void> {
   initializeEventStream(response);
   try {
-    const billingCase = await operation((activity) => sendEvent(response, "progress", { activity }));
+    const billingCase = await operation();
     if (!billingCase) return sendEvent(response, "failure", { message: "That case or message could not be found." });
     sendEvent(response, "done", { case: CaseConversationDto.make(billingCase) });
   } catch {

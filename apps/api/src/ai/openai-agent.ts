@@ -353,6 +353,7 @@ function createAgentInstructions(context: CaseIntakeAgentContext, intake: CaseIn
     "Once provider, issue description, and amount are recorded, tell the user the core intake is complete and invite corrections or optional date/expected amount/outcome details.",
     "Use web search for current or externally verifiable information when it helps answer the user. Cite retrieved sources; never claim to have searched if you did not.",
     "Format replies in standard Markdown supported by the chat: use **bold** for emphasis, blank lines between paragraphs, and Markdown links like [Wise](https://example.com) for citations. Never output raw HTML or malformed Markdown markers.",
+    "When asked to draft an email, return only this exact structure: [EMAIL_DRAFT] on a line, then To: recipient (leave blank if unknown), then Subject: subject, a blank line, the complete email body, and [/EMAIL_DRAFT] on its own line. Do not invent recipient details.",
     "You may answer a direct general-information request, but keep billing-dispute guidance grounded, avoid legal conclusions, and never promise a recovery or send a message for the user.",
     `Current saved intake facts: ${JSON.stringify(intake.facts)}`,
   ].join("\n");
@@ -383,14 +384,23 @@ function createResult(
   intake: CaseIntakeState,
   progress: AgentTurnProgress,
 ): CaseIntakeAgentResult {
-  const answer = removeInternalMessageIds(response).trim();
-  if (!answer) throw new Error("OpenAI returned an empty response");
+  const cleanedResponse = removeInternalMessageIds(response).trim();
+  const { answer, emailDraft } = extractEmailDraft(cleanedResponse);
+  if (!answer && !emailDraft) throw new Error("OpenAI returned an empty response");
   return {
     response: answer,
+    emailDraft,
     intake,
     sources: progress.sources,
     toolActivities: progress.activities,
   };
+}
+
+function extractEmailDraft(response: string): { answer: string; emailDraft?: CaseIntakeAgentResult["emailDraft"] } {
+  const match = response.match(/\[EMAIL_DRAFT\]\s*To:\s*(.*?)\s*\nSubject:\s*(.*?)\s*\n\s*([\s\S]*?)\s*\[\/EMAIL_DRAFT\]/i);
+  if (!match) return { answer: response };
+  const emailDraft = { recipients: match[1].trim(), subject: match[2].trim(), body: match[3].trim() };
+  return { answer: "", emailDraft };
 }
 
 function removeInternalMessageIds(response: string): string {

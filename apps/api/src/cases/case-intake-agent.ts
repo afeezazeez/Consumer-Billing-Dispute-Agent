@@ -9,9 +9,16 @@ export interface CaseIntakeAgentContext {
 
 export interface CaseIntakeAgentResult {
   response: string;
+  emailDraft?: CaseEmailDraft;
   intake: CaseIntakeState;
   sources: CaseAgentSource[];
   toolActivities: CaseAgentToolActivity[];
+}
+
+export interface CaseEmailDraft {
+  recipients: string;
+  subject: string;
+  body: string;
 }
 
 export interface CaseAgentSource {

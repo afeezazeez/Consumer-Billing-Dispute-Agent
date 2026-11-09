@@ -1,4 +1,4 @@
-import type { CaseAgentSource, CaseAgentToolActivity } from "./case-intake-agent";
+import type { CaseAgentSource, CaseAgentToolActivity, CaseEmailDraft } from "./case-intake-agent";
 import type { CaseIntakeState } from "./case-intake";
 
 export interface CaseMessageRecord {
@@ -9,6 +9,7 @@ export interface CaseMessageRecord {
   processingStatus: CaseMessageProcessingStatus;
   sources?: CaseAgentSource[];
   toolActivities?: CaseAgentToolActivity[];
+  emailDraft?: CaseEmailDraft;
 }
 
 export type CaseMessageProcessingStatus = "pending" | "complete" | "failed";
@@ -19,6 +20,7 @@ export interface CaseSummary {
   status: string;
   updatedAt: Date;
   lastMessage: string;
+  isProcessing: boolean;
 }
 
 export interface CaseConversation extends CaseSummary {
@@ -60,8 +62,8 @@ export interface CaseRepository {
   createPendingCase(input: CreatePendingCase): Promise<CaseConversation>;
   appendPendingMessage(input: AppendPendingMessage): Promise<CaseConversation | undefined>;
   completeTurn(input: CompleteCaseTurn): Promise<CaseConversation | undefined>;
-  markMessageFailed(input: UpdateFailedMessage): Promise<CaseConversation | undefined>;
   prepareFailedMessageRetry(input: UpdateFailedMessage): Promise<CaseConversation | undefined>;
+  updatePendingMessageActivities(userId: string, caseId: string, messageId: string, activities: CaseAgentToolActivity[]): Promise<void>;
   listForUser(userId: string): Promise<CaseSummary[]>;
   findForUser(userId: string, caseId: string): Promise<CaseConversation | undefined>;
   deleteForUser(userId: string, caseId: string): Promise<boolean>;

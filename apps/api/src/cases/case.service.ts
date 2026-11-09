@@ -1,37 +1,24 @@
 import { randomUUID } from "node:crypto";
 import { createEmptyCaseIntake } from "./case-intake";
-import type { CaseAgentProgressHandler, CaseIntakeAgent, CaseIntakeAgentResult } from "./case-intake-agent";
+import type { CaseAgentToolActivity, CaseIntakeAgent, CaseIntakeAgentResult } from "./case-intake-agent";
+import type { AgentTurnJob } from "./agent-turn-job.repository";
 import type { CaseConversation, CaseMessageRecord, CaseRepository, CaseSummary } from "./case.repository";
 
 export interface CreateCaseInput {
   openingMessage: string;
   caseId?: string;
   messageId?: string;
-  userFirstName?: string;
-  onProgress?: CaseAgentProgressHandler;
 }
 
 export interface AppendCaseMessageInput {
   caseId: string;
   content: string;
-  userFirstName?: string;
-  onProgress?: CaseAgentProgressHandler;
 }
 
 export interface RetryCaseMessageInput {
   caseId: string;
   messageId: string;
   content?: string;
-  userFirstName?: string;
-  onProgress?: CaseAgentProgressHandler;
-}
-
-interface ProcessPendingMessageInput {
-  userId: string;
-  caseId: string;
-  userMessageId: string;
-  userFirstName?: string;
-  onProgress?: CaseAgentProgressHandler;
 }
 
 export class CaseService {
@@ -51,13 +38,7 @@ export class CaseService {
       userMessage,
       intake: createEmptyCaseIntake(),
     });
-    return this.processPendingMessage({
-      userId,
-      caseId: billingCase.id,
-      userMessageId: userMessage.id,
-      userFirstName: input.userFirstName,
-      onProgress: input.onProgress,
-    });
+    return billingCase;
   }
 
   private async resumeExistingCase(
@@ -71,8 +52,6 @@ export class CaseService {
       caseId: billingCase.id,
       messageId: message.id,
       content: input.openingMessage === message.content ? undefined : input.openingMessage,
-      userFirstName: input.userFirstName,
-      onProgress: input.onProgress,
     })) ?? billingCase;
   }
 
@@ -86,13 +65,7 @@ export class CaseService {
       userMessage,
     });
     if (!updatedCase) return undefined;
-    return this.processPendingMessage({
-      userId,
-      caseId: input.caseId,
-      userMessageId: userMessage.id,
-      userFirstName: input.userFirstName,
-      onProgress: input.onProgress,
-    });
+    return updatedCase;
   }
 
   async retryFailedMessage(userId: string, input: RetryCaseMessageInput): Promise<CaseConversation | undefined> {
@@ -105,44 +78,32 @@ export class CaseService {
       content: input.content?.trim(),
     });
     if (!retryCase) return undefined;
-    return this.processPendingMessage({
-      userId,
-      caseId: input.caseId,
-      userMessageId: input.messageId,
-      userFirstName: input.userFirstName,
-      onProgress: input.onProgress,
-    });
+    return retryCase;
   }
 
-  private async processPendingMessage(input: ProcessPendingMessageInput): Promise<CaseConversation> {
-    try {
-      return await this.completeAgentTurn(input);
-    } catch {
-      const failedCase = await this.caseRepository.markMessageFailed({
-        userId: input.userId,
-        caseId: input.caseId,
-        messageId: input.userMessageId,
-      });
-      if (!failedCase) throw new Error("Unable to record the failed agent response");
-      return failedCase;
-    }
-  }
-
-  private async completeAgentTurn(input: ProcessPendingMessageInput): Promise<CaseConversation> {
-    const billingCase = await this.caseRepository.findForUser(input.userId, input.caseId);
+  async processAgentTurn(job: AgentTurnJob, userFirstName?: string): Promise<CaseConversation> {
+    const billingCase = await this.caseRepository.findForUser(job.userId, job.caseId);
     if (!billingCase) throw new Error("Case disappeared while processing the message");
-    const userMessage = billingCase.messages.find((message) => message.id === input.userMessageId);
+    const userMessage = billingCase.messages.find((message) => message.id === job.messageId);
     if (!userMessage) throw new Error("Message disappeared while processing the case");
+    let activities = userMessage.toolActivities ?? [];
+    let activityWrites = Promise.resolve();
     const result = await this.caseIntakeAgent.respond({
       messages: billingCase.messages,
       intake: billingCase.intake,
-      userFirstName: input.userFirstName,
-    }, input.onProgress);
+      userFirstName,
+    }, (activity) => {
+      activities = upsertActivity(activities, activity);
+      const snapshot = [...activities];
+      activityWrites = activityWrites.then(() =>
+        this.caseRepository.updatePendingMessageActivities(job.userId, job.caseId, job.messageId, snapshot));
+    });
+    await activityWrites;
     const assistantMessage = createAssistantMessage(result, userMessage.createdAt);
     const completedCase = await this.caseRepository.completeTurn({
-      userId: input.userId,
-      caseId: input.caseId,
-      userMessageId: input.userMessageId,
+      userId: job.userId,
+      caseId: job.caseId,
+      userMessageId: job.messageId,
       assistantMessage,
       intake: result.intake,
     });
@@ -176,11 +137,18 @@ function createAssistantMessage(result: CaseIntakeAgentResult, createdAt: Date):
     id: randomUUID(),
     role: "assistant",
     content: result.response,
+    emailDraft: result.emailDraft,
     createdAt: new Date(createdAt.getTime() + 1),
     processingStatus: "complete",
     sources: result.sources,
     toolActivities: result.toolActivities,
   };
+}
+
+function upsertActivity(activities: CaseAgentToolActivity[], activity: CaseAgentToolActivity): CaseAgentToolActivity[] {
+  const index = activities.findIndex((item) => item.id === activity.id);
+  if (index < 0) return [...activities, activity];
+  return activities.map((item) => item.id === activity.id ? activity : item);
 }
 
 function hasFailedUserMessage(
