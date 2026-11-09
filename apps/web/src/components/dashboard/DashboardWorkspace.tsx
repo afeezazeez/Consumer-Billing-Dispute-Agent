@@ -185,7 +185,7 @@ export function DashboardWorkspace({ caseId: routeCaseId }: DashboardWorkspacePr
   const isActiveCaseProcessing = activeCase?.messages.at(-1)?.processingStatus === "pending";
 
   useEffect(() => {
-    if (!hasProcessingCase) return;
+    if (!hasProcessingCase && !isActiveCaseProcessing) return;
     const interval = window.setInterval(() => {
       void refreshProcessingCases(routeCaseId, isActiveCaseProcessing, setCases, setActiveCase);
     }, 1200);

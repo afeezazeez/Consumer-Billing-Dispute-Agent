@@ -8,24 +8,30 @@ export class TypeOrmAgentTurnJobRepository implements AgentTurnJobRepository {
   async claimNext(): Promise<AgentTurnJob | undefined> {
     const rows = await this.dataSource.query(`
       WITH next_job AS (
-        SELECT id FROM agent_turn_jobs
+        SELECT agent_turn_jobs.id FROM agent_turn_jobs
+        JOIN case_messages ON case_messages.id = agent_turn_jobs.message_id
         WHERE (status = 'queued' OR (status = 'running' AND locked_until < NOW()))
+        AND case_messages.processing_status = 'pending'
         AND NOT EXISTS (
           SELECT 1 FROM agent_turn_jobs AS active
+          JOIN case_messages AS active_message ON active_message.id = active.message_id
           WHERE active.case_id = agent_turn_jobs.case_id
           AND active.status = 'running'
+          AND active_message.processing_status = 'pending'
           AND active.locked_until > NOW()
           AND active.id <> agent_turn_jobs.id
         )
-        ORDER BY created_at
-        FOR UPDATE SKIP LOCKED
+        ORDER BY agent_turn_jobs.created_at
+        FOR UPDATE OF agent_turn_jobs SKIP LOCKED
         LIMIT 1
+      ), claimed_job AS (
+        UPDATE agent_turn_jobs AS jobs
+        SET status = 'running', locked_until = NOW() + INTERVAL '2 minutes', updated_at = NOW()
+        FROM next_job
+        WHERE jobs.id = next_job.id
+        RETURNING jobs.id, jobs.user_id AS "userId", jobs.case_id AS "caseId", jobs.message_id AS "messageId"
       )
-      UPDATE agent_turn_jobs AS jobs
-      SET status = 'running', locked_until = NOW() + INTERVAL '2 minutes', updated_at = NOW()
-      FROM next_job
-      WHERE jobs.id = next_job.id
-      RETURNING jobs.id, jobs.user_id AS "userId", jobs.case_id AS "caseId", jobs.message_id AS "messageId"
+      SELECT * FROM claimed_job
     `) as AgentTurnJob[];
     return rows[0];
   }

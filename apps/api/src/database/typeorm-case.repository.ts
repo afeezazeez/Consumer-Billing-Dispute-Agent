@@ -127,7 +127,7 @@ export class TypeOrmCaseRepository implements CaseRepository {
     const jobs = manager.getRepository(AgentTurnJobEntity);
     const queuedJob = await jobs.findOneBy({ messageId: input.messageId });
     if (queuedJob) await jobs.update(
-      { messageId: input.messageId, status: "failed" },
+      { id: queuedJob.id },
       { status: "queued", lockedUntil: null, createdAt: new Date(), updatedAt: new Date() },
     );
     else await enqueueTurn(manager, input.userId, input.caseId, input.messageId);
