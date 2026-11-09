@@ -1690,7 +1690,11 @@ button, a {
   font-size: 14px;
   line-height: 1.6;
   max-width: 80%;
-  padding: 8px 12px;
+  padding: 6px 10px;
+}
+
+.claude-message-row.user .claude-message-bubble > p {
+  margin-bottom: 0;
 }
 
 .claude-message-row.assistant .claude-message-bubble {
@@ -1741,19 +1745,19 @@ button, a {
 }
 
 .case-message-failure {
-  background: var(--dash-sidebar-bg);
-  border: 1px solid var(--dash-line);
-  border-left: 3px solid var(--dash-danger);
-  border-radius: 8px;
-  color: var(--dash-ink-soft);
+  background: #fff1f0;
+  border: 1px solid #f04438;
+  border-radius: 16px 16px 4px 16px;
+  color: #b42318;
   margin-top: 8px;
-  max-width: min(100%, 520px);
-  padding: 10px 12px;
+  max-width: 80%;
+  padding: 6px 10px;
   text-align: left;
 }
 
 .case-message-failure p {
-  font-size: 13px;
+  font-size: 14px;
+  line-height: 1.6;
   margin: 0;
 }
 
