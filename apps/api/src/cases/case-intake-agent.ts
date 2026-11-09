@@ -25,6 +25,7 @@ export interface CaseAgentToolActivity {
   label: string;
   status: "running" | "completed";
   detail?: string;
+  sources?: CaseAgentSource[];
 }
 
 export type CaseAgentProgressHandler = (activity: CaseAgentToolActivity) => void;

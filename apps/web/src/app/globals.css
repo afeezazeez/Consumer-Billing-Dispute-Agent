@@ -1501,18 +1501,18 @@ button, a {
 
 .agent-activity-disclosure {
   color: var(--dash-ink-soft);
-  font-size: 13px;
-  max-width: min(100%, 520px);
+  font-size: 14px;
+  max-width: 100%;
   min-width: 0;
+  width: 100%;
 }
 
 .agent-activity-disclosure summary {
-  border: 1px solid var(--dash-line);
-  border-radius: 999px;
+  color: var(--dash-ink-soft);
   cursor: pointer;
   list-style: none;
   overflow: hidden;
-  padding: 5px 12px;
+  padding: 4px 0;
   text-overflow: ellipsis;
   white-space: nowrap;
   width: fit-content;
@@ -1534,19 +1534,56 @@ button, a {
   transform: rotate(90deg);
 }
 
+.agent-activity-disclosure ul {
+  background: transparent;
+  border: 1px solid var(--dash-line);
+  border-radius: 14px;
+  list-style: none;
+  margin: 4px 0 8px;
+  overflow: hidden;
+  padding: 0;
+}
+
+.agent-activity-disclosure li.agent-activity-step {
+  align-items: baseline;
+  border-bottom: 1px solid var(--dash-line);
+  column-gap: 10px;
+  display: flex;
+  flex-wrap: wrap;
+  padding: 10px 14px;
+}
+
+.agent-activity-disclosure li.agent-activity-step:last-child {
+  border-bottom: 0;
+}
+
+.agent-activity-step-label {
+  color: var(--dash-ink-soft);
+}
+
+.agent-activity-step-sources {
+  display: inline-flex;
+  gap: 10px;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+.agent-activity-step-sources a {
+  color: var(--dash-ink);
+  max-width: 42%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.agent-activity-tool-name {
+  display: none;
+}
+
 .agent-activity-disclosure summary:focus-visible,
 .case-message-sources a:focus-visible {
   outline: 2px solid var(--dash-primary);
   outline-offset: 2px;
-}
-
-.agent-activity-disclosure ul {
-  background: var(--dash-sidebar-bg);
-  border: 1px solid var(--dash-line);
-  border-radius: 10px;
-  list-style: none;
-  margin: 8px 0 0;
-  padding: 8px 12px;
 }
 
 .agent-activity-disclosure li {
@@ -1657,6 +1694,11 @@ button, a {
   line-height: 1.7;
   max-width: 90%;
   padding: 4px 0;
+}
+
+.claude-message-row.assistant {
+  align-items: flex-start;
+  flex-direction: column;
 }
 
 .claude-message-bubble > p,

@@ -95,6 +95,7 @@ export class OpenAiAgent implements CaseIntakeAgent {
       tools: this.agentTools.map((tool) => tool.definition),
       tool_choice: request.toolChoice,
       parallel_tool_calls: false,
+      include: ["web_search_call.action.sources"],
       max_output_tokens: MAX_OUTPUT_TOKENS,
       store: false,
     });
@@ -226,10 +227,11 @@ function reportToolActivity(
   name: string,
   status: CaseAgentToolActivity["status"],
   detail?: string,
+  sources?: CaseAgentSource[],
 ): void {
   const tool = findAgentTool(progress.agentTools, name);
   if (!tool) return;
-  const activity = { id, name, label: tool.label, status, detail };
+  const activity = { id, name, label: tool.label, status, detail, sources };
   const activityIndex = progress.activities.findIndex((item) => item.id === id);
   if (activityIndex >= 0 && isSameActivity(progress.activities[activityIndex], activity)) {
     if (activity.detail || !detail) return;
@@ -252,7 +254,9 @@ function findFunctionTool(agentTools: AgentTool[], name: string): FunctionAgentT
 }
 
 function isSameActivity(left: CaseAgentToolActivity, right: CaseAgentToolActivity): boolean {
-  return left.status === right.status && left.detail === right.detail;
+  return left.status === right.status
+    && left.detail === right.detail
+    && JSON.stringify(left.sources ?? []) === JSON.stringify(right.sources ?? []);
 }
 
 function collectSources(response: Response, progress: AgentTurnProgress): void {
@@ -292,7 +296,16 @@ function collectSearchQueries(response: Response, progress: AgentTurnProgress): 
   for (const item of response.output) {
     if (item.type !== "web_search_call" || item.action.type !== "search") continue;
     const detail = item.action.queries?.join("; ") ?? item.action.query;
-    if (detail) reportToolActivity(progress, item.id, "web_search", "completed", detail);
+    const sources = item.action.sources?.map(({ url }) => ({ title: getHostname(url), url })) ?? [];
+    reportToolActivity(progress, item.id, "web_search", "completed", detail, sources);
+  }
+}
+
+function getHostname(url: string): string {
+  try {
+    return new URL(url).hostname;
+  } catch {
+    return url;
   }
 }
 
@@ -313,6 +326,7 @@ function createAgentInstructions(context: CaseIntakeAgentContext, intake: CaseIn
     "Facts from conversation are user statements, not independently verified evidence. Do not describe them as documented proof.",
     "Once provider, issue description, and amount are recorded, tell the user the core intake is complete and invite corrections or optional date/expected amount/outcome details.",
     "Use web search for current or externally verifiable information when it helps answer the user. Cite retrieved sources; never claim to have searched if you did not.",
+    "Format replies in standard Markdown supported by the chat: use **bold** for emphasis, blank lines between paragraphs, and Markdown links like [Wise](https://example.com) for citations. Never output raw HTML or malformed Markdown markers.",
     "You may answer a direct general-information request, but keep billing-dispute guidance grounded, avoid legal conclusions, and never promise a recovery or send a message for the user.",
     `Current saved intake facts: ${JSON.stringify(intake.facts)}`,
   ].join("\n");

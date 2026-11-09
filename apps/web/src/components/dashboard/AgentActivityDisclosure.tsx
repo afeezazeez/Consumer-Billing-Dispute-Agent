@@ -16,10 +16,17 @@ export function AgentActivityDisclosure({ activities, isLive = false }: AgentAct
       <summary>{summary}</summary>
       <ul>
         {(visibleActivities.length > 0 ? visibleActivities : activities).map((activity) => (
-          <li key={activity.id}>
-            <span>{activity.status === "running" ? `${activity.label}…` : activity.label}</span>
-            {activity.detail && <small>{activity.detail}</small>}
-            <small>Tool: {activity.name}</small>
+          <li className="agent-activity-step" key={activity.id}>
+            <span className="agent-activity-step-label">{getStepLabel(activity)}</span>
+            {activity.sources && getSafeSources(activity.sources).length > 0 && (
+              <span className="agent-activity-step-sources">
+                {getSafeSources(activity.sources).map((source) => (
+                  <a href={source.url} key={source.url} rel="noopener noreferrer" target="_blank">
+                    {source.title || source.url}
+                  </a>
+                ))}
+              </span>
+            )}
           </li>
         ))}
       </ul>
@@ -29,6 +36,32 @@ export function AgentActivityDisclosure({ activities, isLive = false }: AgentAct
 
 function getActivitySummary(activities: CaseAgentToolActivity[], isLive: boolean): string {
   const latestActivity = activities.at(-1);
-  if (isLive && latestActivity) return latestActivity.label;
-  return `${activities.length === 1 ? "1 tool" : `${activities.length} tools`} used`;
+  if (latestActivity?.name === "web_search" && latestActivity.status === "running") {
+    return "Searching the web";
+  }
+  if (latestActivity?.name === "web_search" && latestActivity.sources?.length === 1) {
+    return "Searched the web, read a page";
+  }
+  if (latestActivity?.name === "web_search" && latestActivity.sources?.length) {
+    return `Searched the web, read ${latestActivity.sources.length} pages`;
+  }
+  if (latestActivity?.name === "web_search") return "Searched the web";
+  return isLive && latestActivity ? latestActivity.label : `${activities.length} tool${activities.length === 1 ? "" : "s"} used`;
+}
+
+function getSafeSources(sources: NonNullable<CaseAgentToolActivity["sources"]>) {
+  return sources.filter(({ url }) => {
+    try {
+      return ["http:", "https:"].includes(new URL(url).protocol);
+    } catch {
+      return false;
+    }
+  });
+}
+
+function getStepLabel(activity: CaseAgentToolActivity): string {
+  if (activity.name === "web_search" && activity.detail) return `Searched for “${activity.detail}”`;
+  if (activity.name === "web_search" && activity.status === "completed") return "Searched the web";
+  if (activity.name === "web_search") return "Searching the web";
+  return activity.label;
 }

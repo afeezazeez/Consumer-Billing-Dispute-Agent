@@ -193,16 +193,16 @@ export function CaseConversation({
                 className={`claude-message-row ${message.role}`}
                 key={message.id}
               >
+                {message.role === "assistant" && (
+                  <AgentActivityDisclosure activities={message.toolActivities} />
+                )}
                 <div className="claude-message-bubble">
                   {message.role === "assistant"
                     ? <AssistantMessage content={message.content} />
                     : <p>{message.content}</p>}
                 </div>
                 {message.role === "assistant" && (
-                  <>
-                    <AgentActivityDisclosure activities={message.toolActivities} />
-                    <CaseMessageSources sources={getUnmentionedSources(message.content, message.sources)} />
-                  </>
+                  <CaseMessageSources sources={getUnmentionedSources(message.content, message.sources)} />
                 )}
                 {message.role === "user" && message.processingStatus === "failed" && (
                   <CaseMessageFailure

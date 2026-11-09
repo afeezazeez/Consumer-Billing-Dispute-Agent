@@ -34,6 +34,7 @@ export interface CaseAgentToolActivity {
   label: string;
   status: "running" | "completed";
   detail?: string;
+  sources?: CaseAgentSource[];
 }
 
 export interface CaseConversation extends CaseSummary {
