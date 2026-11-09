@@ -33,8 +33,18 @@ export function CaseMessageAttachments({ attachments }: { attachments: CaseAttac
       <ul className="case-message-attachments" aria-label="Message attachments" aria-busy={loading}>
         {attachments.map((attachment) => (
           <li key={attachment.id}>
-            <button type="button" data-id={attachment.id} onClick={openPreview} disabled={loading}>
-              {attachment.name}
+            <button
+              type="button"
+              data-id={attachment.id}
+              onClick={openPreview}
+              disabled={loading}
+              title={attachment.name}
+              aria-label={`Preview ${attachment.name}`}
+            >
+              <span className="case-attachment-file-type" aria-hidden="true">
+                {attachment.mediaType === "application/pdf" ? "PDF" : "IMG"}
+              </span>
+              <span className="case-attachment-file-name">{attachment.name}</span>
             </button>
           </li>
         ))}
