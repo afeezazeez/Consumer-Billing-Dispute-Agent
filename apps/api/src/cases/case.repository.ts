@@ -38,6 +38,7 @@ export interface CreatePendingCase {
   title: string;
   userMessage: CaseMessageRecord;
   attachments?: StoredCaseAttachment[];
+  attachmentIds?: string[];
   intake: CaseIntakeState;
 }
 
@@ -46,6 +47,7 @@ export interface AppendPendingMessage {
   caseId: string;
   userMessage: CaseMessageRecord;
   attachments?: StoredCaseAttachment[];
+  attachmentIds?: string[];
 }
 
 export interface CompleteCaseTurn {
@@ -66,6 +68,8 @@ export interface UpdateFailedMessage {
 }
 
 export interface CaseRepository {
+  stageAttachment(userId: string, attachment: StoredCaseAttachment): Promise<void>;
+  discardStagedAttachment(userId: string, attachmentId: string): Promise<void>;
   findAttachment(userId: string, attachmentId: string): Promise<StoredCaseAttachment | undefined>;
   createPendingCase(input: CreatePendingCase): Promise<CaseConversation>;
   appendPendingMessage(input: AppendPendingMessage): Promise<CaseConversation | undefined>;

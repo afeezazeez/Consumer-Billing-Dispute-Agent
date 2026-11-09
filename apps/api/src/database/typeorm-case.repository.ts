@@ -1,3 +1,5 @@
+import { ClientErrorException } from "../exceptions/client.error.exception";
+import { ResponseStatus } from "../enums/response-status";
 import type { CaseAttachment, StoredCaseAttachment } from "../cases/case-attachment";
 import { CaseAttachmentEntity } from "./entities/case-attachment.entity";
 import { randomUUID } from "node:crypto";
@@ -64,6 +66,21 @@ export class TypeOrmCaseRepository implements CaseRepository {
     return readConversation(this.dataSource.manager, userId, caseId);
   }
 
+  async stageAttachment(userId: string, attachment: StoredCaseAttachment): Promise<void> {
+    await this.dataSource.query(
+      `INSERT INTO case_attachments (id, name, media_type, size, cloudinary_public_id, staged_user_id, staged_until)
+       VALUES ($1, $2, $3, $4, $5, $6, NOW() + INTERVAL '1 hour')`,
+      [attachment.id, attachment.name, attachment.mediaType, attachment.size, attachment.storageKey, userId],
+    );
+  }
+
+  async discardStagedAttachment(userId: string, attachmentId: string): Promise<void> {
+    await this.dataSource.query(
+      "DELETE FROM case_attachments WHERE id = $1 AND staged_user_id = $2 AND message_id IS NULL",
+      [attachmentId, userId],
+    );
+  }
+
   async findAttachment(userId: string, attachmentId: string): Promise<StoredCaseAttachment | undefined> {
     const rows = await this.dataSource.query(
       `SELECT a.id, a.name, a.media_type AS "mediaType", a.size, a.data, a.cloudinary_public_id AS "storageKey"
@@ -104,6 +121,7 @@ export class TypeOrmCaseRepository implements CaseRepository {
     const message = toMessageEntity(input.userMessage, record.id);
     await manager.getRepository(CaseMessageEntity).insert(message);
     await saveAttachments(manager, message.id, input.attachments);
+    await claimAttachments(manager, input, message.id);
     await enqueueTurn(manager, input.userId, record.id, message.id);
     return toConversation(record, [message], await loadAttachments(manager, [message]));
   }
@@ -117,6 +135,7 @@ export class TypeOrmCaseRepository implements CaseRepository {
     if (existing) return readConversation(manager, input.userId, input.caseId);
     await messages.insert(toMessageEntity(input.userMessage, input.caseId));
     await saveAttachments(manager, input.userMessage.id, input.attachments);
+    await claimAttachments(manager, input, input.userMessage.id);
     await enqueueTurn(manager, input.userId, input.caseId, input.userMessage.id);
     await cases.update({ id: input.caseId, userId: input.userId }, { updatedAt: input.userMessage.createdAt });
     return readConversation(manager, input.userId, input.caseId);
@@ -269,4 +288,25 @@ async function loadAttachments(manager: EntityManager, messages: CaseMessageEnti
     grouped.set(messageId, attachments);
   }
   return grouped;
+}
+
+
+async function claimAttachments(
+  manager: EntityManager,
+  input: CreatePendingCase | AppendPendingMessage,
+  messageId: string,
+): Promise<void> {
+  const ids = input.attachmentIds;
+  if (!ids?.length) return;
+  const rows = await manager.query(
+    `WITH claimed AS (
+      UPDATE case_attachments SET message_id = $1, staged_user_id = NULL, staged_until = NULL
+      WHERE id = ANY($2::uuid[]) AND staged_user_id = $3 AND message_id IS NULL AND staged_until > NOW()
+      RETURNING id
+    ) SELECT id FROM claimed`,
+    [messageId, ids, input.userId],
+  ) as { id: string }[];
+  if (rows.length !== ids.length) {
+    throw new ClientErrorException("An attachment expired or is unavailable. Attach it again.", ResponseStatus.BAD_REQUEST);
+  }
 }

@@ -18,6 +18,7 @@ export class CaseAttachmentCleanup {
 
   private async run(): Promise<void> {
     try {
+      await this.dataSource.query("DELETE FROM case_attachments WHERE message_id IS NULL AND staged_until <= NOW()");
       const rows = await this.dataSource.query(
         "SELECT public_id FROM case_attachment_cleanup ORDER BY public_id LIMIT 10",
       ) as { public_id: string }[];

@@ -1,4 +1,4 @@
-import { parseCaseAttachments } from "../middlewares/case-attachments";
+import { parseCaseAttachments, parseStagedAttachment } from "../middlewares/case-attachments";
 import { Router } from "express";
 import type { AuthMiddleware } from "../auth/auth.middleware";
 import { CreateCaseRequestDto } from "../dtos/cases/create-case-request.dto";
@@ -14,6 +14,8 @@ export function createCaseRouter(controller: CaseController, authMiddleware: Aut
   router.get("/", (request, response, next) => controller.list(request, response, next));
   router.post("/stream", parseCaseAttachments, validateBody(CreateCaseRequestDto), (request, response) => controller.createStream(request, response));
   router.post("/", validateBody(CreateCaseRequestDto), (request, response, next) => controller.create(request, response, next));
+  router.post("/attachments/staged", parseStagedAttachment, (request, response) => controller.stageAttachment(request, response));
+  router.delete("/attachments/staged/:attachmentId", (request, response) => controller.discardStagedAttachment(request, response));
   router.get("/attachments/:attachmentId", (request, response) => controller.readAttachment(request, response));
   router.get("/:caseId", (request, response, next) => controller.read(request, response, next));
   router.post("/:caseId/messages/stream", parseCaseAttachments, validateBody(CreateMessageRequestDto), (request, response) => controller.addMessageStream(request, response));

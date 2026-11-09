@@ -98,9 +98,11 @@ export function DashboardWorkspace({ caseId: routeCaseId }: DashboardWorkspacePr
       setCases((current) => upsertCase(current, result.case));
       if (!activeCase && stillOnCase) router.push(`/cases/${result.case.id}`);
       return true;
-    } catch {
+    } catch (sendError) {
       if (upload) {
-        if (window.location.pathname === startingPath) setError("Couldn’t send the attachments. Check the files and try again.");
+        if (window.location.pathname === startingPath) {
+          setError(sendError instanceof CaseStreamError ? sendError.message : "Couldn’t send the attachments. Try again.");
+        }
         return false;
       }
       setError("");
@@ -274,12 +276,10 @@ async function sendCaseMessage(
   upload?: CaseUpload,
 ): Promise<{ case: CaseConversationData }> {
   if (upload) {
-    const body = new FormData();
-    body.set(activeCase ? "content" : "openingMessage", content);
-    body.set("messageId", upload.id);
-    if (!activeCase) body.set("caseId", upload.id);
-    for (const file of upload.files) body.append("attachments", file);
-    return requestCaseStream(activeCase ? `/cases/${activeCase.id}/messages/stream` : "/cases/stream", body);
+    const fields = { messageId: upload.id, attachmentIds: upload.attachmentIds };
+    return activeCase
+      ? requestCaseStream(`/cases/${activeCase.id}/messages/stream`, { ...fields, content })
+      : requestCaseStream("/cases/stream", { ...fields, openingMessage: content, caseId: upload.id });
   }
   if (activeCase) return requestCaseStream(`/cases/${activeCase.id}/messages/stream`, { content });
   const initialMessage = optimisticCase.messages[0];
@@ -310,11 +310,9 @@ async function requestCaseStream(
 ): Promise<{ case: CaseConversationData }> {
   const response = await fetch(`${API_URL}${path}`, {
     method: "POST",
-    body: body instanceof FormData ? body : JSON.stringify(body),
+    body: JSON.stringify(body),
     credentials: "include",
-    headers: body instanceof FormData
-      ? { Accept: "text/event-stream", "X-Case-Upload": "1" }
-      : { "Content-Type": "application/json", Accept: "text/event-stream" },
+    headers: { "Content-Type": "application/json", Accept: "text/event-stream" },
   });
   if (!response.ok) throw new DashboardRequestError(response.status);
   const billingCase = await readCaseStream(response);
@@ -335,7 +333,7 @@ async function readCaseStream(
     const parsed = dispatchSseFrames(buffer);
     buffer = parsed.remainder;
     result = parsed.billingCase ?? result;
-    if (parsed.failed) throw new DashboardRequestError(500);
+    if (parsed.failureMessage) throw new CaseStreamError(parsed.failureMessage);
     if (chunk.done) break;
   }
   if (!result) throw new DashboardRequestError(500);
@@ -344,20 +342,22 @@ async function readCaseStream(
 
 function dispatchSseFrames(
   buffer: string,
-): { remainder: string; billingCase?: CaseConversationData; failed: boolean } {
+): { remainder: string; billingCase?: CaseConversationData; failureMessage?: string } {
   let remainder = buffer.replace(/\r\n/g, "\n");
   let billingCase: CaseConversationData | undefined;
-  let failed = false;
+  let failureMessage: string | undefined;
   let boundary = remainder.indexOf("\n\n");
   while (boundary >= 0) {
     const frame = remainder.slice(0, boundary);
     remainder = remainder.slice(boundary + 2);
     const event = parseSseFrame(frame);
     if (event?.type === "done") billingCase = event.data.case as CaseConversationData;
-    if (event?.type === "failure") failed = true;
+    if (event?.type === "failure") {
+      failureMessage = typeof event.data.message === "string" ? event.data.message : "Couldn’t send this message.";
+    }
     boundary = remainder.indexOf("\n\n");
   }
-  return { remainder, billingCase, failed };
+  return { remainder, billingCase, failureMessage };
 }
 
 function parseSseFrame(frame: string): ParsedSseEvent | undefined {
@@ -522,3 +522,5 @@ interface ApiResponse<T> {
 class DashboardRequestError extends Error {
   constructor(public readonly status: number) { super("Dashboard request failed"); }
 }
+
+class CaseStreamError extends Error {}

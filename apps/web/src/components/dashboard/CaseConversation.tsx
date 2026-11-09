@@ -238,6 +238,9 @@ export function CaseConversation({
                 {message.role === "assistant" && (
                   <AgentActivityDisclosure activities={message.toolActivities} />
                 )}
+                {message.attachments && message.attachments.length > 0 && (
+                  <CaseMessageAttachments attachments={message.attachments} />
+                )}
                 <div className="claude-message-bubble">
                   {message.role === "assistant"
                     ? message.emailDraft
@@ -250,9 +253,6 @@ export function CaseConversation({
                 )}
                 {message.role === "assistant" && (
                   <CaseMessageSources sources={getUnmentionedSources(message.content, message.sources)} />
-                )}
-                {Boolean(message.attachments?.length) && (
-                  <CaseMessageAttachments attachments={message.attachments ?? []} />
                 )}
                 {message.role === "user" && message.processingStatus === "failed" && (
                   <CaseMessageFailure

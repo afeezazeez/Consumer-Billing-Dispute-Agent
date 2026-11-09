@@ -18,7 +18,7 @@ export function CaseMessageAttachments({ attachments }: { attachments: CaseAttac
     setLoading(true);
     setError("");
     try {
-      const response = await fetch(`${API_URL}/cases/attachments/${attachment.id}`, { credentials: "include" });
+      const response = await fetch(attachmentUrl(attachment.id), { credentials: "include" });
       if (!response.ok) throw new Error("Attachment unavailable");
       setPreview(new File([await response.blob()], attachment.name, { type: attachment.mediaType }));
     } catch {
@@ -32,7 +32,7 @@ export function CaseMessageAttachments({ attachments }: { attachments: CaseAttac
     <>
       <ul className="case-message-attachments" aria-label="Message attachments" aria-busy={loading}>
         {attachments.map((attachment) => (
-          <li key={attachment.id}>
+          <li key={attachment.id} className={attachment.mediaType.startsWith("image/") ? "case-attachment-image" : undefined}>
             <button
               type="button"
               data-id={attachment.id}
@@ -41,10 +41,14 @@ export function CaseMessageAttachments({ attachments }: { attachments: CaseAttac
               title={attachment.name}
               aria-label={`Preview ${attachment.name}`}
             >
-              <span className="case-attachment-file-type" aria-hidden="true">
-                {attachment.mediaType === "application/pdf" ? "PDF" : "IMG"}
-              </span>
-              <span className="case-attachment-file-name">{attachment.name}</span>
+              {attachment.mediaType.startsWith("image/") ? (
+                <picture><img src={attachmentUrl(attachment.id)} alt="" loading="lazy" /></picture>
+              ) : (
+                <>
+                  <span className="case-attachment-file-type" aria-hidden="true">PDF</span>
+                  <span className="case-attachment-file-name">{attachment.name}</span>
+                </>
+              )}
             </button>
           </li>
         ))}
@@ -53,4 +57,8 @@ export function CaseMessageAttachments({ attachments }: { attachments: CaseAttac
       {preview && <ComposerAttachmentPreview file={preview} onClose={closePreview} />}
     </>
   );
+}
+
+function attachmentUrl(id: string): string {
+  return `${API_URL}/cases/attachments/${id}`;
 }

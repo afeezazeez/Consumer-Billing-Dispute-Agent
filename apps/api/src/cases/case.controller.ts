@@ -33,6 +33,7 @@ export class CaseController {
         openingMessage: payload.openingMessage.trim(),
         caseId: payload.caseId,
         messageId: payload.messageId,
+        attachmentIds: payload.attachmentIds,
       };
       const record = await this.caseService.createCase(authenticatedUserId(request), input);
       sendSuccessResponse(response, { case: CaseConversationDto.make(record) }, "Case created successfully", ResponseStatus.CREATED);
@@ -48,6 +49,7 @@ export class CaseController {
       caseId: payload.caseId,
       messageId: payload.messageId,
       attachments: response.locals.caseAttachments as PendingCaseAttachment[] | undefined,
+      attachmentIds: payload.attachmentIds,
     }));
   }
 
@@ -67,6 +69,8 @@ export class CaseController {
       const input = {
         caseId: readCaseId(request),
         content: payload.content.trim(),
+        messageId: payload.messageId,
+        attachmentIds: payload.attachmentIds,
       };
       const record = await this.caseService.appendMessage(authenticatedUserId(request), input);
       if (!record) throw new ClientErrorException("Case not found", ResponseStatus.NOT_FOUND);
@@ -83,7 +87,24 @@ export class CaseController {
       content: payload.content.trim(),
       messageId: payload.messageId,
       attachments: response.locals.caseAttachments as PendingCaseAttachment[] | undefined,
+      attachmentIds: payload.attachmentIds,
     }));
+  }
+
+  async stageAttachment(request: Request, response: Response): Promise<void> {
+    const files = response.locals.caseAttachments as PendingCaseAttachment[] | undefined;
+    if (files?.length !== 1) throw new ClientErrorException("Select one attachment.", ResponseStatus.BAD_REQUEST);
+    const id = await this.caseService.stageAttachment(authenticatedUserId(request), files[0]);
+    sendSuccessResponse(response, { id }, "Attachment uploaded", ResponseStatus.CREATED);
+  }
+
+  async discardStagedAttachment(request: Request, response: Response): Promise<void> {
+    const { attachmentId } = request.params;
+    if (typeof attachmentId !== "string" || !isUUID(attachmentId)) {
+      throw new ClientErrorException("Attachment not found", ResponseStatus.NOT_FOUND);
+    }
+    await this.caseService.discardStagedAttachment(authenticatedUserId(request), attachmentId);
+    response.sendStatus(204);
   }
 
   async readAttachment(request: Request, response: Response): Promise<void> {
@@ -93,7 +114,7 @@ export class CaseController {
     }
     const attachment = await this.caseService.findAttachment(authenticatedUserId(request), attachmentId);
     if (!attachment) throw new ClientErrorException("Attachment not found", ResponseStatus.NOT_FOUND);
-    response.attachment(attachment.name);
+    if (!attachment.mediaType.startsWith("image/")) response.attachment(attachment.name);
     response.set({
       "Content-Type": attachment.mediaType,
       "Cache-Control": "private, no-store",
@@ -156,8 +177,11 @@ async function streamCaseTurn(response: Response, operation: StreamCaseOperation
     const billingCase = await operation();
     if (!billingCase) return sendEvent(response, "failure", { message: "That case or message could not be found." });
     sendEvent(response, "done", { case: CaseConversationDto.make(billingCase) });
-  } catch {
-    sendEvent(response, "failure", { message: "We couldn’t complete that request. Please try again." });
+  } catch (error) {
+    const message = error instanceof ClientErrorException
+      ? error.message
+      : "We couldn’t complete that request. Please try again.";
+    sendEvent(response, "failure", { message });
   } finally {
     response.end();
   }

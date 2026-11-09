@@ -23,7 +23,7 @@ export interface CaseAttachment {
 
 export interface CaseUpload {
   id: string;
-  files: File[];
+  attachmentIds: string[];
 }
 
 export interface CaseMessage {

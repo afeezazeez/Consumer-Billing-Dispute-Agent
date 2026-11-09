@@ -8,6 +8,7 @@ import type { CaseConversation, CaseMessageRecord, CaseRepository, CaseSummary }
 
 export interface CreateCaseInput {
   attachments?: PendingCaseAttachment[];
+  attachmentIds?: string[];
   openingMessage: string;
   caseId?: string;
   messageId?: string;
@@ -15,6 +16,7 @@ export interface CreateCaseInput {
 
 export interface AppendCaseMessageInput {
   attachments?: PendingCaseAttachment[];
+  attachmentIds?: string[];
   messageId?: string;
   caseId: string;
   content: string;
@@ -36,7 +38,7 @@ export class CaseService {
   async createCase(userId: string, input: CreateCaseInput): Promise<CaseConversation> {
     const existingCase = input.caseId ? await this.caseRepository.findForUser(userId, input.caseId) : undefined;
     if (existingCase) {
-      return input.attachments?.length ? existingCase : this.resumeExistingCase(userId, existingCase, input);
+      return input.attachments?.length || input.attachmentIds?.length ? existingCase : this.resumeExistingCase(userId, existingCase, input);
     }
     const userMessage = createMessage("user", input.openingMessage, input.messageId);
     const billingCase = await this.saveWithAttachments(input.attachments, (attachments) => this.caseRepository.createPendingCase({
@@ -45,6 +47,7 @@ export class CaseService {
       title: createTitle(input.openingMessage),
       userMessage,
       attachments,
+      attachmentIds: input.attachmentIds,
       intake: createEmptyCaseIntake(),
     }));
     if (!billingCase) throw new Error("Unable to save case");
@@ -88,6 +91,7 @@ export class CaseService {
       caseId: input.caseId,
       userMessage,
       attachments,
+      attachmentIds: input.attachmentIds,
     }));
     if (!updatedCase) return undefined;
     return updatedCase;
@@ -140,6 +144,17 @@ export class CaseService {
     });
     if (!completedCase) throw new Error("Unable to save the agent response");
     return completedCase;
+  }
+
+  stageAttachment(userId: string, file: PendingCaseAttachment): Promise<string> {
+    return this.attachmentService.save([file], async ([stored]) => {
+      await this.caseRepository.stageAttachment(userId, stored);
+      return { result: stored.id, retainedIds: new Set([stored.id]) };
+    });
+  }
+
+  discardStagedAttachment(userId: string, attachmentId: string): Promise<void> {
+    return this.caseRepository.discardStagedAttachment(userId, attachmentId);
   }
 
   async findAttachment(userId: string, attachmentId: string) {

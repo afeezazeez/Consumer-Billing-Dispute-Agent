@@ -1,3 +1,4 @@
+import { StageCaseAttachments1710000000010 } from "./migrations/1710000000010-StageCaseAttachments";
 import { StoreCaseAttachmentsInCloudinary1710000000009 } from "./migrations/1710000000009-StoreCaseAttachmentsInCloudinary";
 import { caseAttachmentSchema } from "./entities/case-attachment.entity";
 import { CreateCaseAttachments1710000000008 } from "./migrations/1710000000008-CreateCaseAttachments";
@@ -34,6 +35,7 @@ export function createDataSource(database: PostgresConfig): DataSource {
       AddCaseNextAction1710000000007,
       CreateCaseAttachments1710000000008,
       StoreCaseAttachmentsInCloudinary1710000000009,
+      StageCaseAttachments1710000000010,
     ],
     synchronize: false,
   });

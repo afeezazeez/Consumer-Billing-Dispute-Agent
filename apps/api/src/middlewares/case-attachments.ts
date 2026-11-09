@@ -7,18 +7,23 @@ import { ResponseStatus } from "../enums/response-status";
 
 const MAX_FILE_BYTES = 10 * 1024 * 1024;
 
-export const parseCaseAttachments: RequestHandler = async (request, response, next) => {
-  if (!request.is("multipart/form-data")) return next();
-  if (request.get("X-Case-Upload") !== "1") {
-    throw new ClientErrorException("Invalid attachment request.", ResponseStatus.BAD_REQUEST);
-  }
-  const upload = await readUpload(request);
-  request.body = upload.fields;
-  response.locals.caseAttachments = upload.files;
-  next();
-};
+export const parseCaseAttachments = parseAttachments(5);
+export const parseStagedAttachment = parseAttachments(1);
 
-function readUpload(request: Request) {
+function parseAttachments(maxFiles: number): RequestHandler {
+  return async (request, response, next) => {
+    if (!request.is("multipart/form-data")) return next();
+    if (request.get("X-Case-Upload") !== "1") {
+      throw new ClientErrorException("Invalid attachment request.", ResponseStatus.BAD_REQUEST);
+    }
+    const upload = await readUpload(request, maxFiles);
+    request.body = upload.fields;
+    response.locals.caseAttachments = upload.files;
+    next();
+  };
+}
+
+function readUpload(request: Request, maxFiles: number) {
   return new Promise<{ fields: Record<string, string>; files: PendingCaseAttachment[] }>((resolve, reject) => {
     const fields: Record<string, string> = Object.create(null);
     const files: PendingCaseAttachment[] = [];
@@ -30,7 +35,7 @@ function readUpload(request: Request) {
     ));
     let parser: ReturnType<typeof busboy>;
     try {
-      parser = busboy({ headers: request.headers, limits: { files: 5, fields: 3, fieldSize: 8192, fileSize: MAX_FILE_BYTES + 1 } });
+      parser = busboy({ headers: request.headers, limits: { files: maxFiles, fields: 3, fieldSize: 8192, fileSize: MAX_FILE_BYTES + 1 } });
     } catch {
       return fail();
     }

@@ -1734,7 +1734,7 @@ button, a {
   gap: 8px;
   justify-content: flex-end;
   list-style: none;
-  margin: 6px 0 0;
+  margin: 0 0 8px;
   max-width: 100%;
   padding: 0;
 }
@@ -1774,6 +1774,18 @@ button, a {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.case-message-attachments .case-attachment-image button {
+  padding: 0;
+  overflow: hidden;
+}
+
+.case-attachment-image img {
+  display: block;
+  width: 88px;
+  height: 88px;
+  object-fit: cover;
 }
 
 .case-message-sources svg {
@@ -2012,6 +2024,7 @@ button, a {
   height: 72px;
   justify-content: center;
   padding: 0;
+  position: relative;
   width: 72px;
 }
 
@@ -2027,6 +2040,22 @@ button, a {
   color: var(--dash-danger);
   height: 40px;
   width: 34px;
+}
+
+.composer-attachment-progress {
+  align-items: center;
+  background: var(--dash-scrim);
+  border-radius: 9px;
+  color: #fff;
+  display: flex;
+  inset: 0;
+  justify-content: center;
+  position: absolute;
+}
+
+.composer-attachment-progress .claude-agent-spinner {
+  border-color: rgb(255 255 255 / 45%);
+  border-top-color: #fff;
 }
 
 .composer-attachments button:last-child {

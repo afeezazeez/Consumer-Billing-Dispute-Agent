@@ -11,6 +11,7 @@ import {
   type KeyboardEvent,
 } from "react";
 import { ComposerAttachments } from "./ComposerAttachments";
+import { useStagedAttachments } from "./useStagedAttachments";
 
 const ATTACHMENT_TYPES = ["application/pdf", "image/jpeg", "image/png", "image/webp"];
 const MAX_ATTACHMENTS = 5;
@@ -32,7 +33,8 @@ export function CaseComposer({
   placeholder,
 }: CaseComposerProps) {
   const [message, setMessage] = useState("");
-  const [files, setFiles] = useState<File[]>([]);
+  const { attachments, addFiles, remove, retry, clear } = useStagedAttachments();
+  const hasUnreadyAttachments = attachments.some(({ status }) => status !== "ready");
   const [isUploading, setIsUploading] = useState(false);
   const pendingUpload = useRef<{ content: string; upload: CaseUpload }>(undefined);
   const [attachmentError, setAttachmentError] = useState("");
@@ -53,30 +55,32 @@ export function CaseComposer({
     async (event: FormEvent<HTMLFormElement>) => {
       event.preventDefault();
       const content = message.trim();
-      if (!content || isSending || isUploading) return;
-      if (files.length === 0) {
+      if (!content || isSending || isUploading || hasUnreadyAttachments) return;
+      if (attachments.length === 0) {
         setMessage("");
         if (!await onSendMessage(content)) setMessage(content);
         return;
       }
 
+      const attachmentIds = attachments.flatMap(({ id }) => id ? [id] : []);
+      if (attachmentIds.length !== attachments.length) return;
       const previous = pendingUpload.current;
-      const upload = previous?.content === content && previous.upload.files === files
+      const upload = previous?.content === content && previous.upload.attachmentIds.join() === attachmentIds.join()
         ? previous.upload
-        : { id: crypto.randomUUID(), files };
+        : { id: crypto.randomUUID(), attachmentIds };
       pendingUpload.current = { content, upload };
       setIsUploading(true);
       try {
         if (await onSendMessage(content, upload)) {
           pendingUpload.current = undefined;
           setMessage("");
-          setFiles([]);
+          clear();
         }
       } finally {
         setIsUploading(false);
       }
     },
-    [files, isSending, isUploading, message, onSendMessage],
+    [attachments, clear, hasUnreadyAttachments, isSending, isUploading, message, onSendMessage],
   );
 
   const handleKeyDown = useCallback((event: KeyboardEvent<HTMLTextAreaElement>) => {
@@ -94,13 +98,13 @@ export function CaseComposer({
     const valid = Array.from(incoming).filter((file) =>
       ATTACHMENT_TYPES.includes(file.type) && file.size > 0 && file.size <= MAX_ATTACHMENT_BYTES,
     );
-    const available = MAX_ATTACHMENTS - files.length;
-    setFiles([...files, ...valid.slice(0, available)]);
+    const available = MAX_ATTACHMENTS - attachments.length;
+    addFiles(valid.slice(0, available));
     setAttachmentError([
       valid.length !== incoming.length ? "Choose a PDF, PNG, JPEG, or WebP file up to 10 MB." : "",
       valid.length > available ? "You can attach up to five files." : "",
     ].filter(Boolean).join(" "));
-  }, [files]);
+  }, [addFiles, attachments.length]);
 
   const handleFileChange = useCallback((event: ChangeEvent<HTMLInputElement>) => {
     if (event.currentTarget.files) addAttachments(event.currentTarget.files);
@@ -119,9 +123,10 @@ export function CaseComposer({
   }, [addAttachments, isUploading]);
 
   const removeAttachment = useCallback((index: number) => {
-    setFiles((current) => current.filter((_, position) => position !== index));
+    const item = attachments[index];
+    if (item) remove(item);
     setAttachmentError("");
-  }, []);
+  }, [attachments, remove]);
 
   return (
     <div className={`claude-composer-container${variant === "welcome" ? " is-welcome" : ""}`}>
@@ -138,7 +143,7 @@ export function CaseComposer({
         onDrop={handleDrop}
         onSubmit={handleSubmit}
       >
-        <ComposerAttachments files={files} onRemove={removeAttachment} isUploading={isUploading} />
+        <ComposerAttachments attachments={attachments} onRemove={removeAttachment} onRetry={retry} isUploading={isUploading} />
         {attachmentError && <p className="claude-composer-error" role="alert">{attachmentError}</p>}
         <label className="visually-hidden" htmlFor="claude-case-message">
           Message about your billing dispute
@@ -185,7 +190,7 @@ export function CaseComposer({
             <button
               aria-label={isUploading ? "Uploading attachments" : isSending ? "Sending message" : "Send message"}
               className="claude-composer-send-btn"
-              disabled={!message.trim() || isSending || isUploading}
+              disabled={!message.trim() || isSending || isUploading || hasUnreadyAttachments}
               type="submit"
             >
               {isSending || isUploading ? (
