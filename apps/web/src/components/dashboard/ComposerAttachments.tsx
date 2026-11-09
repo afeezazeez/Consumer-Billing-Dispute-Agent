@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useState, type MouseEvent } from "react";
+import { PdfFileIcon } from "./PdfFileIcon";
 import { ComposerAttachmentPreview } from "./ComposerAttachmentPreview";
 import { ComposerAttachmentThumbnail } from "./ComposerAttachmentThumbnail";
 import type { StagedAttachment } from "./useStagedAttachments";
@@ -33,14 +34,7 @@ export function ComposerAttachments({ attachments, onRemove, onRetry, isUploadin
           return (
             <li key={key}>
               <button type="button" data-index={index} onClick={openPreview} title={status === "failed" ? "Upload failed. Click to retry." : file.name} aria-label={`${status === "failed" ? "Retry upload for" : "Preview"} ${file.name}`}>
-                {isImage ? <ComposerAttachmentThumbnail file={file} /> : (
-                  <svg className="composer-pdf-icon" aria-hidden="true" viewBox="0 0 40 48" fill="none">
-                    <path d="M7 2h17l10 10v31a3 3 0 0 1-3 3H7a3 3 0 0 1-3-3V5a3 3 0 0 1 3-3Z" fill="white" stroke="currentColor" strokeWidth="2" />
-                    <path d="M24 2v10h10" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
-                    <rect x="1" y="22" width="37" height="15" rx="3" fill="currentColor" />
-                    <text x="19.5" y="33" fill="white" textAnchor="middle" fontSize="10" fontWeight="700">PDF</text>
-                  </svg>
-                )}
+                {isImage ? <ComposerAttachmentThumbnail file={file} /> : <PdfFileIcon />}
                 {status !== "ready" && (
                   <span className="composer-attachment-progress" role="status">
                     {status === "uploading"

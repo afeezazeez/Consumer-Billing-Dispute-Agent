@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useState, type MouseEvent } from "react";
+import { PdfFileIcon } from "./PdfFileIcon";
 import { ComposerAttachmentPreview } from "./ComposerAttachmentPreview";
 import type { CaseAttachment } from "./dashboard.types";
 
@@ -45,7 +46,7 @@ export function CaseMessageAttachments({ attachments }: { attachments: CaseAttac
                 <picture><img src={attachmentUrl(attachment.id)} alt="" loading="lazy" /></picture>
               ) : (
                 <>
-                  <span className="case-attachment-file-type" aria-hidden="true">PDF</span>
+                  <PdfFileIcon />
                   <span className="case-attachment-file-name">{attachment.name}</span>
                 </>
               )}

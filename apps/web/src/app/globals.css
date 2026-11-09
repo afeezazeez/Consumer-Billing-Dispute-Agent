@@ -1759,14 +1759,11 @@ button, a {
   text-align: left;
 }
 
-.case-attachment-file-type {
-  background: var(--dash-primary-soft);
-  border-radius: 5px;
-  color: var(--dash-primary);
+.pdf-file-icon {
+  color: var(--dash-danger);
   flex: none;
-  font-size: 11px;
-  font-weight: 700;
-  padding: 4px 5px;
+  height: 30px;
+  width: 30px;
 }
 
 .case-attachment-file-name {
@@ -2036,10 +2033,9 @@ button, a {
   width: 72px;
 }
 
-.composer-pdf-icon {
-  color: var(--dash-danger);
-  height: 40px;
-  width: 34px;
+.composer-attachments .pdf-file-icon {
+  height: 36px;
+  width: 36px;
 }
 
 .composer-attachment-progress {
