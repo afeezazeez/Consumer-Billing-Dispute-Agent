@@ -1,26 +1,52 @@
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type MouseEvent } from "react";
 
-interface CaseMessageActionsProps {
-  content: string;
-}
+export function CaseMessageActions() {
+  const [status, setStatus] = useState<"idle" | "copied" | "failed">("idle");
+  const resetTimer = useRef<number>(undefined);
+  const label = status === "copied" ? "Copied response" : status === "failed" ? "Copy failed. Try again" : "Copy response";
 
-export function CaseMessageActions({ content }: CaseMessageActionsProps) {
-  const [copied, setCopied] = useState(false);
-  const handleCopy = useCallback(async () => {
-    await navigator.clipboard.writeText(content);
-    setCopied(true);
-    window.setTimeout(() => setCopied(false), 1600);
-  }, [content]);
+  useEffect(() => () => window.clearTimeout(resetTimer.current), []);
+
+  const handleCopy = useCallback(async (event: MouseEvent<HTMLButtonElement>) => {
+    const response = event.currentTarget.closest("article")?.querySelector<HTMLElement>(".assistant-markdown");
+    if (!response) return;
+
+    try {
+      await copyResponse(response);
+      setStatus("copied");
+    } catch {
+      setStatus("failed");
+    }
+    window.clearTimeout(resetTimer.current);
+    resetTimer.current = window.setTimeout(() => setStatus("idle"), 1600);
+  }, []);
 
   return (
     <div className="case-message-actions">
-      <button aria-label={copied ? "Copied response" : "Copy response"} onClick={handleCopy} title={copied ? "Copied" : "Copy"} type="button">
-        {copied ? <CheckIcon /> : <CopyIcon />}
+      <button aria-label={label} onClick={handleCopy} title={label} type="button">
+        {status === "copied" ? <CheckIcon /> : <CopyIcon />}
       </button>
     </div>
   );
+}
+
+async function copyResponse(response: HTMLElement): Promise<void> {
+  const plainText = response.innerText;
+  if (typeof ClipboardItem !== "undefined" && navigator.clipboard?.write) {
+    const item = new ClipboardItem({
+      "text/html": new Blob([response.innerHTML], { type: "text/html" }),
+      "text/plain": new Blob([plainText], { type: "text/plain" }),
+    });
+    try {
+      await navigator.clipboard.write([item]);
+      return;
+    } catch {
+      // Some browsers allow plain text writes even when rich clipboard writes fail.
+    }
+  }
+  await navigator.clipboard.writeText(plainText);
 }
 
 function CopyIcon() {

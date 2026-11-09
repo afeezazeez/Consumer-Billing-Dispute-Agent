@@ -241,7 +241,7 @@ export function CaseConversation({
                     : <p>{message.content}</p>}
                 </div>
                 {message.role === "assistant" && !message.emailDraft && (
-                  <CaseMessageActions content={message.content} />
+                  <CaseMessageActions />
                 )}
                 {message.role === "assistant" && (
                   <CaseMessageSources sources={getUnmentionedSources(message.content, message.sources)} />
