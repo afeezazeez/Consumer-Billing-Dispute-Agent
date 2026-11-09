@@ -1932,6 +1932,85 @@ button, a {
   z-index: 5;
 }
 
+.composer-attachments {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  list-style: none;
+  margin: 0 0 8px;
+  padding: 0;
+}
+
+.composer-attachments li {
+  align-items: center;
+  background: var(--dash-primary-soft);
+  border: 1px solid var(--dash-line);
+  border-radius: 8px;
+  display: flex;
+  max-width: 100%;
+}
+
+.composer-attachments button,
+.composer-attachment-preview button {
+  cursor: pointer;
+  min-height: 36px;
+  padding: 4px 8px;
+}
+
+.composer-attachments button:first-child {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+  min-width: 0;
+}
+
+.composer-attachments button:first-child span:last-child {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.composer-attachment-note {
+  color: var(--dash-ink-soft);
+  font-size: 12px;
+  margin: 0 0 6px;
+}
+
+.composer-attachment-preview {
+  background: white;
+  border: 1px solid var(--dash-line);
+  border-radius: 14px;
+  color: var(--dash-ink);
+  margin: auto;
+  max-height: 90dvh;
+  overflow: auto;
+  padding: 12px;
+  width: min(860px, calc(100% - 24px));
+}
+
+.composer-attachment-preview::backdrop {
+  background: var(--dash-scrim);
+}
+
+.composer-attachment-preview header {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  overflow-wrap: anywhere;
+}
+
+.composer-attachment-preview img {
+  margin: auto;
+  max-height: 72dvh;
+  object-fit: contain;
+}
+
+.composer-attachment-preview object {
+  height: 72dvh;
+  width: 100%;
+}
+
 /* Modern Confirm Dialog */
 .claude-confirm-dialog {
   background: #ffffff;

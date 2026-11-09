@@ -5,9 +5,15 @@ import {
   useRef,
   useState,
   type ChangeEvent,
+  type DragEvent,
   type FormEvent,
   type KeyboardEvent,
 } from "react";
+import { ComposerAttachments } from "./ComposerAttachments";
+
+const ATTACHMENT_TYPES = ["application/pdf", "image/jpeg", "image/png", "image/webp"];
+const MAX_ATTACHMENTS = 5;
+const MAX_ATTACHMENT_BYTES = 10 * 1024 * 1024;
 
 interface CaseComposerProps {
   isSending: boolean;
@@ -25,6 +31,8 @@ export function CaseComposer({
   placeholder,
 }: CaseComposerProps) {
   const [message, setMessage] = useState("");
+  const [files, setFiles] = useState<File[]>([]);
+  const [attachmentError, setAttachmentError] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -41,12 +49,12 @@ export function CaseComposer({
   const handleSubmit = useCallback(
     async (event: FormEvent<HTMLFormElement>) => {
       event.preventDefault();
-      if (!message.trim() || isSending) return;
+      if (!message.trim() || isSending || files.length > 0) return;
       const submittedMessage = message.trim();
       setMessage("");
       if (!await onSendMessage(submittedMessage)) setMessage(submittedMessage);
     },
-    [isSending, message, onSendMessage],
+    [files.length, isSending, message, onSendMessage],
   );
 
   const handleKeyDown = useCallback((event: KeyboardEvent<HTMLTextAreaElement>) => {
@@ -60,6 +68,38 @@ export function CaseComposer({
     fileInputRef.current?.click();
   }, []);
 
+  const addAttachments = useCallback((incoming: FileList) => {
+    const valid = Array.from(incoming).filter((file) =>
+      ATTACHMENT_TYPES.includes(file.type) && file.size > 0 && file.size <= MAX_ATTACHMENT_BYTES,
+    );
+    const available = MAX_ATTACHMENTS - files.length;
+    setFiles([...files, ...valid.slice(0, available)]);
+    setAttachmentError([
+      valid.length !== incoming.length ? "Choose a PDF, PNG, JPEG, or WebP file up to 10 MB." : "",
+      valid.length > available ? "You can attach up to five files." : "",
+    ].filter(Boolean).join(" "));
+  }, [files]);
+
+  const handleFileChange = useCallback((event: ChangeEvent<HTMLInputElement>) => {
+    if (event.currentTarget.files) addAttachments(event.currentTarget.files);
+    event.currentTarget.value = "";
+  }, [addAttachments]);
+
+  const handleDragOver = useCallback((event: DragEvent<HTMLFormElement>) => {
+    if (event.dataTransfer.types.includes("Files")) event.preventDefault();
+  }, []);
+
+  const handleDrop = useCallback((event: DragEvent<HTMLFormElement>) => {
+    if (!event.dataTransfer.files.length) return;
+    event.preventDefault();
+    addAttachments(event.dataTransfer.files);
+  }, [addAttachments]);
+
+  const removeAttachment = useCallback((index: number) => {
+    setFiles((current) => current.filter((_, position) => position !== index));
+    setAttachmentError("");
+  }, []);
+
   return (
     <div className={`claude-composer-container${variant === "welcome" ? " is-welcome" : ""}`}>
       {error && (
@@ -71,8 +111,13 @@ export function CaseComposer({
       <form
         aria-busy={isSending}
         className="claude-composer-card"
+        onDragOver={handleDragOver}
+        onDrop={handleDrop}
         onSubmit={handleSubmit}
       >
+        <ComposerAttachments files={files} onRemove={removeAttachment} />
+        {attachmentError && <p className="claude-composer-error" role="alert">{attachmentError}</p>}
+        {files.length > 0 && <p className="composer-attachment-note">Preview only for now. Remove attachments to send this message.</p>}
         <label className="visually-hidden" htmlFor="claude-case-message">
           Message about your billing dispute
         </label>
@@ -90,18 +135,21 @@ export function CaseComposer({
 
         <div className="claude-composer-bottom-bar">
           <div className="claude-composer-left-actions">
-            {/* Hidden file input ready for future document intake */}
             <input
+              accept={ATTACHMENT_TYPES.join(",")}
               aria-label="Upload billing document"
               className="visually-hidden"
+              multiple
+              onChange={handleFileChange}
               ref={fileInputRef}
+              tabIndex={-1}
               type="file"
             />
             <button
               aria-label="Add attachment"
               className="claude-attachment-btn"
               onClick={handleAttachmentClick}
-              title="Attach document or bill (coming soon)"
+              title="Choose PDFs or images to preview"
               type="button"
             >
               <span aria-hidden="true">＋</span>
@@ -112,7 +160,7 @@ export function CaseComposer({
             <button
               aria-label={isSending ? "Sending message" : "Send message"}
               className="claude-composer-send-btn"
-              disabled={!message.trim() || isSending}
+              disabled={!message.trim() || isSending || files.length > 0}
               type="submit"
             >
               {isSending ? (
