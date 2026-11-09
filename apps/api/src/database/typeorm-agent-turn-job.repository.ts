@@ -9,7 +9,14 @@ export class TypeOrmAgentTurnJobRepository implements AgentTurnJobRepository {
     const rows = await this.dataSource.query(`
       WITH next_job AS (
         SELECT id FROM agent_turn_jobs
-        WHERE status = 'queued' OR (status = 'running' AND locked_until < NOW())
+        WHERE (status = 'queued' OR (status = 'running' AND locked_until < NOW()))
+        AND NOT EXISTS (
+          SELECT 1 FROM agent_turn_jobs AS active
+          WHERE active.case_id = agent_turn_jobs.case_id
+          AND active.status = 'running'
+          AND active.locked_until > NOW()
+          AND active.id <> agent_turn_jobs.id
+        )
         ORDER BY created_at
         FOR UPDATE SKIP LOCKED
         LIMIT 1
