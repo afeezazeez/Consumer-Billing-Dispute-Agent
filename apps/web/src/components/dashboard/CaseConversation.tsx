@@ -18,6 +18,8 @@ import { CaseComposer } from "./CaseComposer";
 import { CaseMessageFailure } from "./CaseMessageFailure";
 import { AgentActivityDisclosure } from "./AgentActivityDisclosure";
 import { CaseMessageSources } from "./CaseMessageSources";
+import { CaseMessageActions } from "./CaseMessageActions";
+import { EmailDraftCard } from "./EmailDraftCard";
 import type { CaseAgentSource, CaseAgentToolActivity } from "./dashboard.types";
 import type { CaseConversation as CaseConversationData } from "./dashboard.types";
 
@@ -44,6 +46,9 @@ export function CaseConversation({
 }: CaseConversationProps) {
   const menuRef = useRef<HTMLDivElement>(null);
   const historyRef = useRef<HTMLDivElement>(null);
+  const historyContentRef = useRef<HTMLDivElement>(null);
+  const shouldFollowLatestRef = useRef(true);
+  const displayedCaseIdRef = useRef(billingCase.id);
   const [isRenaming, setIsRenaming] = useState(false);
   const [draftTitle, setDraftTitle] = useState(billingCase.title);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -111,14 +116,42 @@ export function CaseConversation({
     };
   }, [handleEscape, handleOutsidePointer]);
 
+  const handleHistoryScroll = useCallback(() => {
+    const history = historyRef.current;
+    if (history) shouldFollowLatestRef.current = history.scrollHeight - history.scrollTop - history.clientHeight < 120;
+  }, []);
+
+  const handleSend = useCallback((content: string) => {
+    shouldFollowLatestRef.current = true;
+    return onSendMessage(content);
+  }, [onSendMessage]);
+
   useLayoutEffect(() => {
+    if (displayedCaseIdRef.current === billingCase.id) return;
+    displayedCaseIdRef.current = billingCase.id;
+    shouldFollowLatestRef.current = true;
+  }, [billingCase.id]);
+
+  useLayoutEffect(() => {
+    if (!shouldFollowLatestRef.current) return;
     const history = historyRef.current;
     if (!history) return;
-    const scrollToLatest = () => { history.scrollTop = history.scrollHeight; };
+    const scrollToLatest = () => history.scrollTo({ top: history.scrollHeight, behavior: "smooth" });
     scrollToLatest();
     const frame = window.requestAnimationFrame(scrollToLatest);
     return () => window.cancelAnimationFrame(frame);
   }, [billingCase.messages, isSending, liveToolActivities]);
+
+  useEffect(() => {
+    const content = historyContentRef.current;
+    if (!content || typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(() => {
+      if (!shouldFollowLatestRef.current || !historyRef.current) return;
+      historyRef.current.scrollTop = historyRef.current.scrollHeight;
+    });
+    observer.observe(content);
+    return () => observer.disconnect();
+  }, []);
 
   const handleMenuKeyDown = useCallback((event: ReactKeyboardEvent<HTMLDivElement>) => {
     if (event.key === "Escape") setIsMenuOpen(false);
@@ -190,8 +223,8 @@ export function CaseConversation({
       {/* Main Chat Workspace */}
       <div className="claude-chat-workspace">
         {/* Messages Feed */}
-        <div className="claude-chat-history" aria-live="polite" ref={historyRef}>
-          <div className="claude-chat-history-inner">
+        <div className="claude-chat-history" aria-live="polite" onScroll={handleHistoryScroll} ref={historyRef}>
+          <div className="claude-chat-history-inner" ref={historyContentRef}>
             {billingCase.messages.map((message) => (
               <article
                 className={`claude-message-row ${message.role}`}
@@ -202,9 +235,14 @@ export function CaseConversation({
                 )}
                 <div className="claude-message-bubble">
                   {message.role === "assistant"
-                    ? <AssistantMessage content={message.content} />
+                    ? message.emailDraft
+                      ? <EmailDraftCard draft={message.emailDraft} />
+                      : <AssistantMessage content={message.content} />
                     : <p>{message.content}</p>}
                 </div>
+                {message.role === "assistant" && !message.emailDraft && (
+                  <CaseMessageActions content={message.content} />
+                )}
                 {message.role === "assistant" && (
                   <CaseMessageSources sources={getUnmentionedSources(message.content, message.sources)} />
                 )}
@@ -238,7 +276,7 @@ export function CaseConversation({
           <CaseComposer
             error={error}
             isSending={isAgentWorking}
-            onSendMessage={onSendMessage}
+            onSendMessage={handleSend}
             variant="conversation"
           />
         </div>

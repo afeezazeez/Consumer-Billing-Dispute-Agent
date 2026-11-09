@@ -27,7 +27,6 @@ export function DashboardWorkspace({ caseId: routeCaseId }: DashboardWorkspacePr
   const [casePendingDelete, setCasePendingDelete] = useState<CaseSummary>();
   const [isLoading, setIsLoading] = useState(true);
   const [isSending, setIsSending] = useState(false);
-  const [agentActivities, setAgentActivities] = useState<CaseAgentToolActivity[]>([]);
   const [isSigningOut, setIsSigningOut] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
@@ -77,10 +76,6 @@ export function DashboardWorkspace({ caseId: routeCaseId }: DashboardWorkspacePr
     setIsMobileSidebarOpen(false);
   }, []);
 
-  const handleAgentProgress = useCallback((activity: CaseAgentToolActivity) => {
-    setAgentActivities((current) => upsertAgentActivity(current, activity));
-  }, []);
-
   const handleSendMessage = useCallback(async (content: string): Promise<boolean> => {
     const optimisticCase = activeCase
       ? appendOptimisticMessage(activeCase, content)
@@ -88,11 +83,10 @@ export function DashboardWorkspace({ caseId: routeCaseId }: DashboardWorkspacePr
     const requestCaseId = optimisticCase.id;
     const requestMessageId = optimisticCase.messages.at(-1)?.id;
     setActiveCase(optimisticCase);
-    setAgentActivities([]);
     setIsSending(true);
     setError("");
     try {
-      const result = await sendCaseMessage(activeCase, optimisticCase, content, handleAgentProgress);
+      const result = await sendCaseMessage(activeCase, optimisticCase, content);
       setActiveCase((current) => current?.id === requestCaseId ? result.case : current);
       setCases((current) => upsertCase(current, result.case));
       if (!activeCase) router.push(`/cases/${result.case.id}`);
@@ -105,19 +99,17 @@ export function DashboardWorkspace({ caseId: routeCaseId }: DashboardWorkspacePr
       return true;
     } finally {
       setIsSending(false);
-      setAgentActivities([]);
     }
-  }, [activeCase, handleAgentProgress, router]);
+  }, [activeCase, router]);
 
   const handleRetryMessage = useCallback(async (messageId: string, editedContent?: string): Promise<void> => {
     if (!activeCase) return;
     const retryingCase = updateMessageStatus(activeCase, messageId, "pending", editedContent);
     setActiveCase(retryingCase);
-    setAgentActivities([]);
     setIsSending(true);
     setError("");
     try {
-      const result = await retryAgentMessage(activeCase, messageId, editedContent, handleAgentProgress);
+      const result = await retryAgentMessage(activeCase, messageId, editedContent);
       setActiveCase((current) => current?.id === activeCase.id ? result.case : current);
       setCases((current) => upsertCase(current, result.case));
     } catch {
@@ -127,9 +119,8 @@ export function DashboardWorkspace({ caseId: routeCaseId }: DashboardWorkspacePr
       setError("");
     } finally {
       setIsSending(false);
-      setAgentActivities([]);
     }
-  }, [activeCase, handleAgentProgress]);
+  }, [activeCase]);
 
   const handleDeleteCase = useCallback(async (caseId: string): Promise<void> => {
     try {
@@ -190,6 +181,17 @@ export function DashboardWorkspace({ caseId: routeCaseId }: DashboardWorkspacePr
     void Promise.resolve().then(loadWorkspace).catch((requestError: unknown) => handleLoadError(requestError, router, setError, setIsLoading));
   }, [loadWorkspace, router]);
 
+  const hasProcessingCase = cases.some((item) => item.isProcessing);
+  const isActiveCaseProcessing = activeCase?.messages.at(-1)?.processingStatus === "pending";
+
+  useEffect(() => {
+    if (!hasProcessingCase) return;
+    const interval = window.setInterval(() => {
+      void refreshProcessingCases(routeCaseId, isActiveCaseProcessing, setCases, setActiveCase);
+    }, 1200);
+    return () => window.clearInterval(interval);
+  }, [hasProcessingCase, isActiveCaseProcessing, routeCaseId]);
+
   if (isLoading) return <main className="dashboard-loading" aria-live="polite"><span aria-hidden="true" className="loading-spinner" /><span>Loading your workspace…</span></main>;
   if (!user) return <main className="dashboard-loading" role="alert">We couldn’t load your account. Please sign in again.</main>;
 
@@ -200,7 +202,6 @@ export function DashboardWorkspace({ caseId: routeCaseId }: DashboardWorkspacePr
         cases={cases}
         isCollapsed={isSidebarCollapsed}
         isMobileOpen={isMobileSidebarOpen}
-        isAgentWorking={isSending}
         isSigningOut={isSigningOut}
         onCloseMobile={handleCloseMobileSidebar}
         onDeleteCase={promptDeleteCase}
@@ -228,7 +229,7 @@ export function DashboardWorkspace({ caseId: routeCaseId }: DashboardWorkspacePr
             billingCase={activeCase}
             error={error}
             isSending={isSending}
-            liveToolActivities={agentActivities}
+            liveToolActivities={getPendingActivities(activeCase)}
             onDeleteCase={promptDeleteCase}
             onRenameCase={handleRenameCase}
             onRetryMessage={handleRetryMessage}
@@ -259,36 +260,33 @@ async function sendCaseMessage(
   activeCase: CaseConversationData | undefined,
   optimisticCase: CaseConversationData,
   content: string,
-  onProgress: (activity: CaseAgentToolActivity) => void,
 ): Promise<{ case: CaseConversationData }> {
-  if (activeCase) return requestCaseStream(`/cases/${activeCase.id}/messages/stream`, { content }, onProgress);
+  if (activeCase) return requestCaseStream(`/cases/${activeCase.id}/messages/stream`, { content });
   const initialMessage = optimisticCase.messages[0];
   return requestCaseStream("/cases/stream", {
     openingMessage: content,
     caseId: optimisticCase.id,
     messageId: initialMessage.id,
-  }, onProgress);
+  });
 }
 
 async function retryAgentMessage(
   billingCase: CaseConversationData,
   messageId: string,
   content?: string,
-  onProgress?: (activity: CaseAgentToolActivity) => void,
 ): Promise<{ case: CaseConversationData }> {
   const retryPath = `/cases/${billingCase.id}/messages/${messageId}/retry/stream`;
   try {
-    return await requestCaseStream(retryPath, { content }, onProgress);
+    return await requestCaseStream(retryPath, { content });
   } catch (error) {
     if (!isInitialMessage(billingCase, messageId)) throw error;
-    return requestCaseStream("/cases/stream", createCaseRetryPayload(billingCase, messageId, content), onProgress);
+    return requestCaseStream("/cases/stream", createCaseRetryPayload(billingCase, messageId, content));
   }
 }
 
 async function requestCaseStream(
   path: string,
   body: unknown,
-  onProgress?: (activity: CaseAgentToolActivity) => void,
 ): Promise<{ case: CaseConversationData }> {
   const response = await fetch(`${API_URL}${path}`, {
     ...postJson(body),
@@ -296,13 +294,12 @@ async function requestCaseStream(
     headers: { "Content-Type": "application/json", Accept: "text/event-stream" },
   });
   if (!response.ok) throw new DashboardRequestError(response.status);
-  const billingCase = await readCaseStream(response, onProgress);
+  const billingCase = await readCaseStream(response);
   return { case: billingCase };
 }
 
 async function readCaseStream(
   response: Response,
-  onProgress?: (activity: CaseAgentToolActivity) => void,
 ): Promise<CaseConversationData> {
   if (!response.body) throw new DashboardRequestError(500);
   const reader = response.body.getReader();
@@ -312,7 +309,7 @@ async function readCaseStream(
   while (true) {
     const chunk = await reader.read();
     buffer += decoder.decode(chunk.value, { stream: !chunk.done });
-    const parsed = dispatchSseFrames(buffer, onProgress);
+    const parsed = dispatchSseFrames(buffer);
     buffer = parsed.remainder;
     result = parsed.billingCase ?? result;
     if (parsed.failed) throw new DashboardRequestError(500);
@@ -324,7 +321,6 @@ async function readCaseStream(
 
 function dispatchSseFrames(
   buffer: string,
-  onProgress?: (activity: CaseAgentToolActivity) => void,
 ): { remainder: string; billingCase?: CaseConversationData; failed: boolean } {
   let remainder = buffer.replace(/\r\n/g, "\n");
   let billingCase: CaseConversationData | undefined;
@@ -334,7 +330,6 @@ function dispatchSseFrames(
     const frame = remainder.slice(0, boundary);
     remainder = remainder.slice(boundary + 2);
     const event = parseSseFrame(frame);
-    if (event?.type === "progress") onProgress?.(event.data.activity as CaseAgentToolActivity);
     if (event?.type === "done") billingCase = event.data.case as CaseConversationData;
     if (event?.type === "failure") failed = true;
     boundary = remainder.indexOf("\n\n");
@@ -389,6 +384,7 @@ function createPendingCase(content: string): CaseConversationData {
     id: crypto.randomUUID(),
     title: createCaseTitle(content),
     status: "open",
+    isProcessing: true,
     createdAt: now,
     updatedAt: now,
     lastMessage: content,
@@ -438,15 +434,6 @@ function updateMessageStatus(
   };
 }
 
-function upsertAgentActivity(
-  current: CaseAgentToolActivity[],
-  activity: CaseAgentToolActivity,
-): CaseAgentToolActivity[] {
-  const index = current.findIndex((item) => item.id === activity.id);
-  if (index < 0) return [...current, activity];
-  return current.map((item) => item.id === activity.id ? activity : item);
-}
-
 async function requestData<T>(path: string, options?: RequestInit): Promise<T> {
   const response = await fetch(`${API_URL}${path}`, { ...options, credentials: "include" });
   const payload = await response.json() as ApiResponse<T>;
@@ -460,7 +447,39 @@ function upsertCase(current: CaseSummary[], billingCase: CaseConversationData): 
 }
 
 function toSummary(billingCase: CaseConversationData): CaseSummary {
-  return { id: billingCase.id, title: billingCase.title, status: billingCase.status, updatedAt: billingCase.updatedAt, lastMessage: billingCase.lastMessage };
+  return {
+    id: billingCase.id,
+    title: billingCase.title,
+    status: billingCase.status,
+    updatedAt: billingCase.updatedAt,
+    lastMessage: billingCase.lastMessage,
+    isProcessing: billingCase.isProcessing ?? billingCase.messages.some((message) =>
+      message.role === "user" && message.processingStatus === "pending"),
+  };
+}
+
+function getPendingActivities(billingCase: CaseConversationData): CaseAgentToolActivity[] {
+  return [...billingCase.messages].reverse().find((message) =>
+    message.role === "user" && message.processingStatus === "pending")?.toolActivities ?? [];
+}
+
+async function refreshProcessingCases(
+  routeCaseId: string | undefined,
+  isActiveCaseProcessing: boolean,
+  setCases: (cases: CaseSummary[] | ((current: CaseSummary[]) => CaseSummary[])) => void,
+  setActiveCase: (billingCase: CaseConversationData | undefined | ((current: CaseConversationData | undefined) => CaseConversationData | undefined)) => void,
+): Promise<void> {
+  try {
+    const result = await requestData<{ cases: CaseSummary[] }>("/cases");
+    setCases(result.cases);
+    const activeSummary = result.cases.find((item) => item.id === routeCaseId);
+    if (routeCaseId && (activeSummary?.isProcessing || isActiveCaseProcessing)) {
+      const conversation = await requestData<{ case: CaseConversationData }>(`/cases/${routeCaseId}`);
+      setActiveCase((current) => current?.id === routeCaseId ? conversation.case : current);
+    }
+  } catch {
+    // The active turn keeps running; the next poll will refresh its visible state.
+  }
 }
 
 function getFirstName(displayName: string): string {

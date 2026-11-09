@@ -11,6 +11,7 @@ export interface CaseSummary {
   status: string;
   updatedAt: string;
   lastMessage: string;
+  isProcessing: boolean;
 }
 
 export interface CaseMessage {
@@ -21,6 +22,13 @@ export interface CaseMessage {
   processingStatus: "pending" | "complete" | "failed";
   sources: CaseAgentSource[];
   toolActivities: CaseAgentToolActivity[];
+  emailDraft?: CaseEmailDraft;
+}
+
+export interface CaseEmailDraft {
+  recipients: string;
+  subject: string;
+  body: string;
 }
 
 export interface CaseAgentSource {
