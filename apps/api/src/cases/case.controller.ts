@@ -4,6 +4,7 @@ import { CaseSummaryDto } from "../dtos/cases/case-summary.dto";
 import { CreateCaseRequestDto } from "../dtos/cases/create-case-request.dto";
 import { CreateMessageRequestDto } from "../dtos/cases/create-message-request.dto";
 import { RenameCaseRequestDto } from "../dtos/cases/rename-case-request.dto";
+import { RetryCaseMessageRequestDto } from "../dtos/cases/retry-case-message-request.dto";
 import { ClientErrorException } from "../exceptions/client.error.exception";
 import { ResponseStatus } from "../enums/response-status";
 import { sendSuccessResponse } from "../utils/http/response-handlers";
@@ -27,6 +28,8 @@ export class CaseController {
       const payload = request.body as CreateCaseRequestDto;
       const input = {
         openingMessage: payload.openingMessage.trim(),
+        caseId: payload.caseId,
+        messageId: payload.messageId,
         userFirstName: authenticatedFirstName(request),
       };
       const record = await this.caseService.createCase(authenticatedUserId(request), input);
@@ -62,6 +65,22 @@ export class CaseController {
     }
   }
 
+  async retryMessage(request: Request, response: Response, next: NextFunction): Promise<void> {
+    try {
+      const payload = request.body as RetryCaseMessageRequestDto;
+      const result = await this.caseService.retryFailedMessage(authenticatedUserId(request), {
+        caseId: readCaseId(request),
+        messageId: readMessageId(request),
+        content: payload.content,
+        userFirstName: authenticatedFirstName(request),
+      });
+      if (!result) throw new ClientErrorException("Message is no longer available to retry", ResponseStatus.CONFLICT);
+      sendSuccessResponse(response, { case: CaseConversationDto.make(result) }, "Message retry completed");
+    } catch (error) {
+      next(error);
+    }
+  }
+
   async delete(request: Request, response: Response, next: NextFunction): Promise<void> {
     try {
       const deleted = await this.caseService.deleteCase(authenticatedUserId(request), readCaseId(request));
@@ -88,4 +107,10 @@ function readCaseId(request: Request): string {
   const caseId = request.params.caseId;
   if (typeof caseId !== "string") throw new ClientErrorException("Case not found", ResponseStatus.NOT_FOUND);
   return caseId;
+}
+
+function readMessageId(request: Request): string {
+  const messageId = request.params.messageId;
+  if (typeof messageId !== "string") throw new ClientErrorException("Message not found", ResponseStatus.NOT_FOUND);
+  return messageId;
 }

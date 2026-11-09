@@ -5,7 +5,10 @@ export interface CaseMessageRecord {
   role: "user" | "assistant";
   content: string;
   createdAt: Date;
+  processingStatus: CaseMessageProcessingStatus;
 }
+
+export type CaseMessageProcessingStatus = "pending" | "complete" | "failed";
 
 export interface CaseSummary {
   id: string;
@@ -21,25 +24,41 @@ export interface CaseConversation extends CaseSummary {
   intake: CaseIntakeState;
 }
 
-export type CaseAgentTurnMessages = [userMessage: CaseMessageRecord, assistantMessage: CaseMessageRecord];
-
-export interface CreateCaseTurn {
+export interface CreatePendingCase {
   userId: string;
+  caseId?: string;
   title: string;
-  messages: CaseAgentTurnMessages;
+  userMessage: CaseMessageRecord;
   intake: CaseIntakeState;
 }
 
-export interface AppendCaseTurn {
+export interface AppendPendingMessage {
   userId: string;
   caseId: string;
-  messages: CaseAgentTurnMessages;
+  userMessage: CaseMessageRecord;
+}
+
+export interface CompleteCaseTurn {
+  userId: string;
+  caseId: string;
+  userMessageId: string;
+  assistantMessage: CaseMessageRecord;
   intake: CaseIntakeState;
+}
+
+export interface UpdateFailedMessage {
+  userId: string;
+  caseId: string;
+  messageId: string;
+  content?: string;
 }
 
 export interface CaseRepository {
-  createWithTurn(turn: CreateCaseTurn): Promise<CaseConversation>;
-  appendTurn(turn: AppendCaseTurn): Promise<CaseConversation | undefined>;
+  createPendingCase(input: CreatePendingCase): Promise<CaseConversation>;
+  appendPendingMessage(input: AppendPendingMessage): Promise<CaseConversation | undefined>;
+  completeTurn(input: CompleteCaseTurn): Promise<CaseConversation | undefined>;
+  markMessageFailed(input: UpdateFailedMessage): Promise<CaseConversation | undefined>;
+  prepareFailedMessageRetry(input: UpdateFailedMessage): Promise<CaseConversation | undefined>;
   listForUser(userId: string): Promise<CaseSummary[]>;
   findForUser(userId: string, caseId: string): Promise<CaseConversation | undefined>;
   deleteForUser(userId: string, caseId: string): Promise<boolean>;

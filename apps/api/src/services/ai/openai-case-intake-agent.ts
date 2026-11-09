@@ -35,7 +35,7 @@ export class OpenAiCaseIntakeAgent implements CaseIntakeAgent {
       return await this.runAgentTurn(this.createClient(), context);
     } catch (error) {
       if (error instanceof ServiceUnavailableException) throw error;
-      throw new ServiceUnavailableException("Bill Agent could not complete this turn. Your message was not saved; please try again.");
+      throw new ServiceUnavailableException("Bill Agent could not complete this turn. Your message is saved; please try again.");
     }
   }
 

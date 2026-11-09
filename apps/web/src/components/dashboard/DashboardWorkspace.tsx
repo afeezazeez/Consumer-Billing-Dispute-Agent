@@ -10,7 +10,11 @@ import type { CaseConversation as CaseConversationData, CaseSummary, DashboardUs
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
 
-export function DashboardWorkspace() {
+interface DashboardWorkspaceProps {
+  caseId?: string;
+}
+
+export function DashboardWorkspace({ caseId: routeCaseId }: DashboardWorkspaceProps) {
   const router = useRouter();
   const [user, setUser] = useState<DashboardUser>();
   const [cases, setCases] = useState<CaseSummary[]>([]);
@@ -31,24 +35,29 @@ export function DashboardWorkspace() {
   }, []);
 
   const loadWorkspace = useCallback(async () => {
+    setIsLoading(true);
+    setActiveCase(undefined);
+    setError("");
     const currentUser = await requestData<DashboardUser>("/auth/me");
     setUser(currentUser);
     const savedCases = await requestData<{ cases: CaseSummary[] }>("/cases");
     setCases(savedCases.cases);
-    if (savedCases.cases[0]) await selectCase(savedCases.cases[0].id);
+    if (routeCaseId) await selectCase(routeCaseId);
+    else setActiveCase(undefined);
     setIsLoading(false);
-  }, [selectCase]);
+  }, [routeCaseId, selectCase]);
 
   const handleSelectCase = useCallback((caseId: string) => {
     setIsMobileSidebarOpen(false);
-    void selectCase(caseId).catch(() => setError("We couldn’t open that case. Please try again."));
-  }, [selectCase]);
+    router.push(`/cases/${caseId}`);
+  }, [router]);
 
   const handleNewCase = useCallback(() => {
     setIsMobileSidebarOpen(false);
     setActiveCase(undefined);
     setError("");
-  }, []);
+    router.push("/dashboard");
+  }, [router]);
 
   const handleToggleSidebar = useCallback(() => {
     setIsSidebarCollapsed((current) => !current);
@@ -63,23 +72,46 @@ export function DashboardWorkspace() {
   }, []);
 
   const handleSendMessage = useCallback(async (content: string): Promise<boolean> => {
-    const previousCase = activeCase;
     const optimisticCase = activeCase
       ? appendOptimisticMessage(activeCase, content)
       : createPendingCase(content);
     const requestCaseId = optimisticCase.id;
+    const requestMessageId = optimisticCase.messages.at(-1)?.id;
     setActiveCase(optimisticCase);
     setIsSending(true);
     setError("");
     try {
-      const result = await sendCaseMessage(activeCase, content);
+      const result = await sendCaseMessage(activeCase, optimisticCase, content);
       setActiveCase((current) => current?.id === requestCaseId ? result.case : current);
       setCases((current) => upsertCase(current, result.case));
+      if (!activeCase) router.push(`/cases/${result.case.id}`);
       return true;
-    } catch (requestError) {
-      setError(getSendErrorMessage(requestError));
-      setActiveCase((current) => current?.id === requestCaseId ? previousCase : current);
-      return false;
+    } catch {
+      setError("");
+      setActiveCase((current) => current?.id === requestCaseId && requestMessageId
+        ? updateMessageStatus(current, requestMessageId, "failed")
+        : current);
+      return true;
+    } finally {
+      setIsSending(false);
+    }
+  }, [activeCase, router]);
+
+  const handleRetryMessage = useCallback(async (messageId: string, editedContent?: string): Promise<void> => {
+    if (!activeCase) return;
+    const retryingCase = updateMessageStatus(activeCase, messageId, "pending", editedContent);
+    setActiveCase(retryingCase);
+    setIsSending(true);
+    setError("");
+    try {
+      const result = await retryAgentMessage(activeCase, messageId, editedContent);
+      setActiveCase((current) => current?.id === activeCase.id ? result.case : current);
+      setCases((current) => upsertCase(current, result.case));
+    } catch {
+      setActiveCase((current) => current?.id === activeCase.id
+        ? updateMessageStatus(retryingCase, messageId, "failed", editedContent)
+        : current);
+      setError("");
     } finally {
       setIsSending(false);
     }
@@ -91,10 +123,11 @@ export function DashboardWorkspace() {
       setCases((current) => current.filter((item) => item.id !== caseId));
       setActiveCase((current) => current?.id === caseId ? undefined : current);
       setError("");
+      if (caseId === activeCase?.id || caseId === routeCaseId) router.replace("/dashboard");
     } catch {
       setError("We couldn’t delete this case. Please try again.");
     }
-  }, []);
+  }, [activeCase, routeCaseId, router]);
 
   const promptDeleteCase = useCallback((caseId: string) => {
     const target = cases.find((c) => c.id === caseId) || (activeCase?.id === caseId ? activeCase : undefined);
@@ -183,6 +216,7 @@ export function DashboardWorkspace() {
             isSending={isSending}
             onDeleteCase={promptDeleteCase}
             onRenameCase={handleRenameCase}
+            onRetryMessage={handleRetryMessage}
             onSendMessage={handleSendMessage}
           />
         ) : (
@@ -206,17 +240,61 @@ export function DashboardWorkspace() {
   );
 }
 
-async function sendCaseMessage(activeCase: CaseConversationData | undefined, content: string): Promise<{ case: CaseConversationData }> {
-  const url = activeCase ? `/cases/${activeCase.id}/messages` : "/cases";
-  const payload = activeCase ? { content } : { openingMessage: content };
-  return requestData(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+async function sendCaseMessage(
+  activeCase: CaseConversationData | undefined,
+  optimisticCase: CaseConversationData,
+  content: string,
+): Promise<{ case: CaseConversationData }> {
+  if (activeCase) return requestData(`/cases/${activeCase.id}/messages`, postJson({ content }));
+  const initialMessage = optimisticCase.messages[0];
+  return requestData("/cases", postJson({ openingMessage: content, caseId: optimisticCase.id, messageId: initialMessage.id }));
+}
+
+async function retryAgentMessage(
+  billingCase: CaseConversationData,
+  messageId: string,
+  content?: string,
+): Promise<{ case: CaseConversationData }> {
+  const retryPath = `/cases/${billingCase.id}/messages/${messageId}/retry`;
+  try {
+    return await requestData(retryPath, postJson({ content }));
+  } catch (error) {
+    if (!isInitialMessage(billingCase, messageId)) throw error;
+    return requestData("/cases", postJson(createCaseRetryPayload(billingCase, messageId, content)));
+  }
+}
+
+function isInitialMessage(billingCase: CaseConversationData, messageId: string): boolean {
+  return billingCase.messages.length === 1 && billingCase.messages[0].id === messageId;
+}
+
+function createCaseRetryPayload(
+  billingCase: CaseConversationData,
+  messageId: string,
+  editedContent?: string,
+): Record<string, string> {
+  return {
+    openingMessage: editedContent ?? billingCase.messages[0].content,
+    caseId: billingCase.id,
+    messageId,
+  };
+}
+
+function postJson(body: unknown): RequestInit {
+  return { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) };
 }
 
 function createPendingCase(content: string): CaseConversationData {
   const now = new Date().toISOString();
-  const userMessage = { id: crypto.randomUUID(), role: "user" as const, content, createdAt: now };
+  const userMessage = {
+    id: crypto.randomUUID(),
+    role: "user" as const,
+    content,
+    createdAt: now,
+    processingStatus: "pending" as const,
+  };
   return {
-    id: `pending-${crypto.randomUUID()}`,
+    id: crypto.randomUUID(),
     title: createCaseTitle(content),
     status: "open",
     createdAt: now,
@@ -227,12 +305,17 @@ function createPendingCase(content: string): CaseConversationData {
   };
 }
 
+function createCaseTitle(message: string): string {
+  const normalized = message.trim().replace(/\s+/g, " ");
+  return normalized.length <= 60 ? normalized : `${normalized.slice(0, 57).trimEnd()}…`;
+}
+
 function appendOptimisticMessage(
   billingCase: CaseConversationData,
   content: string,
 ): CaseConversationData {
   const createdAt = new Date().toISOString();
-  const message = { id: crypto.randomUUID(), role: "user" as const, content, createdAt };
+  const message = { id: crypto.randomUUID(), role: "user" as const, content, createdAt, processingStatus: "pending" as const };
   return {
     ...billingCase,
     updatedAt: createdAt,
@@ -241,9 +324,18 @@ function appendOptimisticMessage(
   };
 }
 
-function createCaseTitle(message: string): string {
-  const normalized = message.trim().replace(/\s+/g, " ");
-  return normalized.length <= 60 ? normalized : `${normalized.slice(0, 57).trimEnd()}…`;
+function updateMessageStatus(
+  billingCase: CaseConversationData,
+  messageId: string,
+  processingStatus: CaseConversationData["messages"][number]["processingStatus"],
+  content?: string,
+): CaseConversationData {
+  return {
+    ...billingCase,
+    messages: billingCase.messages.map((message) => message.id === messageId
+      ? { ...message, processingStatus, content: content ?? message.content }
+      : message),
+  };
 }
 
 async function requestData<T>(path: string, options?: RequestInit): Promise<T> {
@@ -282,11 +374,4 @@ interface ApiResponse<T> {
 
 class DashboardRequestError extends Error {
   constructor(public readonly status: number) { super("Dashboard request failed"); }
-}
-
-function getSendErrorMessage(error: unknown): string {
-  if (error instanceof DashboardRequestError && error.status === 503) {
-    return "Bill Agent couldn’t respond just now. Your message wasn’t saved; please try again shortly.";
-  }
-  return "We couldn’t save your message. Please try again.";
 }

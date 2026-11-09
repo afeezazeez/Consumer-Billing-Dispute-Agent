@@ -4,6 +4,7 @@ import {
   useCallback,
   useEffect,
   useLayoutEffect,
+  useMemo,
   useRef,
   useState,
   type ChangeEvent,
@@ -12,6 +13,7 @@ import {
   type KeyboardEvent as ReactKeyboardEvent,
 } from "react";
 import { CaseComposer } from "./CaseComposer";
+import { CaseMessageFailure } from "./CaseMessageFailure";
 import type { CaseConversation as CaseConversationData } from "./dashboard.types";
 
 interface CaseConversationProps {
@@ -19,6 +21,7 @@ interface CaseConversationProps {
   isSending: boolean;
   error: string;
   onSendMessage: (message: string) => Promise<boolean>;
+  onRetryMessage: (messageId: string, content?: string) => void;
   onDeleteCase: (caseId: string) => void;
   onRenameCase: (caseId: string, title: string) => Promise<boolean>;
 }
@@ -28,6 +31,7 @@ export function CaseConversation({
   isSending,
   error,
   onSendMessage,
+  onRetryMessage,
   onDeleteCase,
   onRenameCase,
 }: CaseConversationProps) {
@@ -36,6 +40,10 @@ export function CaseConversation({
   const [isRenaming, setIsRenaming] = useState(false);
   const [draftTitle, setDraftTitle] = useState(billingCase.title);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const isAgentWorking = useMemo(
+    () => isSending || billingCase.messages.at(-1)?.processingStatus === "pending",
+    [billingCase.messages, isSending],
+  );
 
   const handleToggleMenu = useCallback(() => setIsMenuOpen((curr) => !curr), []);
 
@@ -136,7 +144,7 @@ export function CaseConversation({
               aria-expanded={isMenuOpen}
               aria-haspopup="menu"
               className="claude-title-button"
-              disabled={isSending}
+              disabled={isAgentWorking}
               id="active-case-title"
               onClick={handleToggleMenu}
               type="button"
@@ -181,9 +189,18 @@ export function CaseConversation({
                 <div className="claude-message-bubble">
                   <p>{message.content}</p>
                 </div>
+                {message.role === "user" && message.processingStatus === "failed" && (
+                  <CaseMessageFailure
+                    content={message.content}
+                    isSending={isAgentWorking}
+                    key={`${message.id}-${message.content}-${message.processingStatus}`}
+                    messageId={message.id}
+                    onRetry={onRetryMessage}
+                  />
+                )}
               </article>
             ))}
-            {isSending && (
+            {isAgentWorking && (
               <div aria-live="polite" className="claude-agent-thinking" role="status">
                 <span aria-label="Thinking" className="claude-agent-thinking-text">
                   {renderThinkingLetters()}
@@ -197,7 +214,7 @@ export function CaseConversation({
         <div className="claude-chat-composer-container">
           <CaseComposer
             error={error}
-            isSending={isSending}
+            isSending={isAgentWorking}
             onSendMessage={onSendMessage}
             variant="conversation"
           />

@@ -18,6 +18,7 @@ export interface CaseMessage {
   role: "user" | "assistant";
   content: string;
   createdAt: string;
+  processingStatus: "pending" | "complete" | "failed";
 }
 
 export interface CaseConversation extends CaseSummary {

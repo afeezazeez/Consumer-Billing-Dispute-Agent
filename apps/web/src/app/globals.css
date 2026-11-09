@@ -1535,6 +1535,8 @@ button, a {
 }
 
 .claude-message-row.user {
+  align-items: flex-end;
+  flex-direction: column;
   justify-content: flex-end;
 }
 
@@ -1560,6 +1562,63 @@ button, a {
 .claude-message-bubble p {
   margin: 0;
   white-space: pre-wrap;
+}
+
+.case-message-failure {
+  background: var(--dash-sidebar-bg);
+  border: 1px solid var(--dash-line);
+  border-left: 3px solid var(--dash-danger);
+  border-radius: 8px;
+  color: var(--dash-ink-soft);
+  margin-top: 8px;
+  max-width: min(100%, 520px);
+  padding: 10px 12px;
+  text-align: left;
+}
+
+.case-message-failure p {
+  font-size: 13px;
+  margin: 0;
+}
+
+.case-message-failure textarea {
+  background: var(--dash-bg);
+  border: 1px solid var(--dash-line);
+  border-radius: 6px;
+  color: var(--dash-ink);
+  display: block;
+  font: inherit;
+  margin-top: 8px;
+  min-height: 72px;
+  padding: 8px;
+  resize: vertical;
+  width: 100%;
+}
+
+.case-message-failure-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.case-message-failure-actions button {
+  background: transparent;
+  border: 1px solid var(--dash-line);
+  border-radius: 6px;
+  color: var(--dash-ink);
+  cursor: pointer;
+  font-size: 12px;
+  padding: 5px 9px;
+}
+
+.case-message-failure-actions button:first-child {
+  border-color: transparent;
+  padding-left: 0;
+}
+
+.case-message-failure-actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
 }
 
 .claude-chat-composer-container {

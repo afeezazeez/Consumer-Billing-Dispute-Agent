@@ -1,5 +1,6 @@
 import { EntitySchema } from "typeorm";
 import type { CaseIntakeState } from "../../cases/case-intake";
+import type { CaseMessageProcessingStatus } from "../../cases/case.repository";
 
 export class CaseEntity {
   id!: string;
@@ -17,6 +18,7 @@ export class CaseMessageEntity {
   role!: "user" | "assistant";
   content!: string;
   createdAt!: Date;
+  processingStatus!: CaseMessageProcessingStatus;
 }
 
 export const caseSchema = new EntitySchema<CaseEntity>({
@@ -48,6 +50,7 @@ export const caseMessageSchema = new EntitySchema<CaseMessageEntity>({
     caseId: { name: "case_id", type: "uuid" },
     role: { type: "varchar", length: 12 },
     content: { type: "text" },
+    processingStatus: { name: "processing_status", type: "varchar", length: 16, default: "complete" },
     createdAt: { name: "created_at", type: "timestamptz", createDate: true },
   },
   indices: [{ columns: ["caseId", "createdAt"] }],

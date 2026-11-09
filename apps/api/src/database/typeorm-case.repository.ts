@@ -1,25 +1,38 @@
 import { randomUUID } from "node:crypto";
 import { In, type DataSource, type EntityManager } from "typeorm";
 import type {
-  AppendCaseTurn,
-  CaseAgentTurnMessages,
+  AppendPendingMessage,
   CaseConversation,
   CaseMessageRecord,
   CaseRepository,
   CaseSummary,
-  CreateCaseTurn,
+  CompleteCaseTurn,
+  CreatePendingCase,
+  UpdateFailedMessage,
 } from "../cases/case.repository";
 import { CaseEntity, CaseMessageEntity } from "./entities/case.entity";
 
 export class TypeOrmCaseRepository implements CaseRepository {
   constructor(private readonly dataSource: DataSource) {}
 
-  createWithTurn(turn: CreateCaseTurn): Promise<CaseConversation> {
-    return this.dataSource.transaction((manager) => this.createCase(manager, turn));
+  createPendingCase(input: CreatePendingCase): Promise<CaseConversation> {
+    return this.dataSource.transaction((manager) => this.createCase(manager, input));
   }
 
-  appendTurn(turn: AppendCaseTurn): Promise<CaseConversation | undefined> {
-    return this.dataSource.transaction((manager) => this.appendCaseTurn(manager, turn));
+  appendPendingMessage(input: AppendPendingMessage): Promise<CaseConversation | undefined> {
+    return this.dataSource.transaction((manager) => this.appendMessage(manager, input));
+  }
+
+  completeTurn(input: CompleteCaseTurn): Promise<CaseConversation | undefined> {
+    return this.dataSource.transaction((manager) => this.completeCaseTurn(manager, input));
+  }
+
+  markMessageFailed(input: UpdateFailedMessage): Promise<CaseConversation | undefined> {
+    return this.dataSource.transaction((manager) => this.changeMessageStatus(manager, input, "failed"));
+  }
+
+  prepareFailedMessageRetry(input: UpdateFailedMessage): Promise<CaseConversation | undefined> {
+    return this.dataSource.transaction((manager) => this.resetFailedMessage(manager, input));
   }
 
   async listForUser(userId: string): Promise<CaseSummary[]> {
@@ -56,35 +69,75 @@ export class TypeOrmCaseRepository implements CaseRepository {
     return (result.affected ?? 0) > 0;
   }
 
-  private async createCase(manager: EntityManager, turn: CreateCaseTurn): Promise<CaseConversation> {
+  private async createCase(manager: EntityManager, input: CreatePendingCase): Promise<CaseConversation> {
     const record = await manager.getRepository(CaseEntity).save({
-      id: randomUUID(),
-      userId: turn.userId,
-      title: turn.title,
+      id: input.caseId ?? randomUUID(),
+      userId: input.userId,
+      title: input.title,
       status: "open",
-      intakeState: turn.intake,
+      intakeState: input.intake,
     });
-    const messages = await saveTurnMessages(manager, record.id, turn.messages);
-    return toConversation(record, messages);
+    const message = await manager.getRepository(CaseMessageEntity).save(toMessageEntity(input.userMessage, record.id));
+    return toConversation(record, [message]);
   }
 
-  private async appendCaseTurn(manager: EntityManager, turn: AppendCaseTurn): Promise<CaseConversation | undefined> {
+  private async appendMessage(manager: EntityManager, input: AppendPendingMessage): Promise<CaseConversation | undefined> {
     const cases = manager.getRepository(CaseEntity);
-    const record = await cases.findOneBy({ id: turn.caseId, userId: turn.userId });
+    const record = await cases.findOneBy({ id: input.caseId, userId: input.userId });
     if (!record) return undefined;
-    await saveTurnMessages(manager, turn.caseId, turn.messages);
-    await cases.update({ id: turn.caseId, userId: turn.userId }, { updatedAt: turn.messages[1].createdAt, intakeState: turn.intake });
-    const updatedRecord = await cases.findOneBy({ id: turn.caseId, userId: turn.userId });
-    return updatedRecord ? toConversation(updatedRecord, await loadMessages(manager, turn.caseId)) : undefined;
+    await manager.getRepository(CaseMessageEntity).save(toMessageEntity(input.userMessage, input.caseId));
+    await cases.update({ id: input.caseId, userId: input.userId }, { updatedAt: input.userMessage.createdAt });
+    return readConversation(manager, input.userId, input.caseId);
+  }
+
+  private async completeCaseTurn(manager: EntityManager, input: CompleteCaseTurn): Promise<CaseConversation | undefined> {
+    const messages = manager.getRepository(CaseMessageEntity);
+    const update = await messages.update(
+      { id: input.userMessageId, caseId: input.caseId, role: "user", processingStatus: "pending" },
+      { processingStatus: "complete" },
+    );
+    if (!update.affected) return undefined;
+    await messages.save(toMessageEntity(input.assistantMessage, input.caseId));
+    await manager.getRepository(CaseEntity).update(
+      { id: input.caseId, userId: input.userId },
+      { updatedAt: input.assistantMessage.createdAt, intakeState: input.intake },
+    );
+    return readConversation(manager, input.userId, input.caseId);
+  }
+
+  private async changeMessageStatus(
+    manager: EntityManager,
+    input: UpdateFailedMessage,
+    processingStatus: "failed",
+  ): Promise<CaseConversation | undefined> {
+    const result = await manager.getRepository(CaseMessageEntity).update(
+      { id: input.messageId, caseId: input.caseId, role: "user", processingStatus: "pending" },
+      { processingStatus },
+    );
+    return result.affected ? readConversation(manager, input.userId, input.caseId) : undefined;
+  }
+
+  private async resetFailedMessage(manager: EntityManager, input: UpdateFailedMessage): Promise<CaseConversation | undefined> {
+    const messageUpdate: Partial<CaseMessageEntity> = { processingStatus: "pending" };
+    if (input.content) messageUpdate.content = input.content;
+    const result = await manager.getRepository(CaseMessageEntity).update(
+      { id: input.messageId, caseId: input.caseId, role: "user", processingStatus: "failed" },
+      messageUpdate,
+    );
+    if (!result.affected) return undefined;
+    await manager.getRepository(CaseEntity).update({ id: input.caseId, userId: input.userId }, { updatedAt: new Date() });
+    return readConversation(manager, input.userId, input.caseId);
   }
 }
 
-async function saveTurnMessages(
+async function readConversation(
   manager: EntityManager,
+  userId: string,
   caseId: string,
-  messages: CaseAgentTurnMessages,
-): Promise<CaseMessageEntity[]> {
-  return manager.getRepository(CaseMessageEntity).save(messages.map((message) => toMessageEntity(message, caseId)));
+): Promise<CaseConversation | undefined> {
+  const record = await manager.getRepository(CaseEntity).findOneBy({ id: caseId, userId });
+  if (!record) return undefined;
+  return toConversation(record, await loadMessages(manager, caseId));
 }
 
 function toMessageEntity(message: CaseMessageRecord, caseId: string): CaseMessageEntity {
@@ -94,6 +147,7 @@ function toMessageEntity(message: CaseMessageRecord, caseId: string): CaseMessag
     role: message.role,
     content: message.content,
     createdAt: message.createdAt,
+    processingStatus: message.processingStatus,
   };
 }
 
@@ -128,5 +182,11 @@ function toCaseFields(record: CaseEntity): Omit<CaseSummary, "lastMessage"> {
 }
 
 function toMessage(message: CaseMessageEntity): CaseMessageRecord {
-  return { id: message.id, role: message.role, content: message.content, createdAt: message.createdAt };
+  return {
+    id: message.id,
+    role: message.role,
+    content: message.content,
+    createdAt: message.createdAt,
+    processingStatus: message.processingStatus,
+  };
 }
