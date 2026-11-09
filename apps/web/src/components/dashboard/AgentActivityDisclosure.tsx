@@ -29,6 +29,6 @@ export function AgentActivityDisclosure({ activities, isLive = false }: AgentAct
 
 function getActivitySummary(activities: CaseAgentToolActivity[], isLive: boolean): string {
   const latestActivity = activities.at(-1);
-  if (isLive && latestActivity) return `${latestActivity.label}…`;
-  return `Used ${activities.length === 1 ? "1 tool" : `${activities.length} tools`}`;
+  if (isLive && latestActivity) return latestActivity.label;
+  return `${activities.length === 1 ? "1 tool" : `${activities.length} tools`} used`;
 }

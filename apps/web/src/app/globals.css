@@ -1659,9 +1659,38 @@ button, a {
   padding: 4px 0;
 }
 
-.claude-message-bubble p {
-  margin: 0;
+.claude-message-bubble > p,
+.assistant-markdown p {
+  margin: 0 0 12px;
   white-space: pre-wrap;
+}
+
+.assistant-markdown p:last-child {
+  margin-bottom: 0;
+}
+
+.assistant-markdown ul,
+.assistant-markdown ol {
+  margin: 8px 0 12px;
+  padding-left: 24px;
+}
+
+.assistant-markdown li + li {
+  margin-top: 4px;
+}
+
+.assistant-markdown {
+  overflow-wrap: anywhere;
+}
+
+.assistant-markdown a {
+  color: var(--dash-primary);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.assistant-markdown a:hover {
+  color: var(--dash-ink);
 }
 
 .case-message-failure {

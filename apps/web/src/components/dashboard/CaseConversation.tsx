@@ -12,11 +12,13 @@ import {
   type PointerEvent as ReactPointerEvent,
   type KeyboardEvent as ReactKeyboardEvent,
 } from "react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { CaseComposer } from "./CaseComposer";
 import { CaseMessageFailure } from "./CaseMessageFailure";
 import { AgentActivityDisclosure } from "./AgentActivityDisclosure";
 import { CaseMessageSources } from "./CaseMessageSources";
-import type { CaseAgentToolActivity } from "./dashboard.types";
+import type { CaseAgentSource, CaseAgentToolActivity } from "./dashboard.types";
 import type { CaseConversation as CaseConversationData } from "./dashboard.types";
 
 interface CaseConversationProps {
@@ -192,12 +194,14 @@ export function CaseConversation({
                 key={message.id}
               >
                 <div className="claude-message-bubble">
-                  <p>{message.content}</p>
+                  {message.role === "assistant"
+                    ? <AssistantMessage content={message.content} />
+                    : <p>{message.content}</p>}
                 </div>
                 {message.role === "assistant" && (
                   <>
                     <AgentActivityDisclosure activities={message.toolActivities} />
-                    <CaseMessageSources sources={message.sources} />
+                    <CaseMessageSources sources={getUnmentionedSources(message.content, message.sources)} />
                   </>
                 )}
                 {message.role === "user" && message.processingStatus === "failed" && (
@@ -254,4 +258,40 @@ function renderThinkingLetters() {
 
 function getRunningActivity(activities: CaseAgentToolActivity[]): boolean {
   return activities.some((activity) => activity.status === "running");
+}
+
+interface AssistantMessageProps {
+  content: string;
+}
+
+function AssistantMessage({ content }: AssistantMessageProps) {
+  return (
+    <div className="assistant-markdown">
+      <ReactMarkdown
+        remarkPlugins={[remarkGfm]}
+        components={{
+          a: ({ href, children }) => renderSafeMarkdownLink(href, children),
+        }}
+      >
+        {content}
+      </ReactMarkdown>
+    </div>
+  );
+}
+
+function renderSafeMarkdownLink(href: string | undefined, children: React.ReactNode): React.ReactNode {
+  if (!href || !isSafeWebUrl(href)) return children;
+  return <a href={href} rel="noopener noreferrer" target="_blank">{children}</a>;
+}
+
+function getUnmentionedSources(content: string, sources: CaseAgentSource[]): CaseAgentSource[] {
+  return sources.filter((source) => !content.includes(source.url));
+}
+
+function isSafeWebUrl(url: string): boolean {
+  try {
+    return ["http:", "https:"].includes(new URL(url).protocol);
+  } catch {
+    return false;
+  }
 }
