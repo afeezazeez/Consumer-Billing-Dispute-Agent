@@ -1498,8 +1498,8 @@ button, a {
 }
 
 @keyframes thinking-letter {
-  0%, 100% { color: var(--dash-ink-soft); font-weight: 400; }
-  50% { color: var(--dash-ink); font-weight: 700; }
+  0%, 100% { opacity: 0.58; }
+  50% { opacity: 0.9; }
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -178,7 +178,7 @@ export function CaseConversation({
             ))}
             {isSending && (
               <div aria-live="polite" className="claude-agent-thinking" role="status">
-                <span aria-label="Thinking…" className="claude-agent-thinking-text">
+                <span aria-label="Thinking" className="claude-agent-thinking-text">
                   {renderThinkingLetters()}
                 </span>
               </div>
@@ -201,7 +201,7 @@ export function CaseConversation({
 }
 
 function renderThinkingLetters() {
-  return Array.from("Thinking…").map((letter, index) => (
+  return Array.from("Thinking").map((letter, index) => (
     <span
       aria-hidden="true"
       className="claude-agent-thinking-letter"
