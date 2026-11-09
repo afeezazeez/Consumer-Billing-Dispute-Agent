@@ -1,13 +1,14 @@
 import { EntitySchema } from "typeorm";
-import type { PendingCaseAttachment } from "../../cases/case-attachment";
+import type { StoredCaseAttachment } from "../../cases/case-attachment";
 
-export class CaseAttachmentEntity implements PendingCaseAttachment {
+export class CaseAttachmentEntity implements StoredCaseAttachment {
   id!: string;
   messageId!: string;
   name!: string;
   mediaType!: string;
   size!: number;
-  data!: Buffer;
+  data!: Buffer | null;
+  cloudinaryPublicId!: string | null;
 }
 
 export const caseAttachmentSchema = new EntitySchema<CaseAttachmentEntity>({
@@ -20,6 +21,7 @@ export const caseAttachmentSchema = new EntitySchema<CaseAttachmentEntity>({
     name: { type: "varchar", length: 255 },
     mediaType: { name: "media_type", type: "varchar", length: 32 },
     size: { type: "integer" },
-    data: { type: "bytea", select: false },
+    data: { type: "bytea", nullable: true, select: false },
+    cloudinaryPublicId: { name: "cloudinary_public_id", type: "text", nullable: true, select: false },
   },
 });

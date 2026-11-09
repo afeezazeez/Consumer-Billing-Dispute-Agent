@@ -1,3 +1,4 @@
+import { StoreCaseAttachmentsInCloudinary1710000000009 } from "./migrations/1710000000009-StoreCaseAttachmentsInCloudinary";
 import { caseAttachmentSchema } from "./entities/case-attachment.entity";
 import { CreateCaseAttachments1710000000008 } from "./migrations/1710000000008-CreateCaseAttachments";
 import { DataSource } from "typeorm";
@@ -32,6 +33,7 @@ export function createDataSource(database: PostgresConfig): DataSource {
       AddProvisionalCaseTitle1710000000006,
       AddCaseNextAction1710000000007,
       CreateCaseAttachments1710000000008,
+      StoreCaseAttachmentsInCloudinary1710000000009,
     ],
     synchronize: false,
   });

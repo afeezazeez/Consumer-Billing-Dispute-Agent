@@ -1,3 +1,4 @@
+import { CaseAttachmentService } from "./case-attachment.service";
 import type { PendingCaseAttachment } from "./case-attachment";
 import { randomUUID } from "node:crypto";
 import { createEmptyCaseIntake } from "./case-intake";
@@ -29,6 +30,7 @@ export class CaseService {
   constructor(
     private readonly caseRepository: CaseRepository,
     private readonly caseIntakeAgent: CaseIntakeAgent,
+    private readonly caseAttachmentService: CaseAttachmentService,
   ) {}
 
   async createCase(userId: string, input: CreateCaseInput): Promise<CaseConversation> {
@@ -37,14 +39,15 @@ export class CaseService {
       return input.attachments?.length ? existingCase : this.resumeExistingCase(userId, existingCase, input);
     }
     const userMessage = createMessage("user", input.openingMessage, input.messageId);
-    const billingCase = await this.caseRepository.createPendingCase({
+    const billingCase = await this.caseAttachmentService.save(input.attachments, (attachments) => this.caseRepository.createPendingCase({
       userId,
       caseId: input.caseId,
       title: createTitle(input.openingMessage),
       userMessage,
-      attachments: input.attachments,
+      attachments,
       intake: createEmptyCaseIntake(),
-    });
+    }));
+    if (!billingCase) throw new Error("Unable to save case");
     return billingCase;
   }
 
@@ -65,13 +68,14 @@ export class CaseService {
   async appendMessage(userId: string, input: AppendCaseMessageInput): Promise<CaseConversation | undefined> {
     const billingCase = await this.caseRepository.findForUser(userId, input.caseId);
     if (!billingCase) return undefined;
+    if (input.messageId && billingCase.messages.some(({ id }) => id === input.messageId)) return billingCase;
     const userMessage = createMessage("user", input.content, input.messageId);
-    const updatedCase = await this.caseRepository.appendPendingMessage({
+    const updatedCase = await this.caseAttachmentService.save(input.attachments, (attachments) => this.caseRepository.appendPendingMessage({
       userId,
       caseId: input.caseId,
       userMessage,
-      attachments: input.attachments,
-    });
+      attachments,
+    }));
     if (!updatedCase) return undefined;
     return updatedCase;
   }
@@ -125,8 +129,9 @@ export class CaseService {
     return completedCase;
   }
 
-  findAttachment(userId: string, attachmentId: string) {
-    return this.caseRepository.findAttachment(userId, attachmentId);
+  async findAttachment(userId: string, attachmentId: string) {
+    const attachment = await this.caseRepository.findAttachment(userId, attachmentId);
+    return attachment ? this.caseAttachmentService.read(attachment) : undefined;
   }
 
   listCases(userId: string): Promise<CaseSummary[]> {

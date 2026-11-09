@@ -1,7 +1,10 @@
+import type { CloudinaryConfig } from "./storage/cloudinary-attachment-storage";
+
 export interface AppConfig {
   port: number;
   webOrigin: string;
   database: PostgresConfig;
+  cloudinary?: CloudinaryConfig;
   googleClientId: string;
   googleClientSecret: string;
   googleRedirectUri: string;
@@ -31,6 +34,7 @@ export function loadConfig(): AppConfig {
       username: requiredValue("DB_USER"),
       password: readDatabasePassword(isProduction),
     },
+    cloudinary: readCloudinaryConfig(),
     googleClientId: requiredValue("GOOGLE_CLIENT_ID"),
     googleClientSecret: requiredValue("GOOGLE_CLIENT_SECRET"),
     googleRedirectUri: requiredValue("GOOGLE_REDIRECT_URI"),
@@ -55,4 +59,12 @@ function requiredValue(name: string): string {
 
 function optionalValue(name: string): string | undefined {
   return process.env[name]?.trim() || undefined;
+}
+
+
+function readCloudinaryConfig(): CloudinaryConfig | undefined {
+  const cloud_name = optionalValue("CLOUDINARY_CLOUD_NAME");
+  const api_key = optionalValue("CLOUDINARY_API_KEY");
+  const api_secret = optionalValue("CLOUDINARY_API_SECRET");
+  if (cloud_name && api_key && api_secret) return { cloud_name, api_key, api_secret };
 }

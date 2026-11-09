@@ -1,4 +1,4 @@
-import type { CaseAttachment, PendingCaseAttachment } from "../cases/case-attachment";
+import type { CaseAttachment, StoredCaseAttachment } from "../cases/case-attachment";
 import { CaseAttachmentEntity } from "./entities/case-attachment.entity";
 import { randomUUID } from "node:crypto";
 import { In, type DataSource, type EntityManager } from "typeorm";
@@ -64,15 +64,15 @@ export class TypeOrmCaseRepository implements CaseRepository {
     return readConversation(this.dataSource.manager, userId, caseId);
   }
 
-  async findAttachment(userId: string, attachmentId: string): Promise<PendingCaseAttachment | undefined> {
+  async findAttachment(userId: string, attachmentId: string): Promise<StoredCaseAttachment | undefined> {
     const rows = await this.dataSource.query(
-      `SELECT a.id, a.name, a.media_type AS "mediaType", a.size, a.data
+      `SELECT a.id, a.name, a.media_type AS "mediaType", a.size, a.data, a.cloudinary_public_id AS "cloudinaryPublicId"
        FROM case_attachments a
        JOIN case_messages m ON m.id = a.message_id
        JOIN billing_cases c ON c.id = m.case_id
        WHERE a.id = $1 AND c.user_id = $2`,
       [attachmentId, userId],
-    ) as PendingCaseAttachment[];
+    ) as StoredCaseAttachment[];
     return rows[0];
   }
 
@@ -252,7 +252,7 @@ async function enqueueTurn(manager: EntityManager, userId: string, caseId: strin
 }
 
 
-async function saveAttachments(manager: EntityManager, messageId: string, files?: PendingCaseAttachment[]): Promise<void> {
+async function saveAttachments(manager: EntityManager, messageId: string, files?: StoredCaseAttachment[]): Promise<void> {
   if (files?.length) await manager.getRepository(CaseAttachmentEntity).insert(files.map((file) => ({ ...file, messageId })));
 }
 

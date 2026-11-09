@@ -1,4 +1,4 @@
-import type { CaseAttachment, PendingCaseAttachment } from "./case-attachment";
+import type { CaseAttachment, StoredCaseAttachment } from "./case-attachment";
 import type { CaseAgentSource, CaseAgentToolActivity, CaseEmailDraft } from "./case-intake-agent";
 import type { CaseIntakeState } from "./case-intake";
 
@@ -37,7 +37,7 @@ export interface CreatePendingCase {
   caseId?: string;
   title: string;
   userMessage: CaseMessageRecord;
-  attachments?: PendingCaseAttachment[];
+  attachments?: StoredCaseAttachment[];
   intake: CaseIntakeState;
 }
 
@@ -45,7 +45,7 @@ export interface AppendPendingMessage {
   userId: string;
   caseId: string;
   userMessage: CaseMessageRecord;
-  attachments?: PendingCaseAttachment[];
+  attachments?: StoredCaseAttachment[];
 }
 
 export interface CompleteCaseTurn {
@@ -66,7 +66,7 @@ export interface UpdateFailedMessage {
 }
 
 export interface CaseRepository {
-  findAttachment(userId: string, attachmentId: string): Promise<PendingCaseAttachment | undefined>;
+  findAttachment(userId: string, attachmentId: string): Promise<StoredCaseAttachment | undefined>;
   createPendingCase(input: CreatePendingCase): Promise<CaseConversation>;
   appendPendingMessage(input: AppendPendingMessage): Promise<CaseConversation | undefined>;
   completeTurn(input: CompleteCaseTurn): Promise<CaseConversation | undefined>;

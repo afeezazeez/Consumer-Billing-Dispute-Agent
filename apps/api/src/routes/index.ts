@@ -1,3 +1,6 @@
+import { CaseAttachmentService } from "../cases/case-attachment.service";
+import { CaseAttachmentCleanup } from "../database/case-attachment-cleanup";
+import { CloudinaryAttachmentStorage } from "../storage/cloudinary-attachment-storage";
 import { Router } from "express";
 import type { DataSource } from "typeorm";
 import type { AppConfig } from "../config";
@@ -41,7 +44,11 @@ function createAuthController(config: AppConfig, dataSource: DataSource): AuthCo
 function createCaseController(config: AppConfig, dataSource: DataSource): CaseController {
   const caseRepository = new TypeOrmCaseRepository(dataSource);
   const caseIntakeAgent = new OpenAiAgent(config.openAiApiKey, config.openAiModel, createAgentTools());
-  const caseService = new CaseService(caseRepository, caseIntakeAgent);
+  const storage = new CloudinaryAttachmentStorage(config.cloudinary);
+  const cleanup = new CaseAttachmentCleanup(dataSource, storage);
+  const caseAttachmentService = new CaseAttachmentService(storage, (publicId) => cleanup.enqueue(publicId));
+  const caseService = new CaseService(caseRepository, caseIntakeAgent, caseAttachmentService);
+  cleanup.start();
   const agentTurnWorker = new AgentTurnWorker(
     new TypeOrmAgentTurnJobRepository(dataSource),
     caseService,

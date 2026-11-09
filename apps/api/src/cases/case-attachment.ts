@@ -8,3 +8,8 @@ export interface CaseAttachment {
 export interface PendingCaseAttachment extends CaseAttachment {
   data: Buffer;
 }
+
+export interface StoredCaseAttachment extends CaseAttachment {
+  data: Buffer | null;
+  cloudinaryPublicId: string | null;
+}
