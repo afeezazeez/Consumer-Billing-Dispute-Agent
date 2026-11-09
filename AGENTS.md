@@ -14,6 +14,6 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 - Place model-callable tools in `apps/api/src/ai/tools/`.
 - Keep each tool in its own `<verb>-<subject>.tool.ts` file.
 - Keep that tool's model schema and validated execution together in its file.
-- Register every tool in `case-agent-tools.registry.ts`; the agent receives the complete registered collection.
+- Register every tool in `agent-tools.registry.ts`; the agent receives the complete registered collection.
 - The agent coordinates tool calls; each tool owns one capability.
 - Do not use runtime filesystem scanning to discover tools; registration stays explicit and type-checked.
