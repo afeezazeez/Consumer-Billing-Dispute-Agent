@@ -3,6 +3,7 @@
 import {
   useCallback,
   useEffect,
+  useLayoutEffect,
   useRef,
   useState,
   type ChangeEvent,
@@ -31,6 +32,7 @@ export function CaseConversation({
   onRenameCase,
 }: CaseConversationProps) {
   const menuRef = useRef<HTMLDivElement>(null);
+  const historyRef = useRef<HTMLDivElement>(null);
   const [isRenaming, setIsRenaming] = useState(false);
   const [draftTitle, setDraftTitle] = useState(billingCase.title);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -93,6 +95,11 @@ export function CaseConversation({
       document.removeEventListener("keydown", handleEscape);
     };
   }, [handleEscape, handleOutsidePointer]);
+
+  useLayoutEffect(() => {
+    const history = historyRef.current;
+    if (history) history.scrollTo({ top: history.scrollHeight, behavior: "smooth" });
+  }, [billingCase.messages.length, isSending]);
 
   const handleMenuKeyDown = useCallback((event: ReactKeyboardEvent<HTMLDivElement>) => {
     if (event.key === "Escape") setIsMenuOpen(false);
@@ -164,7 +171,7 @@ export function CaseConversation({
       {/* Main Chat Workspace */}
       <div className="claude-chat-workspace">
         {/* Messages Feed */}
-        <div className="claude-chat-history" aria-live="polite">
+        <div className="claude-chat-history" aria-live="polite" ref={historyRef}>
           <div className="claude-chat-history-inner">
             {billingCase.messages.map((message) => (
               <article

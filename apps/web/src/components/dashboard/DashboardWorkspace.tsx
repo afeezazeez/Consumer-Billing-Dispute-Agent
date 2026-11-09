@@ -63,10 +63,12 @@ export function DashboardWorkspace() {
   }, []);
 
   const handleSendMessage = useCallback(async (content: string): Promise<boolean> => {
-    const isStartingCase = !activeCase;
-    const pendingCase = isStartingCase ? createPendingCase(content) : undefined;
-    const requestCaseId = activeCase?.id ?? pendingCase?.id;
-    if (pendingCase) setActiveCase(pendingCase);
+    const previousCase = activeCase;
+    const optimisticCase = activeCase
+      ? appendOptimisticMessage(activeCase, content)
+      : createPendingCase(content);
+    const requestCaseId = optimisticCase.id;
+    setActiveCase(optimisticCase);
     setIsSending(true);
     setError("");
     try {
@@ -76,9 +78,7 @@ export function DashboardWorkspace() {
       return true;
     } catch (requestError) {
       setError(getSendErrorMessage(requestError));
-      if (pendingCase) {
-        setActiveCase((current) => current?.id === pendingCase.id ? undefined : current);
-      }
+      setActiveCase((current) => current?.id === requestCaseId ? previousCase : current);
       return false;
     } finally {
       setIsSending(false);
@@ -224,6 +224,20 @@ function createPendingCase(content: string): CaseConversationData {
     lastMessage: content,
     messages: [userMessage],
     intake: { status: "collecting", facts: {} },
+  };
+}
+
+function appendOptimisticMessage(
+  billingCase: CaseConversationData,
+  content: string,
+): CaseConversationData {
+  const createdAt = new Date().toISOString();
+  const message = { id: crypto.randomUUID(), role: "user" as const, content, createdAt };
+  return {
+    ...billingCase,
+    updatedAt: createdAt,
+    lastMessage: content,
+    messages: [...billingCase.messages, message],
   };
 }
 

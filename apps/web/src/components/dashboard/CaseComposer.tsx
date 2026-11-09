@@ -42,9 +42,9 @@ export function CaseComposer({
     async (event: FormEvent<HTMLFormElement>) => {
       event.preventDefault();
       if (!message.trim() || isSending) return;
-      if (await onSendMessage(message.trim())) {
-        setMessage("");
-      }
+      const submittedMessage = message.trim();
+      setMessage("");
+      if (!await onSendMessage(submittedMessage)) setMessage(submittedMessage);
     },
     [isSending, message, onSendMessage],
   );
