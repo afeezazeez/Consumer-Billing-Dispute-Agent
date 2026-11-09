@@ -115,7 +115,11 @@ export class TypeOrmCaseRepository implements CaseRepository {
     await messages.save(toMessageEntity(input.assistantMessage, input.caseId));
     await manager.getRepository(CaseEntity).update(
       { id: input.caseId, userId: input.userId },
-      { updatedAt: input.assistantMessage.createdAt, intakeState: input.intake },
+      {
+        updatedAt: input.assistantMessage.createdAt,
+        intakeState: input.intake,
+        ...(input.nextAction ? { nextAction: input.nextAction } : {}),
+      },
     );
     if (input.caseTitle) {
       await manager.getRepository(CaseEntity).update(
@@ -197,6 +201,7 @@ function toConversation(record: CaseEntity, messages: CaseMessageEntity[]): Case
     isProcessing: messages.some((message) => message.role === "user" && message.processingStatus === "pending"),
     messages: messages.map(toMessage),
     intake: record.intakeState,
+    nextAction: record.nextAction ?? undefined,
   };
 }
 

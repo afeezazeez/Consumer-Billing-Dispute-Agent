@@ -1,9 +1,11 @@
 import { EntitySchema } from "typeorm";
+import type { CaseNextAction } from "../../cases/case-next-action";
 import type { CaseAgentSource, CaseAgentToolActivity, CaseEmailDraft } from "../../cases/case-intake-agent";
 import type { CaseIntakeState } from "../../cases/case-intake";
 import type { CaseMessageProcessingStatus } from "../../cases/case.repository";
 
 export class CaseEntity {
+  nextAction!: CaseNextAction | null;
   titleIsProvisional!: boolean;
   id!: string;
   userId!: string;
@@ -46,6 +48,7 @@ export const caseSchema = new EntitySchema<CaseEntity>({
     userId: { name: "user_id", type: "uuid" },
     title: { type: "varchar", length: 140 },
     titleIsProvisional: { name: "title_is_provisional", type: "boolean", default: false },
+    nextAction: { name: "next_action", type: "jsonb", nullable: true },
     status: { type: "varchar", length: 24, default: "open" },
     createdAt: { name: "created_at", type: "timestamptz", createDate: true },
     updatedAt: { name: "updated_at", type: "timestamptz", updateDate: true },

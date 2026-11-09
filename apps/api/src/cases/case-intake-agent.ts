@@ -2,6 +2,7 @@ import type { CaseIntakeState } from "./case-intake";
 import type { CaseMessageRecord } from "./case.repository";
 
 export interface CaseIntakeAgentContext {
+  nextAction?: CaseNextAction;
   generateCaseTitle?: boolean;
   messages: CaseMessageRecord[];
   intake: CaseIntakeState;
@@ -9,6 +10,7 @@ export interface CaseIntakeAgentContext {
 }
 
 export interface CaseIntakeAgentResult {
+  nextAction?: CaseNextAction;
   caseTitle?: string;
   response: string;
   emailDraft?: CaseEmailDraft;
@@ -43,3 +45,4 @@ export type CaseAgentProgressHandler = (activity: CaseAgentToolActivity) => void
 export interface CaseIntakeAgent {
   respond(context: CaseIntakeAgentContext, onProgress?: CaseAgentProgressHandler): Promise<CaseIntakeAgentResult>;
 }
+import type { CaseNextAction } from "./case-next-action";

@@ -4,6 +4,7 @@ import { CaseMessageDto } from "./case-message.dto";
 import { CaseSummaryDto } from "./case-summary.dto";
 
 export class CaseConversationDto extends CaseSummaryDto {
+  nextAction?: CaseConversation["nextAction"];
   createdAt: Date;
   messages: CaseMessageDto[];
   intake: CaseIntakeDto;
@@ -13,6 +14,7 @@ export class CaseConversationDto extends CaseSummaryDto {
     this.createdAt = billingCase.createdAt;
     this.messages = CaseMessageDto.collection(billingCase.messages);
     this.intake = CaseIntakeDto.make(billingCase.intake);
+    this.nextAction = billingCase.nextAction;
   }
 
   static make(billingCase: CaseConversation): CaseConversationDto {

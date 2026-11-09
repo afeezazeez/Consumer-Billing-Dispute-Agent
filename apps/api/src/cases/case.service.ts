@@ -93,6 +93,7 @@ export class CaseService {
     const result = await this.caseIntakeAgent.respond({
       messages: billingCase.messages,
       intake: billingCase.intake,
+      nextAction: billingCase.nextAction,
       userFirstName,
       generateCaseTitle: isOpeningTurn,
     }, (activity) => {
@@ -110,6 +111,7 @@ export class CaseService {
       assistantMessage,
       caseTitle: isOpeningTurn && result.caseTitle ? createTitle(result.caseTitle) : undefined,
       intake: result.intake,
+      nextAction: result.nextAction,
     });
     if (!completedCase) throw new Error("Unable to save the agent response");
     return completedCase;

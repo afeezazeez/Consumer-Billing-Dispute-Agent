@@ -47,6 +47,7 @@ export interface CaseAgentToolActivity {
 }
 
 export interface CaseConversation extends CaseSummary {
+  nextAction?: { goal: string; action: string };
   createdAt: string;
   messages: CaseMessage[];
   intake: CaseIntakeState;

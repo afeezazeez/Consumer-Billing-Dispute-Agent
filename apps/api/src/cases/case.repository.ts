@@ -24,6 +24,7 @@ export interface CaseSummary {
 }
 
 export interface CaseConversation extends CaseSummary {
+  nextAction?: CaseNextAction;
   createdAt: Date;
   messages: CaseMessageRecord[];
   intake: CaseIntakeState;
@@ -44,6 +45,7 @@ export interface AppendPendingMessage {
 }
 
 export interface CompleteCaseTurn {
+  nextAction?: CaseNextAction;
   caseTitle?: string;
   userId: string;
   caseId: string;
@@ -70,3 +72,4 @@ export interface CaseRepository {
   deleteForUser(userId: string, caseId: string): Promise<boolean>;
   renameForUser(userId: string, caseId: string, title: string): Promise<boolean>;
 }
+import type { CaseNextAction } from "./case-next-action";
