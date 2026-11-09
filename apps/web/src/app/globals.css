@@ -1355,7 +1355,7 @@ button, a {
 /* Active Case Conversation View */
 .claude-chat-viewport {
   display: flex;
-  flex: 1;
+  flex: none;
   flex-direction: column;
   height: 100dvh;
   min-height: 0;

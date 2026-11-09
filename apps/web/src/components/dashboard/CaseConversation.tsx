@@ -121,10 +121,16 @@ export function CaseConversation({
     if (history) shouldFollowLatestRef.current = history.scrollHeight - history.scrollTop - history.clientHeight < 120;
   }, []);
 
+  const scrollToLatest = useCallback(() => {
+    const history = historyRef.current;
+    history?.scrollTo({ top: history.scrollHeight, behavior: "instant" });
+  }, []);
+
   const handleSend = useCallback((content: string) => {
     shouldFollowLatestRef.current = true;
+    scrollToLatest();
     return onSendMessage(content);
-  }, [onSendMessage]);
+  }, [onSendMessage, scrollToLatest]);
 
   useLayoutEffect(() => {
     if (displayedCaseIdRef.current === billingCase.id) return;
@@ -133,25 +139,18 @@ export function CaseConversation({
   }, [billingCase.id]);
 
   useLayoutEffect(() => {
-    if (!shouldFollowLatestRef.current) return;
-    const history = historyRef.current;
-    if (!history) return;
-    const scrollToLatest = () => history.scrollTo({ top: history.scrollHeight, behavior: "smooth" });
-    scrollToLatest();
-    const frame = window.requestAnimationFrame(scrollToLatest);
-    return () => window.cancelAnimationFrame(frame);
-  }, [billingCase.messages, isSending, liveToolActivities]);
+    if (shouldFollowLatestRef.current) scrollToLatest();
+  }, [billingCase.id, billingCase.messages, isSending, liveToolActivities, scrollToLatest]);
 
   useEffect(() => {
     const content = historyContentRef.current;
     if (!content || typeof ResizeObserver === "undefined") return;
     const observer = new ResizeObserver(() => {
-      if (!shouldFollowLatestRef.current || !historyRef.current) return;
-      historyRef.current.scrollTop = historyRef.current.scrollHeight;
+      if (shouldFollowLatestRef.current) scrollToLatest();
     });
     observer.observe(content);
     return () => observer.disconnect();
-  }, []);
+  }, [scrollToLatest]);
 
   const handleMenuKeyDown = useCallback((event: ReactKeyboardEvent<HTMLDivElement>) => {
     if (event.key === "Escape") setIsMenuOpen(false);
