@@ -1487,20 +1487,23 @@ button, a {
 }
 
 .claude-agent-thinking-text {
-  animation: thinking-shimmer 1.8s ease-in-out infinite;
-  background: linear-gradient(90deg, var(--dash-ink-soft) 20%, var(--dash-ink) 50%, var(--dash-ink-soft) 80%);
-  background-clip: text;
-  background-size: 220% 100%;
-  color: transparent;
-  -webkit-background-clip: text;
+  color: var(--dash-ink-soft);
+  display: inline-flex;
 }
 
-@keyframes thinking-shimmer {
-  to { background-position: -220% 0; }
+.claude-agent-thinking-letter {
+  animation: thinking-letter 1.35s ease-in-out infinite alternate;
+  animation-delay: calc(var(--thinking-letter-index) * 75ms);
+  font-weight: 400;
+}
+
+@keyframes thinking-letter {
+  0%, 100% { color: var(--dash-ink-soft); font-weight: 400; }
+  50% { color: var(--dash-ink); font-weight: 700; }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .claude-agent-thinking-text { animation: none; }
+  .claude-agent-thinking-letter { animation: none; }
 }
 
 .claude-agent-spinner {

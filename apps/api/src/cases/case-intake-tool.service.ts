@@ -3,7 +3,6 @@ import { validate } from "class-validator";
 import type {
   CaseIntakeFacts,
   CaseIntakeState,
-  DisputeIssueType,
 } from "./case-intake";
 import type { CaseMessageRecord } from "./case.repository";
 import { RecordCaseIntakeFactsToolDto } from "../dtos/cases/record-case-intake-facts-tool.dto";
@@ -46,7 +45,7 @@ function mergeFacts(current: CaseIntakeFacts, request: RecordCaseIntakeFactsTool
   return {
     ...current,
     ...textFact("provider", request.provider),
-    ...issueFact(request.issueType),
+    ...textFact("issueType", request.issueType),
     ...textFact("chargeAmount", request.chargeAmount),
     ...textFact("chargeDate", request.chargeDate),
     ...textFact("expectedAmount", request.expectedAmount),
@@ -59,12 +58,7 @@ function textFact<Key extends TextFactKey>(key: Key, fact?: RecordCaseIntakeFact
   return { [key]: { value: fact.value, source: "user_message", messageId: fact.sourceMessageId } };
 }
 
-type TextFactKey = "provider" | "chargeAmount" | "chargeDate" | "expectedAmount" | "desiredOutcome";
-
-function issueFact(fact?: RecordCaseIntakeFactsToolDto["issueType"]): Partial<CaseIntakeFacts> {
-  if (!fact) return {};
-  return { issueType: { value: fact.value as DisputeIssueType, source: "user_message", messageId: fact.sourceMessageId } };
-}
+type TextFactKey = keyof CaseIntakeFacts;
 
 function getIntakeStatus(facts: CaseIntakeFacts): CaseIntakeState["status"] {
   return facts.provider && facts.issueType && facts.chargeAmount ? "ready" : "collecting";

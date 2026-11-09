@@ -18,3 +18,7 @@ export function authenticatedUserId(request: Request): string {
   if (!userId) throw new AuthenticationException();
   return userId;
 }
+
+export function authenticatedFirstName(request: Request): string | undefined {
+  return request.session.firstName;
+}

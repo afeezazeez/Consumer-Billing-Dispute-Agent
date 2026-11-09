@@ -1,6 +1,5 @@
 import { Type } from "class-transformer";
 import {
-  IsIn,
   IsNotEmpty,
   IsOptional,
   IsString,
@@ -8,30 +7,11 @@ import {
   MaxLength,
   ValidateNested,
 } from "class-validator";
-import type { DisputeIssueType } from "../../cases/case-intake";
-
-const ISSUE_TYPES: DisputeIssueType[] = [
-  "unrecognized_charge",
-  "incorrect_amount",
-  "duplicate_charge",
-  "charged_after_cancellation",
-  "other",
-];
-
 export class CaseIntakeTextFactToolDto {
   @IsString()
   @IsNotEmpty()
   @MaxLength(200)
   value!: string;
-
-  @IsUUID()
-  sourceMessageId!: string;
-}
-
-export class CaseIntakeIssueFactToolDto {
-  @IsString()
-  @IsIn(ISSUE_TYPES)
-  value!: DisputeIssueType;
 
   @IsUUID()
   sourceMessageId!: string;
@@ -45,8 +25,8 @@ export class RecordCaseIntakeFactsToolDto {
 
   @IsOptional()
   @ValidateNested()
-  @Type(() => CaseIntakeIssueFactToolDto)
-  issueType?: CaseIntakeIssueFactToolDto | null;
+  @Type(() => CaseIntakeTextFactToolDto)
+  issueType?: CaseIntakeTextFactToolDto | null;
 
   @IsOptional()
   @ValidateNested()

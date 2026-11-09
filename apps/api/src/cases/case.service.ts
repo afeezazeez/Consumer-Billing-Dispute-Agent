@@ -3,34 +3,47 @@ import { createEmptyCaseIntake } from "./case-intake";
 import type { CaseIntakeAgent } from "./case-intake-agent";
 import type { CaseConversation, CaseMessageRecord, CaseRepository, CaseSummary } from "./case.repository";
 
+export interface CreateCaseInput {
+  openingMessage: string;
+  userFirstName?: string;
+}
+
+export interface AppendCaseMessageInput {
+  caseId: string;
+  content: string;
+  userFirstName?: string;
+}
+
 export class CaseService {
   constructor(
     private readonly caseRepository: CaseRepository,
     private readonly caseIntakeAgent: CaseIntakeAgent,
   ) {}
 
-  async createCase(userId: string, openingMessage: string): Promise<CaseConversation> {
-    const userMessage = createMessage("user", openingMessage);
-    const result = await this.caseIntakeAgent.respond({ messages: [userMessage], intake: createEmptyCaseIntake() });
+  async createCase(userId: string, input: CreateCaseInput): Promise<CaseConversation> {
+    const userMessage = createMessage("user", input.openingMessage);
+    const context = { messages: [userMessage], intake: createEmptyCaseIntake(), userFirstName: input.userFirstName };
+    const result = await this.caseIntakeAgent.respond(context);
     const assistantMessage = createAssistantMessage(result.response, userMessage.createdAt);
     return this.caseRepository.createWithTurn({
       userId,
-      title: createTitle(openingMessage),
+      title: createTitle(input.openingMessage),
       messages: [userMessage, assistantMessage],
       intake: result.intake,
     });
   }
 
-  async appendMessage(userId: string, caseId: string, content: string): Promise<CaseConversation | undefined> {
-    const billingCase = await this.caseRepository.findForUser(userId, caseId);
+  async appendMessage(userId: string, input: AppendCaseMessageInput): Promise<CaseConversation | undefined> {
+    const billingCase = await this.caseRepository.findForUser(userId, input.caseId);
     if (!billingCase) return undefined;
-    const userMessage = createMessage("user", content);
+    const userMessage = createMessage("user", input.content);
     const messages = [...billingCase.messages, userMessage];
-    const result = await this.caseIntakeAgent.respond({ messages, intake: billingCase.intake });
+    const context = { messages, intake: billingCase.intake, userFirstName: input.userFirstName };
+    const result = await this.caseIntakeAgent.respond(context);
     const assistantMessage = createAssistantMessage(result.response, userMessage.createdAt);
     return this.caseRepository.appendTurn({
       userId,
-      caseId,
+      caseId: input.caseId,
       messages: [userMessage, assistantMessage],
       intake: result.intake,
     });

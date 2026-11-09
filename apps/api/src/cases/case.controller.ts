@@ -7,7 +7,7 @@ import { RenameCaseRequestDto } from "../dtos/cases/rename-case-request.dto";
 import { ClientErrorException } from "../exceptions/client.error.exception";
 import { ResponseStatus } from "../enums/response-status";
 import { sendSuccessResponse } from "../utils/http/response-handlers";
-import { authenticatedUserId } from "../auth/auth.middleware";
+import { authenticatedFirstName, authenticatedUserId } from "../auth/auth.middleware";
 import type { CaseService } from "./case.service";
 
 export class CaseController {
@@ -25,7 +25,11 @@ export class CaseController {
   async create(request: Request, response: Response, next: NextFunction): Promise<void> {
     try {
       const payload = request.body as CreateCaseRequestDto;
-      const record = await this.caseService.createCase(authenticatedUserId(request), payload.openingMessage.trim());
+      const input = {
+        openingMessage: payload.openingMessage.trim(),
+        userFirstName: authenticatedFirstName(request),
+      };
+      const record = await this.caseService.createCase(authenticatedUserId(request), input);
       sendSuccessResponse(response, { case: CaseConversationDto.make(record) }, "Case created successfully", ResponseStatus.CREATED);
     } catch (error) {
       next(error);
@@ -45,7 +49,12 @@ export class CaseController {
   async addMessage(request: Request, response: Response, next: NextFunction): Promise<void> {
     try {
       const payload = request.body as CreateMessageRequestDto;
-      const record = await this.caseService.appendMessage(authenticatedUserId(request), readCaseId(request), payload.content.trim());
+      const input = {
+        caseId: readCaseId(request),
+        content: payload.content.trim(),
+        userFirstName: authenticatedFirstName(request),
+      };
+      const record = await this.caseService.appendMessage(authenticatedUserId(request), input);
       if (!record) throw new ClientErrorException("Case not found", ResponseStatus.NOT_FOUND);
       sendSuccessResponse(response, { case: CaseConversationDto.make(record) }, "Message added successfully", ResponseStatus.CREATED);
     } catch (error) {

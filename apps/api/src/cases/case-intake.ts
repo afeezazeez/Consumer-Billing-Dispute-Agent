@@ -1,12 +1,5 @@
 export type CaseIntakeStatus = "collecting" | "ready";
 
-export type DisputeIssueType =
-  | "unrecognized_charge"
-  | "incorrect_amount"
-  | "duplicate_charge"
-  | "charged_after_cancellation"
-  | "other";
-
 export interface CaseIntakeFact<Value> {
   value: Value;
   source: "user_message";
@@ -15,7 +8,7 @@ export interface CaseIntakeFact<Value> {
 
 export interface CaseIntakeFacts {
   provider?: CaseIntakeFact<string>;
-  issueType?: CaseIntakeFact<DisputeIssueType>;
+  issueType?: CaseIntakeFact<string>;
   chargeAmount?: CaseIntakeFact<string>;
   chargeDate?: CaseIntakeFact<string>;
   expectedAmount?: CaseIntakeFact<string>;

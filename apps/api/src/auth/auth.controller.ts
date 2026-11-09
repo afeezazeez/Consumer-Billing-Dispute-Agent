@@ -34,6 +34,7 @@ export class AuthController {
     try {
       const user = await this.authService.findUser(authenticatedUserId(request));
       if (!user) throw new AuthenticationException();
+      request.session.firstName = getFirstName(user.displayName);
       sendSuccessResponse(response, GoogleUserDto.make(user), "User retrieved successfully");
     } catch (error) {
       next(error);
@@ -56,8 +57,13 @@ export class AuthController {
     const user = await this.authService.signInWithGoogle(code);
     await regenerateSession(request);
     request.session.userId = user.id;
+    request.session.firstName = getFirstName(user.displayName);
     await saveSession(request);
   }
+}
+
+function getFirstName(displayName: string): string {
+  return displayName.trim().split(/\s+/)[0] || "there";
 }
 
 function readCallbackParameters(request: Request): { code: string; state: string } {

@@ -4,6 +4,7 @@ import type { CaseMessageRecord } from "./case.repository";
 export interface CaseIntakeAgentContext {
   messages: CaseMessageRecord[];
   intake: CaseIntakeState;
+  userFirstName?: string;
 }
 
 export interface CaseIntakeAgentResult {

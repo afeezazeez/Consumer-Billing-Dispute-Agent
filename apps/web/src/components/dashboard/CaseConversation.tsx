@@ -6,6 +6,7 @@ import {
   useRef,
   useState,
   type ChangeEvent,
+  type CSSProperties,
   type PointerEvent as ReactPointerEvent,
   type KeyboardEvent as ReactKeyboardEvent,
 } from "react";
@@ -176,7 +177,9 @@ export function CaseConversation({
             ))}
             {isSending && (
               <div aria-live="polite" className="claude-agent-thinking" role="status">
-                <span className="claude-agent-thinking-text">Thinking…</span>
+                <span aria-label="Thinking…" className="claude-agent-thinking-text">
+                  {renderThinkingLetters()}
+                </span>
               </div>
             )}
           </div>
@@ -194,4 +197,17 @@ export function CaseConversation({
       </div>
     </div>
   );
+}
+
+function renderThinkingLetters() {
+  return Array.from("Thinking…").map((letter, index) => (
+    <span
+      aria-hidden="true"
+      className="claude-agent-thinking-letter"
+      key={index}
+      style={{ "--thinking-letter-index": index } as CSSProperties}
+    >
+      {letter}
+    </span>
+  ));
 }
