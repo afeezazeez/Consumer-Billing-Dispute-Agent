@@ -1433,7 +1433,7 @@ button, a {
 }
 
 .claude-chat-workspace {
-  --chat-content-width: 940px;
+  --chat-content-width: 900px;
   --chat-inline-padding: 24px;
   display: flex;
   flex: 1;
