@@ -6,6 +6,8 @@ export interface AppConfig {
   googleClientSecret: string;
   googleRedirectUri: string;
   sessionSecret: string;
+  openAiApiKey: string | undefined;
+  openAiModel: string;
   isProduction: boolean;
 }
 
@@ -33,6 +35,8 @@ export function loadConfig(): AppConfig {
     googleClientSecret: requiredValue("GOOGLE_CLIENT_SECRET"),
     googleRedirectUri: requiredValue("GOOGLE_REDIRECT_URI"),
     sessionSecret: requiredValue("SESSION_SECRET"),
+    openAiApiKey: optionalValue("OPENAI_API_KEY"),
+    openAiModel: process.env.OPENAI_MODEL?.trim() || "gpt-5.6-terra",
     isProduction,
   };
 }
@@ -47,4 +51,8 @@ function requiredValue(name: string): string {
   const value = process.env[name]?.trim();
   if (!value) throw new Error(`Missing required environment variable: ${name}`);
   return value;
+}
+
+function optionalValue(name: string): string | undefined {
+  return process.env[name]?.trim() || undefined;
 }

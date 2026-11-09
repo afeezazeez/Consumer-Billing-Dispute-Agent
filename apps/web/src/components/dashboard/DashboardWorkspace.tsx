@@ -70,8 +70,8 @@ export function DashboardWorkspace() {
       setActiveCase(result.case);
       setCases((current) => upsertCase(current, result.case));
       return true;
-    } catch {
-      setError("We couldn’t save your message. Please try again.");
+    } catch (requestError) {
+      setError(getSendErrorMessage(requestError));
       return false;
     } finally {
       setIsSending(false);
@@ -146,6 +146,7 @@ export function DashboardWorkspace() {
         cases={cases}
         isCollapsed={isSidebarCollapsed}
         isMobileOpen={isMobileSidebarOpen}
+        isAgentWorking={isSending}
         isSigningOut={isSigningOut}
         onCloseMobile={handleCloseMobileSidebar}
         onDeleteCase={promptDeleteCase}
@@ -240,4 +241,11 @@ interface ApiResponse<T> {
 
 class DashboardRequestError extends Error {
   constructor(public readonly status: number) { super("Dashboard request failed"); }
+}
+
+function getSendErrorMessage(error: unknown): string {
+  if (error instanceof DashboardRequestError && error.status === 503) {
+    return "Bill Agent couldn’t respond just now. Your message wasn’t saved; please try again shortly.";
+  }
+  return "We couldn’t save your message. Please try again.";
 }

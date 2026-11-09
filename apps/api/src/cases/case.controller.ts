@@ -11,11 +11,11 @@ import { authenticatedUserId } from "../auth/auth.middleware";
 import type { CaseService } from "./case.service";
 
 export class CaseController {
-  constructor(private readonly cases: CaseService) {}
+  constructor(private readonly caseService: CaseService) {}
 
   async list(request: Request, response: Response, next: NextFunction): Promise<void> {
     try {
-      const records = await this.cases.listCases(authenticatedUserId(request));
+      const records = await this.caseService.listCases(authenticatedUserId(request));
       sendSuccessResponse(response, { cases: CaseSummaryDto.collection(records) }, "Cases retrieved successfully");
     } catch (error) {
       next(error);
@@ -25,7 +25,7 @@ export class CaseController {
   async create(request: Request, response: Response, next: NextFunction): Promise<void> {
     try {
       const payload = request.body as CreateCaseRequestDto;
-      const record = await this.cases.createCase(authenticatedUserId(request), payload.openingMessage.trim());
+      const record = await this.caseService.createCase(authenticatedUserId(request), payload.openingMessage.trim());
       sendSuccessResponse(response, { case: CaseConversationDto.make(record) }, "Case created successfully", ResponseStatus.CREATED);
     } catch (error) {
       next(error);
@@ -34,7 +34,7 @@ export class CaseController {
 
   async read(request: Request, response: Response, next: NextFunction): Promise<void> {
     try {
-      const record = await this.cases.findCase(authenticatedUserId(request), readCaseId(request));
+      const record = await this.caseService.findCase(authenticatedUserId(request), readCaseId(request));
       if (!record) throw new ClientErrorException("Case not found", ResponseStatus.NOT_FOUND);
       sendSuccessResponse(response, { case: CaseConversationDto.make(record) }, "Case retrieved successfully");
     } catch (error) {
@@ -45,7 +45,7 @@ export class CaseController {
   async addMessage(request: Request, response: Response, next: NextFunction): Promise<void> {
     try {
       const payload = request.body as CreateMessageRequestDto;
-      const record = await this.cases.appendMessage(authenticatedUserId(request), readCaseId(request), payload.content.trim());
+      const record = await this.caseService.appendMessage(authenticatedUserId(request), readCaseId(request), payload.content.trim());
       if (!record) throw new ClientErrorException("Case not found", ResponseStatus.NOT_FOUND);
       sendSuccessResponse(response, { case: CaseConversationDto.make(record) }, "Message added successfully", ResponseStatus.CREATED);
     } catch (error) {
@@ -55,7 +55,7 @@ export class CaseController {
 
   async delete(request: Request, response: Response, next: NextFunction): Promise<void> {
     try {
-      const deleted = await this.cases.deleteCase(authenticatedUserId(request), readCaseId(request));
+      const deleted = await this.caseService.deleteCase(authenticatedUserId(request), readCaseId(request));
       if (!deleted) throw new ClientErrorException("Case not found", ResponseStatus.NOT_FOUND);
       sendSuccessResponse(response, {}, "Case deleted successfully");
     } catch (error) {
@@ -66,7 +66,7 @@ export class CaseController {
   async rename(request: Request, response: Response, next: NextFunction): Promise<void> {
     try {
       const payload = request.body as RenameCaseRequestDto;
-      const renamed = await this.cases.renameCase(authenticatedUserId(request), readCaseId(request), payload.title);
+      const renamed = await this.caseService.renameCase(authenticatedUserId(request), readCaseId(request), payload.title);
       if (!renamed) throw new ClientErrorException("Case not found", ResponseStatus.NOT_FOUND);
       sendSuccessResponse(response, {}, "Case renamed successfully");
     } catch (error) {

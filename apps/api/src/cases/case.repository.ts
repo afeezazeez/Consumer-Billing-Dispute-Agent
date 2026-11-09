@@ -21,9 +21,25 @@ export interface CaseConversation extends CaseSummary {
   intake: CaseIntakeState;
 }
 
+export type CaseAgentTurnMessages = [userMessage: CaseMessageRecord, assistantMessage: CaseMessageRecord];
+
+export interface CreateCaseTurn {
+  userId: string;
+  title: string;
+  messages: CaseAgentTurnMessages;
+  intake: CaseIntakeState;
+}
+
+export interface AppendCaseTurn {
+  userId: string;
+  caseId: string;
+  messages: CaseAgentTurnMessages;
+  intake: CaseIntakeState;
+}
+
 export interface CaseRepository {
-  create(userId: string, title: string, openingMessage: string): Promise<CaseConversation>;
-  appendMessage(userId: string, caseId: string, content: string): Promise<CaseConversation | undefined>;
+  createWithTurn(turn: CreateCaseTurn): Promise<CaseConversation>;
+  appendTurn(turn: AppendCaseTurn): Promise<CaseConversation | undefined>;
   listForUser(userId: string): Promise<CaseSummary[]>;
   findForUser(userId: string, caseId: string): Promise<CaseConversation | undefined>;
   deleteForUser(userId: string, caseId: string): Promise<boolean>;

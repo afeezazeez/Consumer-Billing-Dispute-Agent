@@ -9,13 +9,13 @@ import type { AuthService } from "./auth.service";
 import { authenticatedUserId } from "./auth.middleware";
 
 export class AuthController {
-  constructor(private readonly auth: AuthService, private readonly config: AppConfig) {}
+  constructor(private readonly authService: AuthService, private readonly config: AppConfig) {}
 
   startGoogleSignIn(request: Request, response: Response, next: NextFunction): void {
     try {
       const state = randomBytes(32).toString("hex");
       request.session.oauthState = state;
-      response.redirect(this.auth.createGoogleAuthorizationUrl(state));
+      response.redirect(this.authService.createGoogleAuthorizationUrl(state));
     } catch (error) {
       next(error);
     }
@@ -32,7 +32,7 @@ export class AuthController {
 
   async currentUser(request: Request, response: Response, next: NextFunction): Promise<void> {
     try {
-      const user = await this.auth.findUser(authenticatedUserId(request));
+      const user = await this.authService.findUser(authenticatedUserId(request));
       if (!user) throw new AuthenticationException();
       sendSuccessResponse(response, GoogleUserDto.make(user), "User retrieved successfully");
     } catch (error) {
@@ -53,7 +53,7 @@ export class AuthController {
   private async completeGoogleSignIn(request: Request): Promise<void> {
     const { code, state } = readCallbackParameters(request);
     validateOAuthState(request.session.oauthState, state);
-    const user = await this.auth.signInWithGoogle(code);
+    const user = await this.authService.signInWithGoogle(code);
     await regenerateSession(request);
     request.session.userId = user.id;
     await saveSession(request);

@@ -4,7 +4,7 @@ import type { GoogleIdentity, UserRecord, UserRepository } from "./user.reposito
 export class AuthService {
   constructor(
     private readonly googleProvider: GoogleOAuthProvider,
-    private readonly users: UserRepository,
+    private readonly userRepository: UserRepository,
   ) {}
 
   createGoogleAuthorizationUrl(state: string): string {
@@ -13,10 +13,10 @@ export class AuthService {
 
   async signInWithGoogle(code: string): Promise<UserRecord> {
     const identity: GoogleIdentity = await this.googleProvider.getIdentity(code);
-    return this.users.saveGoogleIdentity(identity);
+    return this.userRepository.saveGoogleIdentity(identity);
   }
 
   findUser(id: string): Promise<UserRecord | undefined> {
-    return this.users.findById(id);
+    return this.userRepository.findById(id);
   }
 }

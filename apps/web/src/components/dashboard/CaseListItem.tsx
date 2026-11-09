@@ -14,6 +14,7 @@ import type { CaseSummary } from "./dashboard.types";
 interface CaseListItemProps {
   billingCase: CaseSummary;
   isActive: boolean;
+  isWorking?: boolean;
   onOpen: (caseId: string) => void;
   onRename?: (caseId: string, title: string) => Promise<boolean>;
   onDelete?: (caseId: string) => void;
@@ -22,6 +23,7 @@ interface CaseListItemProps {
 export function CaseListItem({
   billingCase,
   isActive,
+  isWorking = false,
   onOpen,
   onRename,
   onDelete,
@@ -130,6 +132,11 @@ export function CaseListItem({
       ) : (
         <span className="claude-case-title" title={billingCase.title}>
           {billingCase.title}
+        </span>
+      )}
+      {isWorking && (
+        <span aria-label="Bill Agent is working" className="claude-case-working" role="status">
+          <span aria-hidden="true" className="claude-agent-spinner" />
         </span>
       )}
 

@@ -3,6 +3,7 @@ import { AuthenticationException } from "../exceptions/authentication.exception"
 import { ClientErrorException } from "../exceptions/client.error.exception";
 import { ValidationException } from "../exceptions/validation.exception";
 import { ResponseStatus } from "../enums/response-status";
+import { ServiceUnavailableException } from "../exceptions/service-unavailable.exception";
 import { sendErrorResponse } from "../utils/http/response-handlers";
 
 export const errorHandler: ErrorRequestHandler = (error: unknown, request, response, next) => {
@@ -12,6 +13,9 @@ export const errorHandler: ErrorRequestHandler = (error: unknown, request, respo
   }
   if (error instanceof ValidationException) {
     return sendErrorResponse(response, error.errors, error.message, error.statusCode);
+  }
+  if (error instanceof ServiceUnavailableException) {
+    return sendErrorResponse(response, undefined, error.message, error.statusCode);
   }
   if (error instanceof ClientErrorException) {
     return sendErrorResponse(response, undefined, error.message, error.statusCode);

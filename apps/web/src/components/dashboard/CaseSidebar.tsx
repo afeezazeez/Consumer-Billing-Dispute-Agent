@@ -16,6 +16,7 @@ interface CaseSidebarProps {
   activeCaseId: string;
   user: DashboardUser;
   isSigningOut: boolean;
+  isAgentWorking: boolean;
   signOutError: string;
   isCollapsed: boolean;
   isMobileOpen: boolean;
@@ -33,6 +34,7 @@ export function CaseSidebar({
   activeCaseId,
   user,
   isSigningOut,
+  isAgentWorking,
   signOutError,
   isCollapsed,
   isMobileOpen,
@@ -148,6 +150,7 @@ export function CaseSidebar({
                 <CaseListItem
                   billingCase={c}
                   isActive={c.id === activeCaseId}
+                  isWorking={isAgentWorking && c.id === activeCaseId}
                   key={c.id}
                   onDelete={onDeleteCase}
                   onOpen={onSelectCase}

@@ -1,18 +1,25 @@
 import { randomUUID } from "node:crypto";
 import { In, type DataSource, type EntityManager } from "typeorm";
-import { createEmptyCaseIntake } from "../cases/case-intake";
-import type { CaseConversation, CaseMessageRecord, CaseRepository, CaseSummary } from "../cases/case.repository";
+import type {
+  AppendCaseTurn,
+  CaseAgentTurnMessages,
+  CaseConversation,
+  CaseMessageRecord,
+  CaseRepository,
+  CaseSummary,
+  CreateCaseTurn,
+} from "../cases/case.repository";
 import { CaseEntity, CaseMessageEntity } from "./entities/case.entity";
 
 export class TypeOrmCaseRepository implements CaseRepository {
   constructor(private readonly dataSource: DataSource) {}
 
-  create(userId: string, title: string, openingMessage: string): Promise<CaseConversation> {
-    return this.dataSource.transaction((manager) => this.createCase(manager, userId, title, openingMessage));
+  createWithTurn(turn: CreateCaseTurn): Promise<CaseConversation> {
+    return this.dataSource.transaction((manager) => this.createCase(manager, turn));
   }
 
-  appendMessage(userId: string, caseId: string, content: string): Promise<CaseConversation | undefined> {
-    return this.dataSource.transaction((manager) => this.appendCaseMessage(manager, userId, caseId, content));
+  appendTurn(turn: AppendCaseTurn): Promise<CaseConversation | undefined> {
+    return this.dataSource.transaction((manager) => this.appendCaseTurn(manager, turn));
   }
 
   async listForUser(userId: string): Promise<CaseSummary[]> {
@@ -49,41 +56,45 @@ export class TypeOrmCaseRepository implements CaseRepository {
     return (result.affected ?? 0) > 0;
   }
 
-  private async createCase(
-    manager: EntityManager,
-    userId: string,
-    title: string,
-    openingMessage: string,
-  ): Promise<CaseConversation> {
+  private async createCase(manager: EntityManager, turn: CreateCaseTurn): Promise<CaseConversation> {
     const record = await manager.getRepository(CaseEntity).save({
       id: randomUUID(),
-      userId,
-      title,
+      userId: turn.userId,
+      title: turn.title,
       status: "open",
-      intakeState: createEmptyCaseIntake(),
+      intakeState: turn.intake,
     });
-    const message = await manager.getRepository(CaseMessageEntity).save({
-      id: randomUUID(), caseId: record.id, role: "user", content: openingMessage,
-    });
-    return toConversation(record, [message]);
+    const messages = await saveTurnMessages(manager, record.id, turn.messages);
+    return toConversation(record, messages);
   }
 
-  private async appendCaseMessage(
-    manager: EntityManager,
-    userId: string,
-    caseId: string,
-    content: string,
-  ): Promise<CaseConversation | undefined> {
+  private async appendCaseTurn(manager: EntityManager, turn: AppendCaseTurn): Promise<CaseConversation | undefined> {
     const cases = manager.getRepository(CaseEntity);
-    const record = await cases.findOneBy({ id: caseId, userId });
+    const record = await cases.findOneBy({ id: turn.caseId, userId: turn.userId });
     if (!record) return undefined;
-    await manager.getRepository(CaseMessageEntity).save({
-      id: randomUUID(), caseId, role: "user", content,
-    });
-    await cases.update({ id: caseId, userId }, { updatedAt: new Date() });
-    const updatedRecord = await cases.findOneBy({ id: caseId, userId });
-    return updatedRecord ? toConversation(updatedRecord, [...await loadMessages(manager, caseId)]) : undefined;
+    await saveTurnMessages(manager, turn.caseId, turn.messages);
+    await cases.update({ id: turn.caseId, userId: turn.userId }, { updatedAt: turn.messages[1].createdAt, intakeState: turn.intake });
+    const updatedRecord = await cases.findOneBy({ id: turn.caseId, userId: turn.userId });
+    return updatedRecord ? toConversation(updatedRecord, await loadMessages(manager, turn.caseId)) : undefined;
   }
+}
+
+async function saveTurnMessages(
+  manager: EntityManager,
+  caseId: string,
+  messages: CaseAgentTurnMessages,
+): Promise<CaseMessageEntity[]> {
+  return manager.getRepository(CaseMessageEntity).save(messages.map((message) => toMessageEntity(message, caseId)));
+}
+
+function toMessageEntity(message: CaseMessageRecord, caseId: string): CaseMessageEntity {
+  return {
+    id: message.id,
+    caseId,
+    role: message.role,
+    content: message.content,
+    createdAt: message.createdAt,
+  };
 }
 
 async function loadMessages(manager: EntityManager, caseId: string): Promise<CaseMessageEntity[]> {
