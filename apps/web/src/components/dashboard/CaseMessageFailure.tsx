@@ -33,7 +33,6 @@ export function CaseMessageFailure({ messageId, content, isSending, onRetry }: C
   return (
     <div className="case-message-failure" role="status">
       <div className="case-message-failure-copy">
-        <span aria-hidden="true" className="case-message-failure-icon"><AlertIcon /></span>
         <p>Bill Agent couldn’t respond. Your message is kept here.</p>
       </div>
       {isEditing && (
@@ -71,10 +70,6 @@ export function CaseMessageFailure({ messageId, content, isSending, onRetry }: C
       </div>
     </div>
   );
-}
-
-function AlertIcon() {
-  return <svg aria-hidden="true" viewBox="0 0 20 20" fill="none"><path d="M10 6.25v4.5m0 3h.01M8.27 3.83 2.1 14.5A1.75 1.75 0 0 0 3.62 17h12.76a1.75 1.75 0 0 0 1.52-2.5L11.73 3.83a2 2 0 0 0-3.46 0Z" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.6" /></svg>;
 }
 
 function RetryIcon() {

@@ -1749,36 +1749,21 @@ button, a {
 }
 
 .case-message-failure {
-  background: var(--dash-danger-soft);
-  border: 1px solid var(--dash-danger-border);
-  border-radius: 16px 16px 4px 16px;
   color: var(--dash-danger-text);
-  margin-top: 8px;
+  display: grid;
+  justify-items: end;
+  margin-top: 4px;
   max-width: 80%;
-  padding: 12px 14px;
   text-align: left;
+  width: fit-content;
 }
 
 .case-message-failure-copy {
-  align-items: center;
-  display: flex;
-  gap: 9px;
-}
-
-.case-message-failure-icon {
-  align-items: center;
-  background: var(--dash-danger-icon-bg);
-  border-radius: 50%;
-  display: inline-flex;
-  flex: 0 0 28px;
-  height: 28px;
-  justify-content: center;
-  width: 28px;
-}
-
-.case-message-failure-icon svg {
-  height: 17px;
-  width: 17px;
+  background: var(--dash-danger-soft);
+  border: 1px solid var(--dash-danger-border);
+  border-radius: 16px 16px 4px 16px;
+  max-width: 100%;
+  padding: 6px 10px;
 }
 
 .case-message-failure p {
@@ -1803,20 +1788,18 @@ button, a {
 
 .case-message-failure-actions {
   display: flex;
-  gap: 8px;
-  margin-top: 8px;
+  gap: 2px;
+  margin-top: 2px;
 }
 
 .case-message-failure-actions button {
   align-items: center;
-  background: var(--dash-card-bg);
-  border: 1px solid var(--dash-danger-border);
-  border-radius: 10px;
+  background: transparent;
+  border: 0;
+  border-radius: 50%;
   color: var(--dash-danger-text);
   cursor: pointer;
   display: inline-flex;
-  font-size: 13px;
-  gap: 7px;
   justify-content: center;
   min-height: 44px;
   padding: 0;
@@ -1829,7 +1812,12 @@ button, a {
 }
 
 .case-message-failure-actions button:hover:not(:disabled) {
-  background: var(--dash-danger-soft);
+  background: var(--dash-danger-icon-bg);
+}
+
+.case-message-failure-actions button:focus-visible {
+  outline: 2px solid var(--dash-danger);
+  outline-offset: 2px;
 }
 
 .case-message-failure-actions button:disabled {
