@@ -1752,7 +1752,7 @@ button, a {
   color: var(--dash-danger-text);
   display: grid;
   justify-items: end;
-  margin-top: 0;
+  margin-top: 8px;
   max-width: 80%;
   text-align: left;
   width: fit-content;
