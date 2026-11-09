@@ -1,3 +1,4 @@
+import { needsStatementRecheck } from "../documents/document-review";
 import type { DocumentReviewService } from "../documents/document-review.service";
 import type { AttachmentService } from "../storage/attachment.service";
 import type { PendingCaseAttachment, StoredCaseAttachment } from "./case-attachment";
@@ -117,7 +118,7 @@ export class CaseService {
     if (!billingCase) throw new Error("Case disappeared while processing the message");
     const userMessage = billingCase.messages.find((message) => message.id === job.messageId);
     if (!userMessage) throw new Error("Message disappeared while processing the case");
-    await this.readTurnDocuments(job, userMessage);
+    await this.readTurnDocuments(job, userMessage, billingCase.messages);
     const isOpeningTurn = billingCase.messages[0]?.id === job.messageId
       && !billingCase.messages.some((message) => message.role === "assistant");
     let activities = userMessage.toolActivities ?? [];
@@ -149,26 +150,43 @@ export class CaseService {
     return completedCase;
   }
 
-  private async readTurnDocuments(job: AgentTurnJob, message: CaseMessageRecord): Promise<void> {
-    const unread = message.attachments?.filter((attachment) => !attachment.review);
-    if (!unread?.length) return;
+  private async readTurnDocuments(job: AgentTurnJob, message: CaseMessageRecord, history: CaseMessageRecord[]): Promise<void> {
+    const unread = this.findAttachmentsToRead(message, history);
+    if (!unread.length) return;
     const activities = (message.toolActivities ?? []).filter(({ name }) => name !== "read_documents");
-    await this.caseRepository.updatePendingMessageActivities(job.userId, job.caseId, job.messageId, [
+    await this.writeDocumentActivity(job, message, [
       ...activities,
       { id: `read-${job.messageId}`, name: "read_documents", label: "Reading attachments", status: "running" },
     ]);
     try {
-      for (const attachment of unread) {
-        try {
-          attachment.review = await this.documentReviewService.extract(job.userId, attachment.id);
-        } catch {
-          // Keep the file available for preview and let the agent explain what it could read.
-        }
-      }
+      await this.extractAttachments(job.userId, unread);
     } finally {
-      message.toolActivities = activities;
-      await this.caseRepository.updatePendingMessageActivities(job.userId, job.caseId, job.messageId, activities);
+      await this.writeDocumentActivity(job, message, activities);
     }
+  }
+
+  private findAttachmentsToRead(message: CaseMessageRecord, history: CaseMessageRecord[]) {
+    const current = (message.attachments ?? []).filter(({ review }) => !review || needsStatementRecheck(review));
+    if (current.length || message.attachments?.length) return current;
+    const previous = [...history].reverse().find((item) => item.attachments?.some(({ review }) => review && needsStatementRecheck(review)));
+    return (previous?.attachments ?? []).filter(({ review }) => review && needsStatementRecheck(review));
+  }
+
+  private async extractAttachments(userId: string, attachments: NonNullable<CaseMessageRecord["attachments"]>): Promise<void> {
+    for (const attachment of attachments) await this.extractAttachment(userId, attachment);
+  }
+
+  private async extractAttachment(userId: string, attachment: NonNullable<CaseMessageRecord["attachments"]>[number]): Promise<void> {
+    try {
+      attachment.review = await this.documentReviewService.extract(userId, attachment.id);
+    } catch {
+      return;
+    }
+  }
+
+  private writeDocumentActivity(job: AgentTurnJob, message: CaseMessageRecord, activities: CaseAgentToolActivity[]): Promise<void> {
+    message.toolActivities = activities;
+    return this.caseRepository.updatePendingMessageActivities(job.userId, job.caseId, job.messageId, activities);
   }
 
   stageAttachment(userId: string, file: PendingCaseAttachment): Promise<string> {

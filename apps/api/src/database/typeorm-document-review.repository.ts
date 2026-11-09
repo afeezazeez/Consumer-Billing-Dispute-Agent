@@ -1,5 +1,5 @@
 import type { DataSource } from "typeorm";
-import type { ConfirmedDocumentFields, DocumentReview, ExtractedDocumentFields } from "../documents/document-review";
+import type { ConfirmedDocumentFields, DocumentReview, DocumentExtraction } from "../documents/document-review";
 import type { DocumentReviewRepository } from "../documents/document-review.repository";
 
 const ownedAttachment = `EXISTS (
@@ -22,7 +22,14 @@ export class TypeOrmDocumentReviewRepository implements DocumentReviewRepository
     const rows = await this.dataSource.query(
       `WITH claimed AS (
         UPDATE case_attachments a SET review_claim = $3, review_started_at = NOW()
-        WHERE id = $1 AND ${ownedAttachment} AND document_review IS NULL
+        WHERE id = $1 AND ${ownedAttachment} AND (
+          document_review IS NULL OR (
+            NOT (document_review ? 'statement') AND NOT (document_review ? 'confirmed')
+            AND document_review #>> '{extracted,provider,value}' IS NULL
+            AND document_review #>> '{extracted,amount,value}' IS NULL
+            AND document_review #>> '{extracted,chargeDate,value}' IS NULL
+          )
+        )
         AND (review_claim IS NULL OR review_started_at < NOW() - INTERVAL '2 minutes')
         RETURNING id
       ) SELECT id FROM claimed`,
@@ -31,11 +38,11 @@ export class TypeOrmDocumentReviewRepository implements DocumentReviewRepository
     return rows.length > 0;
   }
 
-  async complete(attachmentId: string, claim: string, extracted: ExtractedDocumentFields) {
+  async complete(attachmentId: string, claim: string, extraction: DocumentExtraction) {
     return this.writeReview(
-      `UPDATE case_attachments SET document_review = $3::jsonb, review_claim = NULL, review_started_at = NULL
+      `UPDATE case_attachments SET document_review = COALESCE(document_review, '{}'::jsonb) || $3::jsonb, review_claim = NULL, review_started_at = NULL
        WHERE id = $1 AND review_claim = $2 RETURNING document_review AS review`,
-      [attachmentId, claim, JSON.stringify({ extracted })],
+      [attachmentId, claim, JSON.stringify(extraction)],
     );
   }
 

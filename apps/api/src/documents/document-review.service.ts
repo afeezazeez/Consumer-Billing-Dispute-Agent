@@ -2,11 +2,11 @@ import { randomUUID } from "node:crypto";
 import type { PendingAttachment } from "../storage/attachment.types";
 import { ClientErrorException } from "../exceptions/client.error.exception";
 import { ResponseStatus } from "../enums/response-status";
-import type { ConfirmedDocumentFields, DocumentReview, ExtractedDocumentFields } from "./document-review";
+import { needsStatementRecheck, type ConfirmedDocumentFields, type DocumentReview, type DocumentExtraction } from "./document-review";
 import type { DocumentReviewRepository } from "./document-review.repository";
 
 interface DocumentExtractor {
-  extract(file: PendingAttachment): Promise<ExtractedDocumentFields>;
+  extract(file: PendingAttachment): Promise<DocumentExtraction>;
 }
 
 export class DocumentReviewService {
@@ -19,12 +19,12 @@ export class DocumentReviewService {
   async extract(userId: string, id: string): Promise<DocumentReview> {
     const attachment = await this.repository.find(userId, id);
     if (!attachment) throw notFound();
-    if (attachment.review) return attachment.review;
+    if (attachment.review && !needsStatementRecheck(attachment.review)) return attachment.review;
     const claim = randomUUID();
     if (!await this.repository.claim(userId, id, claim)) {
       const latest = await this.repository.find(userId, id);
       if (!latest) throw notFound();
-      if (latest.review) return latest.review;
+      if (latest.review && !needsStatementRecheck(latest.review)) return latest.review;
       throw new ClientErrorException("This document is already being read. Try again shortly.", ResponseStatus.CONFLICT);
     }
     return this.extractClaimed(userId, id, claim);

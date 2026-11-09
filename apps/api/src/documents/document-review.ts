@@ -11,8 +11,20 @@ export interface ExtractedDocumentField {
 export type ExtractedDocumentFields = Record<DocumentField, ExtractedDocumentField>;
 export type ConfirmedDocumentFields = Record<DocumentField, string | null>;
 
-export interface DocumentReview {
+export interface DocumentExtraction {
   extracted: ExtractedDocumentFields;
+  statement?: {
+    issuer: ExtractedDocumentField;
+    transactions: ExtractedDocumentFields[];
+  };
+}
+
+export interface DocumentReview extends DocumentExtraction {
   confirmed?: ConfirmedDocumentFields;
   confirmedAt?: string;
+}
+
+export function needsStatementRecheck(review: DocumentReview): boolean {
+  return !review.statement && !review.confirmed
+    && DOCUMENT_FIELDS.every((key) => review.extracted[key].value === null);
 }
