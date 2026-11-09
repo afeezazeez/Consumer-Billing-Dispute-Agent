@@ -82,21 +82,15 @@ export function CaseSearchModal({ isOpen, cases, onClose, onSelectCase, onNewCas
     >
       <div className="claude-search-content" onClick={(e) => e.stopPropagation()}>
         <header className="claude-search-header">
-          <div className="claude-search-input-wrap">
-            <svg aria-hidden="true" className="claude-search-icon" viewBox="0 0 24 24">
-              <circle cx="10.8" cy="10.8" r="6.8" />
-              <path d="m16 16 4.5 4.5" />
-            </svg>
-            <input
-              aria-label="Search cases"
-              autoFocus
-              className="claude-search-input"
-              onChange={handleInputChange}
-              placeholder="Search cases..."
-              ref={inputRef}
-              value={searchTerm}
-            />
-          </div>
+          <input
+            aria-label="Search cases"
+            autoFocus
+            className="claude-search-input"
+            onChange={handleInputChange}
+            placeholder="Search cases..."
+            ref={inputRef}
+            value={searchTerm}
+          />
           <button
             aria-label="Close search"
             className="claude-search-close-btn"
@@ -142,7 +136,6 @@ export function CaseSearchModal({ isOpen, cases, onClose, onSelectCase, onNewCas
                       onClick={() => handleSelect(item.id)}
                       type="button"
                     >
-                      <span className="claude-search-item-icon">○</span>
                       <span className="claude-search-item-title">{item.title}</span>
                       <span className="claude-search-item-arrow">↵</span>
                     </button>

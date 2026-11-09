@@ -733,16 +733,6 @@ button, a {
   font-weight: 600;
 }
 
-.claude-case-bullet {
-  color: #94a3b8;
-  font-size: 11px;
-  shrink: 0;
-}
-
-.claude-case-row.is-active .claude-case-bullet {
-  color: var(--dash-primary);
-}
-
 .claude-case-title {
   color: inherit;
   flex: 1;
@@ -1003,26 +993,19 @@ button, a {
   padding: 16px 20px;
 }
 
-.claude-search-input-wrap {
-  align-items: center;
-  display: flex;
-  flex: 1;
-  gap: 10px;
-}
-
-.claude-search-icon {
-  color: var(--dash-muted);
-  height: 18px;
-  width: 18px;
-}
-
 .claude-search-input {
   background: transparent;
   border: 0;
   color: var(--dash-ink);
+  flex: 1;
   font-size: 15px;
+  min-width: 0;
   outline: none;
-  width: 100%;
+}
+
+.claude-search-input::placeholder {
+  color: var(--dash-muted);
+  opacity: 1;
 }
 
 .claude-search-close-btn {

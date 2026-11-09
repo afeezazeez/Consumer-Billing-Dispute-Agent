@@ -116,8 +116,6 @@ export function CaseListItem({
         if (e.key === "Enter" && !isRenaming) handleOpen();
       }}
     >
-      <span aria-hidden="true" className="claude-case-bullet">○</span>
-
       {isRenaming ? (
         <input
           aria-label="Rename case"
