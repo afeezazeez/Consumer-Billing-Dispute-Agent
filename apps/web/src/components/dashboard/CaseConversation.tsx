@@ -8,7 +8,6 @@ import {
   useRef,
   useState,
   type ChangeEvent,
-  type CSSProperties,
   type PointerEvent as ReactPointerEvent,
   type KeyboardEvent as ReactKeyboardEvent,
 } from "react";
@@ -17,6 +16,7 @@ import remarkGfm from "remark-gfm";
 import { CaseComposer } from "./CaseComposer";
 import { CaseMessageFailure } from "./CaseMessageFailure";
 import { AgentActivityDisclosure } from "./AgentActivityDisclosure";
+import { AgentActivityText } from "./AgentActivityText";
 import { CaseMessageSources } from "./CaseMessageSources";
 import { CaseMessageActions } from "./CaseMessageActions";
 import { EmailDraftCard } from "./EmailDraftCard";
@@ -261,9 +261,7 @@ export function CaseConversation({
                 {getRunningActivity(liveToolActivities) ? (
                   <AgentActivityDisclosure activities={liveToolActivities} isLive />
                 ) : (
-                  <span aria-label="Thinking" className="claude-agent-thinking-text">
-                    {renderThinkingLetters()}
-                  </span>
+                  <AgentActivityText label="Thinking" />
                 )}
               </div>
             )}
@@ -282,19 +280,6 @@ export function CaseConversation({
       </div>
     </div>
   );
-}
-
-function renderThinkingLetters() {
-  return Array.from("Thinking").map((letter, index) => (
-    <span
-      aria-hidden="true"
-      className="claude-agent-thinking-letter"
-      key={index}
-      style={{ "--thinking-letter-index": index } as CSSProperties}
-    >
-      {letter}
-    </span>
-  ));
 }
 
 function getRunningActivity(activities: CaseAgentToolActivity[]): boolean {

@@ -1,4 +1,5 @@
 import { useMemo } from "react";
+import { AgentActivityText } from "./AgentActivityText";
 import type { CaseAgentToolActivity } from "./dashboard.types";
 
 interface AgentActivityDisclosureProps {
@@ -13,11 +14,15 @@ export function AgentActivityDisclosure({ activities, isLive = false }: AgentAct
 
   return (
     <details className="agent-activity-disclosure" aria-live={isLive ? "polite" : undefined}>
-      <summary>{summary}</summary>
+      <summary>{isLive ? <AgentActivityText label={summary} /> : summary}</summary>
       <ul>
         {(visibleActivities.length > 0 ? visibleActivities : activities).map((activity) => (
           <li className="agent-activity-step" key={activity.id}>
-            <span className="agent-activity-step-label">{getStepLabel(activity)}</span>
+            <span className="agent-activity-step-label">
+              {isLive && activity.status === "running"
+                ? <AgentActivityText label={getStepLabel(activity)} />
+                : getStepLabel(activity)}
+            </span>
             {activity.sources && getSafeSources(activity.sources).length > 0 && (
               <span className="agent-activity-step-sources">
                 {getVisibleSources(activity.sources).map((source) => (
@@ -41,8 +46,8 @@ function getActivitySummary(activities: CaseAgentToolActivity[], isLive: boolean
   const latestActivity = activities.at(-1);
   const runningActivity = [...activities].reverse().find((activity) => activity.status === "running");
   const openPages = activities.filter((activity) => activity.operation === "open_page").length;
-  if (runningActivity?.name === "web_search") {
-    return "Searching the web";
+  if (isLive && runningActivity) {
+    return runningActivity.name === "web_search" ? "Searching the web" : runningActivity.label;
   }
   if (activities.some((activity) => activity.name === "web_search") && openPages === 1) {
     return "Searched the web, read a page";
