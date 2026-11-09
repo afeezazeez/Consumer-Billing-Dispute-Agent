@@ -20,6 +20,7 @@ export function DashboardWorkspace() {
   const [isSending, setIsSending] = useState(false);
   const [isSigningOut, setIsSigningOut] = useState(false);
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [error, setError] = useState("");
   const [signOutError, setSignOutError] = useState("");
 
@@ -39,16 +40,26 @@ export function DashboardWorkspace() {
   }, [selectCase]);
 
   const handleSelectCase = useCallback((caseId: string) => {
+    setIsMobileSidebarOpen(false);
     void selectCase(caseId).catch(() => setError("We couldn’t open that case. Please try again."));
   }, [selectCase]);
 
   const handleNewCase = useCallback(() => {
+    setIsMobileSidebarOpen(false);
     setActiveCase(undefined);
     setError("");
   }, []);
 
   const handleToggleSidebar = useCallback(() => {
     setIsSidebarCollapsed((current) => !current);
+  }, []);
+
+  const handleToggleMobileSidebar = useCallback(() => {
+    setIsMobileSidebarOpen((current) => !current);
+  }, []);
+
+  const handleCloseMobileSidebar = useCallback(() => {
+    setIsMobileSidebarOpen(false);
   }, []);
 
   const handleSendMessage = useCallback(async (content: string): Promise<boolean> => {
@@ -134,7 +145,9 @@ export function DashboardWorkspace() {
         activeCaseId={activeCase?.id ?? ""}
         cases={cases}
         isCollapsed={isSidebarCollapsed}
+        isMobileOpen={isMobileSidebarOpen}
         isSigningOut={isSigningOut}
+        onCloseMobile={handleCloseMobileSidebar}
         onDeleteCase={promptDeleteCase}
         onNewCase={handleNewCase}
         onRenameCase={handleRenameCase}
@@ -145,6 +158,16 @@ export function DashboardWorkspace() {
         user={user}
       />
       <section className="dashboard-main" aria-label="Billing case chat">
+        <button
+          aria-label="Open cases sidebar"
+          className="dashboard-mobile-menu-toggle"
+          onClick={handleToggleMobileSidebar}
+          type="button"
+        >
+          <svg aria-hidden="true" viewBox="0 0 24 24" fill="none">
+            <path d="M4 6h16M4 12h16M4 18h16" stroke="currentColor" strokeLinecap="round" strokeWidth="1.8" />
+          </svg>
+        </button>
         {activeCase ? (
           <CaseConversation
             billingCase={activeCase}

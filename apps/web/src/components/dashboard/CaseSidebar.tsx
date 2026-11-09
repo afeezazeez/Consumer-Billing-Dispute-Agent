@@ -18,6 +18,8 @@ interface CaseSidebarProps {
   isSigningOut: boolean;
   signOutError: string;
   isCollapsed: boolean;
+  isMobileOpen: boolean;
+  onCloseMobile: () => void;
   onToggleCollapse: () => void;
   onNewCase: () => void;
   onSelectCase: (caseId: string) => void;
@@ -33,6 +35,8 @@ export function CaseSidebar({
   isSigningOut,
   signOutError,
   isCollapsed,
+  isMobileOpen,
+  onCloseMobile,
   onToggleCollapse,
   onNewCase,
   onSelectCase,
@@ -58,7 +62,23 @@ export function CaseSidebar({
 
   const handleOpenSearch = useCallback(() => {
     setIsSearchModalOpen(true);
-  }, []);
+    onCloseMobile();
+  }, [onCloseMobile]);
+
+  const handleNewCase = useCallback(() => {
+    onNewCase();
+    onCloseMobile();
+  }, [onCloseMobile, onNewCase]);
+
+  const handleMobileEscape = useCallback((event: KeyboardEvent) => {
+    if (event.key === "Escape") onCloseMobile();
+  }, [onCloseMobile]);
+
+  useEffect(() => {
+    if (!isMobileOpen) return;
+    window.addEventListener("keydown", handleMobileEscape);
+    return () => window.removeEventListener("keydown", handleMobileEscape);
+  }, [handleMobileEscape, isMobileOpen]);
 
   const handleCloseSearch = useCallback(() => {
     setIsSearchModalOpen(false);
@@ -66,7 +86,15 @@ export function CaseSidebar({
 
   return (
     <>
-      <aside className={`claude-sidebar${isCollapsed ? " is-collapsed" : ""}`}>
+      {isMobileOpen && (
+        <button
+          aria-label="Close cases sidebar"
+          className="dashboard-mobile-backdrop"
+          onClick={onCloseMobile}
+          type="button"
+        />
+      )}
+      <aside className={`claude-sidebar${isCollapsed ? " is-collapsed" : ""}${isMobileOpen ? " is-mobile-open" : ""}`}>
         {/* Top Header - Aligned horizontally with Main Chat Top Bar */}
         <div className="claude-sidebar-top">
           <div className="claude-brand-row">
@@ -88,7 +116,7 @@ export function CaseSidebar({
           <button
             aria-label="New case"
             className="claude-new-btn"
-            onClick={onNewCase}
+            onClick={handleNewCase}
             type="button"
           >
             <span className="claude-new-plus">＋</span>

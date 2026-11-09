@@ -28,6 +28,7 @@
   --dash-primary-hover: #1d4ed8;
   --dash-primary-soft: #eff6ff;
   --dash-danger: #dc2626;
+  --dash-scrim: rgb(15 23 42 / 42%);
 
   --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   --font-serif: Georgia, Cambria, "Times New Roman", Times, serif;
@@ -535,6 +536,10 @@ button, a {
 
 .dashboard-shell.sidebar-collapsed {
   grid-template-columns: 64px minmax(0, 1fr);
+}
+
+.dashboard-mobile-menu-toggle {
+  display: none;
 }
 
 .dashboard-main {
@@ -1645,7 +1650,302 @@ button, a {
     grid-template-columns: 1fr;
   }
 
+  .dashboard-shell.sidebar-collapsed {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
   .claude-sidebar {
+    background: var(--dash-sidebar-bg);
+    height: 100dvh;
+    left: 0;
+    max-width: min(320px, calc(100vw - 48px));
+    position: fixed;
+    top: 0;
+    transform: translateX(-105%);
+    transition: transform 180ms ease, visibility 0s linear 180ms;
+    visibility: hidden;
+    width: 280px;
+    z-index: 60;
+  }
+
+  .claude-sidebar.is-mobile-open {
+    transform: translateX(0);
+    transition-delay: 0s;
+    visibility: visible;
+  }
+
+  .claude-sidebar.is-collapsed {
+    padding: 12px 10px;
+    width: 280px;
+  }
+
+  .claude-sidebar.is-collapsed .claude-brand-text,
+  .claude-sidebar.is-collapsed .claude-new-text,
+  .claude-sidebar.is-collapsed .claude-nav-text,
+  .claude-sidebar.is-collapsed .claude-shortcut-hint,
+  .claude-sidebar.is-collapsed .claude-sidebar-cases,
+  .claude-sidebar.is-collapsed .claude-user-details,
+  .claude-sidebar.is-collapsed .claude-bottom-collapse-btn {
+    display: initial;
+  }
+
+  .claude-sidebar.is-collapsed .claude-new-btn,
+  .claude-sidebar.is-collapsed .claude-nav-item,
+  .claude-sidebar.is-collapsed .claude-user-row {
+    justify-content: flex-start;
+    padding: 8px 12px;
+  }
+
+  .dashboard-mobile-backdrop {
+    background: var(--dash-scrim);
+    border: 0;
+    inset: 0;
+    position: fixed;
+    z-index: 55;
+  }
+
+  .dashboard-mobile-menu-toggle {
+    align-items: center;
+    background: var(--dash-bg);
+    border: 1px solid var(--dash-line);
+    border-radius: 8px;
+    color: var(--dash-ink);
+    cursor: pointer;
+    display: flex;
+    height: 40px;
+    justify-content: center;
+    left: 12px;
+    padding: 8px;
+    position: fixed;
+    top: 8px;
+    width: 40px;
+    z-index: 20;
+  }
+
+  .dashboard-mobile-menu-toggle svg {
+    height: 21px;
+    width: 21px;
+  }
+
+  .claude-chat-top-bar {
+    min-height: 56px;
+    padding-left: 60px;
+    padding-right: 12px;
+  }
+
+  .claude-title-button {
+    max-width: min(62vw, 360px);
+  }
+
+  .claude-title-text {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .claude-title-input {
+    max-width: 62vw;
+    width: 280px;
+  }
+
+  .claude-chat-viewport {
+    height: 100dvh;
+  }
+
+  .claude-chat-workspace {
+    padding: 0 16px;
+  }
+
+  .claude-chat-history {
+    padding: 20px 0;
+  }
+
+  .claude-message-row.user .claude-message-bubble,
+  .claude-message-row.assistant .claude-message-bubble {
+    font-size: 15px;
+    max-width: 92%;
+  }
+
+  .claude-chat-composer-container {
+    padding: 12px 0 max(16px, env(safe-area-inset-bottom));
+  }
+
+  .claude-empty-container {
+    justify-content: center;
+    min-height: 100dvh;
+    padding: 72px 20px 32px;
+  }
+
+  .claude-greeting-block {
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 22px;
+  }
+
+  .modern-dash-spark {
+    height: 26px;
+    width: 26px;
+  }
+
+  .claude-greeting-heading {
+    font-size: clamp(25px, 7vw, 34px);
+  }
+
+  .modern-dash-subheading {
+    font-size: 15px;
+    line-height: 1.5;
+  }
+
+  .claude-starter-prompts {
+    justify-content: flex-start;
+    margin-top: 18px;
+  }
+
+  .claude-starter-pill {
+    font-size: 14px;
+    max-width: 100%;
+    padding: 9px 13px;
+    text-align: left;
+  }
+
+  .claude-search-dialog {
+    margin: 8vh auto auto;
+    width: calc(100% - 24px);
+  }
+
+  .claude-confirm-content {
+    padding: 20px;
+  }
+
+  .claude-confirm-actions {
+    flex-wrap: wrap;
+  }
+}
+
+@media (max-width: 600px) {
+  .modern-site-header {
+    align-items: flex-start;
+    gap: 16px;
+    padding: 18px 18px;
+  }
+
+  .modern-brand {
+    font-size: 16px;
+    padding-top: 8px;
+  }
+
+  .modern-nav {
+    gap: 8px;
+  }
+
+  .modern-nav-link {
     display: none;
+  }
+
+  .modern-login-nav-link {
+    display: inline-flex;
+  }
+
+  .modern-btn-header {
+    padding: 9px 12px;
+    white-space: nowrap;
+  }
+
+  .modern-hero-section {
+    padding: 42px 20px 56px;
+  }
+
+  .modern-hero-grid,
+  .modern-login-container,
+  .modern-trust-container {
+    gap: 30px;
+  }
+
+  .modern-hero-title {
+    font-size: clamp(36px, 10vw, 48px);
+  }
+
+  .modern-hero-desc {
+    font-size: 16px;
+  }
+
+  .modern-hero-actions {
+    align-items: stretch;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .modern-hero-actions .modern-btn-primary,
+  .modern-hero-actions .modern-text-link {
+    align-self: flex-start;
+  }
+
+  .modern-case-preview-card {
+    padding: 20px 16px;
+  }
+
+  .modern-preview-row {
+    flex-wrap: wrap;
+    gap: 8px 12px;
+  }
+
+  .modern-preview-row-content {
+    flex: 1 1 100%;
+    padding-left: 2px;
+  }
+
+  .modern-steps-section,
+  .modern-trust-section,
+  .modern-cta-section {
+    padding: 56px 20px;
+  }
+
+  .modern-steps-heading {
+    margin-bottom: 34px;
+  }
+
+  .modern-trust-container {
+    grid-template-columns: 1fr;
+  }
+
+  .modern-footer-container {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 8px;
+    padding: 0;
+  }
+
+  .modern-login-main {
+    align-items: flex-start;
+    padding: 38px 20px 48px;
+  }
+
+  .modern-auth-card {
+    border-radius: 12px;
+    padding: 26px 20px;
+  }
+
+  .modern-auth-card-title {
+    font-size: 22px;
+  }
+
+  .claude-composer-card {
+    border-radius: 14px;
+    padding: 12px 12px 9px;
+  }
+
+  .claude-composer-textarea {
+    font-size: 16px;
+  }
+
+  .claude-title-dropdown {
+    max-width: calc(100vw - 72px);
+    min-width: 150px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .claude-sidebar {
+    transition: none;
   }
 }

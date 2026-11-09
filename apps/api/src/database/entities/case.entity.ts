@@ -1,5 +1,5 @@
 import { EntitySchema } from "typeorm";
-import type { CaseIntakeState } from "../cases/case-intake";
+import type { CaseIntakeState } from "../../cases/case-intake";
 
 export class CaseEntity {
   id!: string;

@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import type { DataSource } from "typeorm";
-import { UserEntity } from "./user.entity";
+import { UserEntity } from "./entities/user.entity";
 import type { GoogleIdentity, UserRecord, UserRepository } from "../auth/user.repository";
 
 export class TypeOrmUserRepository implements UserRepository {

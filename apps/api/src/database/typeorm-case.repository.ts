@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { In, type DataSource, type EntityManager } from "typeorm";
 import { createEmptyCaseIntake } from "../cases/case-intake";
 import type { CaseConversation, CaseMessageRecord, CaseRepository, CaseSummary } from "../cases/case.repository";
-import { CaseEntity, CaseMessageEntity } from "./case.entity";
+import { CaseEntity, CaseMessageEntity } from "./entities/case.entity";
 
 export class TypeOrmCaseRepository implements CaseRepository {
   constructor(private readonly dataSource: DataSource) {}

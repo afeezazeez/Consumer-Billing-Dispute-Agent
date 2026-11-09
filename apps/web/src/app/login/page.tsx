@@ -51,7 +51,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
           Billing Case Agent
         </Link>
         <nav className="modern-nav" aria-label="Navigation">
-          <Link className="modern-nav-link" href="/">
+          <Link className="modern-nav-link modern-login-nav-link" href="/">
             Back to home
           </Link>
         </nav>
