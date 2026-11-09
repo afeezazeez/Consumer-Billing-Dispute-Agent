@@ -2,6 +2,7 @@
 
 import { useCallback, useState, type MouseEvent } from "react";
 import { ComposerAttachmentPreview } from "./ComposerAttachmentPreview";
+import { ComposerAttachmentThumbnail } from "./ComposerAttachmentThumbnail";
 
 interface ComposerAttachmentsProps {
   files: File[];
@@ -22,15 +23,17 @@ export function ComposerAttachments({ files, onRemove }: ComposerAttachmentsProp
   return (
     <>
       <ul className="composer-attachments" aria-label="Selected attachments">
-        {files.map((file, index) => (
-          <li key={`${file.name}-${file.lastModified}-${index}`}>
-            <button type="button" data-index={index} onClick={openPreview} title={file.name}>
-              <span>{file.type === "application/pdf" ? "PDF" : "Image"}</span>
-              <span>{file.name}</span>
-            </button>
-            <button type="button" data-index={index} onClick={removeFile} aria-label={`Remove ${file.name}`}>×</button>
-          </li>
-        ))}
+        {files.map((file, index) => {
+          const isImage = file.type.startsWith("image/");
+          return (
+            <li className={isImage ? "composer-image-attachment" : undefined} key={`${file.name}-${file.lastModified}-${index}`}>
+              <button type="button" data-index={index} onClick={openPreview} aria-label={`Preview ${file.name}`}>
+                {isImage ? <ComposerAttachmentThumbnail file={file} /> : <><span>PDF</span><span>{file.name}</span></>}
+              </button>
+              <button type="button" data-index={index} onClick={removeFile} aria-label={`Remove ${file.name}`}>×</button>
+            </li>
+          );
+        })}
       </ul>
       {preview && <ComposerAttachmentPreview file={preview} onClose={closePreview} />}
     </>

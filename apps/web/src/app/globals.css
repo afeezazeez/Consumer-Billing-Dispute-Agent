@@ -1970,10 +1970,37 @@ button, a {
   white-space: nowrap;
 }
 
-.composer-attachment-note {
-  color: var(--dash-ink-soft);
-  font-size: 12px;
-  margin: 0 0 6px;
+.composer-attachments .composer-image-attachment {
+  position: relative;
+  border-radius: 10px;
+}
+
+.composer-image-attachment button:first-child {
+  padding: 0;
+}
+
+.composer-image-attachment img {
+  border-radius: 9px;
+  display: block;
+  height: 72px;
+  object-fit: cover;
+  width: 72px;
+}
+
+.composer-image-attachment button:last-child {
+  align-items: center;
+  background: var(--dash-ink);
+  border-radius: 50%;
+  color: #fff;
+  display: grid;
+  height: 24px;
+  line-height: 1;
+  min-height: 24px;
+  padding: 0;
+  position: absolute;
+  right: 4px;
+  top: 4px;
+  width: 24px;
 }
 
 .composer-attachment-preview {

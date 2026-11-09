@@ -117,7 +117,6 @@ export function CaseComposer({
       >
         <ComposerAttachments files={files} onRemove={removeAttachment} />
         {attachmentError && <p className="claude-composer-error" role="alert">{attachmentError}</p>}
-        {files.length > 0 && <p className="composer-attachment-note">Preview only for now. Remove attachments to send this message.</p>}
         <label className="visually-hidden" htmlFor="claude-case-message">
           Message about your billing dispute
         </label>
