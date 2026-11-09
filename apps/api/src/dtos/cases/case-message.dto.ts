@@ -1,4 +1,5 @@
 import type { CaseMessageRecord } from "../../cases/case.repository";
+import type { CaseAgentSource, CaseAgentToolActivity } from "../../cases/case-intake-agent";
 
 export class CaseMessageDto {
   id: string;
@@ -6,6 +7,8 @@ export class CaseMessageDto {
   content: string;
   createdAt: Date;
   processingStatus: CaseMessageRecord["processingStatus"];
+  sources: CaseAgentSource[];
+  toolActivities: CaseAgentToolActivity[];
 
   constructor(message: CaseMessageRecord) {
     this.id = message.id;
@@ -13,6 +16,8 @@ export class CaseMessageDto {
     this.content = message.content;
     this.createdAt = message.createdAt;
     this.processingStatus = message.processingStatus;
+    this.sources = message.sources ?? [];
+    this.toolActivities = message.toolActivities ?? [];
   }
 
   static make(message: CaseMessageRecord): CaseMessageDto {

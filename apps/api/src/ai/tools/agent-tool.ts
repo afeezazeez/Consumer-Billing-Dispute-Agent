@@ -1,6 +1,10 @@
-import type { FunctionTool } from "openai/resources/responses/responses";
+import type { FunctionTool, WebSearchTool } from "openai/resources/responses/responses";
 import type { CaseIntakeState } from "../../cases/case-intake";
 import type { CaseMessageRecord } from "../../cases/case.repository";
+
+export interface AgentToolBase {
+  label: string;
+}
 
 export interface AgentToolContext {
   messages: CaseMessageRecord[];
@@ -12,7 +16,15 @@ export interface AgentToolResult {
   output: Record<string, unknown>;
 }
 
-export interface AgentTool {
+export interface FunctionAgentTool extends AgentToolBase {
+  kind: "function";
   definition: FunctionTool;
   execute(input: unknown, context: AgentToolContext): Promise<AgentToolResult>;
 }
+
+export interface HostedAgentTool extends AgentToolBase {
+  kind: "hosted";
+  definition: WebSearchTool;
+}
+
+export type AgentTool = FunctionAgentTool | HostedAgentTool;

@@ -14,12 +14,16 @@ import {
 } from "react";
 import { CaseComposer } from "./CaseComposer";
 import { CaseMessageFailure } from "./CaseMessageFailure";
+import { AgentActivityDisclosure } from "./AgentActivityDisclosure";
+import { CaseMessageSources } from "./CaseMessageSources";
+import type { CaseAgentToolActivity } from "./dashboard.types";
 import type { CaseConversation as CaseConversationData } from "./dashboard.types";
 
 interface CaseConversationProps {
   billingCase: CaseConversationData;
   isSending: boolean;
   error: string;
+  liveToolActivities: CaseAgentToolActivity[];
   onSendMessage: (message: string) => Promise<boolean>;
   onRetryMessage: (messageId: string, content?: string) => void;
   onDeleteCase: (caseId: string) => void;
@@ -30,6 +34,7 @@ export function CaseConversation({
   billingCase,
   isSending,
   error,
+  liveToolActivities,
   onSendMessage,
   onRetryMessage,
   onDeleteCase,
@@ -189,6 +194,12 @@ export function CaseConversation({
                 <div className="claude-message-bubble">
                   <p>{message.content}</p>
                 </div>
+                {message.role === "assistant" && (
+                  <>
+                    <AgentActivityDisclosure activities={message.toolActivities} />
+                    <CaseMessageSources sources={message.sources} />
+                  </>
+                )}
                 {message.role === "user" && message.processingStatus === "failed" && (
                   <CaseMessageFailure
                     content={message.content}
@@ -205,6 +216,7 @@ export function CaseConversation({
                 <span aria-label="Thinking" className="claude-agent-thinking-text">
                   {renderThinkingLetters()}
                 </span>
+                <AgentActivityDisclosure activities={liveToolActivities} isLive />
               </div>
             )}
           </div>

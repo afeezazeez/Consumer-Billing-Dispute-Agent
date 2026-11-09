@@ -7,9 +7,11 @@ import type {
 } from "../../cases/case-intake";
 import type { CaseMessageRecord } from "../../cases/case.repository";
 import { RecordCaseIntakeFactsToolDto } from "../../dtos/cases/record-case-intake-facts-tool.dto";
-import type { AgentTool, AgentToolContext, AgentToolResult } from "./agent-tool";
+import type { AgentToolContext, AgentToolResult, FunctionAgentTool } from "./agent-tool";
 
-export class RecordCaseIntakeFactsTool implements AgentTool {
+export class RecordCaseIntakeFactsTool implements FunctionAgentTool {
+  readonly kind = "function" as const;
+  readonly label = "Recording case details";
   readonly definition: FunctionTool = {
     type: "function",
     name: "record_case_facts",

@@ -1,3 +1,4 @@
+import type { CaseAgentSource, CaseAgentToolActivity } from "./case-intake-agent";
 import type { CaseIntakeState } from "./case-intake";
 
 export interface CaseMessageRecord {
@@ -6,6 +7,8 @@ export interface CaseMessageRecord {
   content: string;
   createdAt: Date;
   processingStatus: CaseMessageProcessingStatus;
+  sources?: CaseAgentSource[];
+  toolActivities?: CaseAgentToolActivity[];
 }
 
 export type CaseMessageProcessingStatus = "pending" | "complete" | "failed";

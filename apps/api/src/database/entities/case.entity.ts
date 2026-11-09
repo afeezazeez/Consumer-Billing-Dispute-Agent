@@ -1,4 +1,5 @@
 import { EntitySchema } from "typeorm";
+import type { CaseAgentSource, CaseAgentToolActivity } from "../../cases/case-intake-agent";
 import type { CaseIntakeState } from "../../cases/case-intake";
 import type { CaseMessageProcessingStatus } from "../../cases/case.repository";
 
@@ -19,6 +20,8 @@ export class CaseMessageEntity {
   content!: string;
   createdAt!: Date;
   processingStatus!: CaseMessageProcessingStatus;
+  sources!: CaseAgentSource[];
+  toolActivities!: CaseAgentToolActivity[];
 }
 
 export const caseSchema = new EntitySchema<CaseEntity>({
@@ -51,6 +54,8 @@ export const caseMessageSchema = new EntitySchema<CaseMessageEntity>({
     role: { type: "varchar", length: 12 },
     content: { type: "text" },
     processingStatus: { name: "processing_status", type: "varchar", length: 16, default: "complete" },
+    sources: { type: "jsonb", default: () => "'[]'::jsonb" },
+    toolActivities: { name: "tool_activities", type: "jsonb", default: () => "'[]'::jsonb" },
     createdAt: { name: "created_at", type: "timestamptz", createDate: true },
   },
   indices: [{ columns: ["caseId", "createdAt"] }],

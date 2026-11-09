@@ -4,6 +4,7 @@ import type { PostgresConfig } from "../config";
 import { CreateUsers1710000000000 } from "./migrations/1710000000000-CreateUsers";
 import { AddCaseIntakeState1710000000002 } from "./migrations/1710000000002-AddCaseIntakeState";
 import { AddCaseMessageProcessingStatus1710000000003 } from "./migrations/1710000000003-AddCaseMessageProcessingStatus";
+import { AddAgentMessageSourcesAndActivities1710000000004 } from "./migrations/1710000000004-AddAgentMessageSourcesAndActivities";
 import { caseMessageSchema, caseSchema } from "./entities/case.entity";
 import { userSchema } from "./entities/user.entity";
 
@@ -21,6 +22,7 @@ export function createDataSource(database: PostgresConfig): DataSource {
       CreateBillingCases1710000000001,
       AddCaseIntakeState1710000000002,
       AddCaseMessageProcessingStatus1710000000003,
+      AddAgentMessageSourcesAndActivities1710000000004,
     ],
     synchronize: false,
   });

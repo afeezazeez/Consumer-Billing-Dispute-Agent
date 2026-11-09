@@ -9,6 +9,8 @@ import { ClientErrorException } from "../exceptions/client.error.exception";
 import { ResponseStatus } from "../enums/response-status";
 import { sendSuccessResponse } from "../utils/http/response-handlers";
 import { authenticatedFirstName, authenticatedUserId } from "../auth/auth.middleware";
+import type { CaseAgentProgressHandler } from "./case-intake-agent";
+import type { CaseConversation } from "./case.repository";
 import type { CaseService } from "./case.service";
 
 export class CaseController {
@@ -39,6 +41,17 @@ export class CaseController {
     }
   }
 
+  async createStream(request: Request, response: Response): Promise<void> {
+    const payload = request.body as CreateCaseRequestDto;
+    await streamCaseTurn(response, (onProgress) => this.caseService.createCase(authenticatedUserId(request), {
+      openingMessage: payload.openingMessage.trim(),
+      caseId: payload.caseId,
+      messageId: payload.messageId,
+      userFirstName: authenticatedFirstName(request),
+      onProgress,
+    }));
+  }
+
   async read(request: Request, response: Response, next: NextFunction): Promise<void> {
     try {
       const record = await this.caseService.findCase(authenticatedUserId(request), readCaseId(request));
@@ -65,6 +78,16 @@ export class CaseController {
     }
   }
 
+  async addMessageStream(request: Request, response: Response): Promise<void> {
+    const payload = request.body as CreateMessageRequestDto;
+    await streamCaseTurn(response, (onProgress) => this.caseService.appendMessage(authenticatedUserId(request), {
+      caseId: readCaseId(request),
+      content: payload.content.trim(),
+      userFirstName: authenticatedFirstName(request),
+      onProgress,
+    }));
+  }
+
   async retryMessage(request: Request, response: Response, next: NextFunction): Promise<void> {
     try {
       const payload = request.body as RetryCaseMessageRequestDto;
@@ -79,6 +102,17 @@ export class CaseController {
     } catch (error) {
       next(error);
     }
+  }
+
+  async retryMessageStream(request: Request, response: Response): Promise<void> {
+    const payload = request.body as RetryCaseMessageRequestDto;
+    await streamCaseTurn(response, (onProgress) => this.caseService.retryFailedMessage(authenticatedUserId(request), {
+      caseId: readCaseId(request),
+      messageId: readMessageId(request),
+      content: payload.content,
+      userFirstName: authenticatedFirstName(request),
+      onProgress,
+    }));
   }
 
   async delete(request: Request, response: Response, next: NextFunction): Promise<void> {
@@ -101,6 +135,36 @@ export class CaseController {
       next(error);
     }
   }
+}
+
+type StreamCaseOperation = (onProgress: CaseAgentProgressHandler) => Promise<CaseConversation | undefined>;
+
+async function streamCaseTurn(response: Response, operation: StreamCaseOperation): Promise<void> {
+  initializeEventStream(response);
+  try {
+    const billingCase = await operation((activity) => sendEvent(response, "progress", { activity }));
+    if (!billingCase) return sendEvent(response, "failure", { message: "That case or message could not be found." });
+    sendEvent(response, "done", { case: CaseConversationDto.make(billingCase) });
+  } catch {
+    sendEvent(response, "failure", { message: "We couldn’t complete that request. Please try again." });
+  } finally {
+    response.end();
+  }
+}
+
+function initializeEventStream(response: Response): void {
+  response.status(200).set({
+    "Content-Type": "text/event-stream",
+    "Cache-Control": "no-cache, no-transform",
+    Connection: "keep-alive",
+    "X-Accel-Buffering": "no",
+  });
+  response.flushHeaders();
+}
+
+function sendEvent(response: Response, eventName: string, data: unknown): void {
+  if (response.destroyed || response.writableEnded) return;
+  response.write(`event: ${eventName}\ndata: ${JSON.stringify(data)}\n\n`);
 }
 
 function readCaseId(request: Request): string {

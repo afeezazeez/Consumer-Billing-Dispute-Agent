@@ -148,6 +148,8 @@ function toMessageEntity(message: CaseMessageRecord, caseId: string): CaseMessag
     content: message.content,
     createdAt: message.createdAt,
     processingStatus: message.processingStatus,
+    sources: message.sources ?? [],
+    toolActivities: message.toolActivities ?? [],
   };
 }
 
@@ -188,5 +190,7 @@ function toMessage(message: CaseMessageEntity): CaseMessageRecord {
     content: message.content,
     createdAt: message.createdAt,
     processingStatus: message.processingStatus,
+    sources: message.sources ?? [],
+    toolActivities: message.toolActivities ?? [],
   };
 }

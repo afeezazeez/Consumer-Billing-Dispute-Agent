@@ -1481,8 +1481,11 @@ button, a {
 }
 
 .claude-agent-thinking {
+  align-items: center;
   display: flex;
+  flex-wrap: wrap;
   font-size: 14px;
+  gap: 10px;
   padding: 6px 0;
 }
 
@@ -1495,6 +1498,84 @@ button, a {
   animation: thinking-letter 1.35s ease-in-out infinite alternate;
   animation-delay: calc(var(--thinking-letter-index) * 75ms);
   font-weight: 400;
+}
+
+.agent-activity-disclosure {
+  color: var(--dash-ink-soft);
+  font-size: 13px;
+  max-width: min(100%, 520px);
+}
+
+.agent-activity-disclosure summary {
+  border: 1px solid var(--dash-line);
+  border-radius: 999px;
+  cursor: pointer;
+  list-style-position: inside;
+  padding: 5px 10px;
+  width: fit-content;
+}
+
+.agent-activity-disclosure summary:focus-visible,
+.case-message-sources a:focus-visible {
+  outline: 2px solid var(--dash-primary);
+  outline-offset: 2px;
+}
+
+.agent-activity-disclosure ul {
+  background: var(--dash-sidebar-bg);
+  border: 1px solid var(--dash-line);
+  border-radius: 10px;
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 8px 12px;
+}
+
+.agent-activity-disclosure li {
+  display: grid;
+  gap: 3px;
+  padding: 5px 0;
+}
+
+.agent-activity-disclosure small {
+  color: var(--dash-ink-soft);
+  overflow-wrap: anywhere;
+}
+
+.case-message-sources {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 4px 0 8px;
+}
+
+.case-message-sources a {
+  align-items: center;
+  background: var(--dash-sidebar-bg);
+  border: 1px solid var(--dash-line);
+  border-radius: 999px;
+  color: var(--dash-ink);
+  display: inline-flex;
+  font-size: 12px;
+  gap: 6px;
+  max-width: min(100%, 240px);
+  padding: 5px 9px;
+  text-decoration: none;
+}
+
+.case-message-sources a:hover {
+  background: var(--dash-hover);
+}
+
+.case-message-sources svg {
+  flex: 0 0 16px;
+  height: 16px;
+  width: 16px;
+}
+
+.case-message-sources a > span:first-of-type {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 @keyframes thinking-letter {

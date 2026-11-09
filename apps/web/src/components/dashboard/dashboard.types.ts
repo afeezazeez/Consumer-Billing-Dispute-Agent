@@ -19,6 +19,21 @@ export interface CaseMessage {
   content: string;
   createdAt: string;
   processingStatus: "pending" | "complete" | "failed";
+  sources: CaseAgentSource[];
+  toolActivities: CaseAgentToolActivity[];
+}
+
+export interface CaseAgentSource {
+  title: string;
+  url: string;
+}
+
+export interface CaseAgentToolActivity {
+  id: string;
+  name: string;
+  label: string;
+  status: "running" | "completed";
+  detail?: string;
 }
 
 export interface CaseConversation extends CaseSummary {
