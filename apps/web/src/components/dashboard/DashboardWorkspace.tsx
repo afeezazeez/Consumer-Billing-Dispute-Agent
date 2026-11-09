@@ -63,15 +63,22 @@ export function DashboardWorkspace() {
   }, []);
 
   const handleSendMessage = useCallback(async (content: string): Promise<boolean> => {
+    const isStartingCase = !activeCase;
+    const pendingCase = isStartingCase ? createPendingCase(content) : undefined;
+    const requestCaseId = activeCase?.id ?? pendingCase?.id;
+    if (pendingCase) setActiveCase(pendingCase);
     setIsSending(true);
     setError("");
     try {
       const result = await sendCaseMessage(activeCase, content);
-      setActiveCase(result.case);
+      setActiveCase((current) => current?.id === requestCaseId ? result.case : current);
       setCases((current) => upsertCase(current, result.case));
       return true;
     } catch (requestError) {
       setError(getSendErrorMessage(requestError));
+      if (pendingCase) {
+        setActiveCase((current) => current?.id === pendingCase.id ? undefined : current);
+      }
       return false;
     } finally {
       setIsSending(false);
@@ -203,6 +210,26 @@ async function sendCaseMessage(activeCase: CaseConversationData | undefined, con
   const url = activeCase ? `/cases/${activeCase.id}/messages` : "/cases";
   const payload = activeCase ? { content } : { openingMessage: content };
   return requestData(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+}
+
+function createPendingCase(content: string): CaseConversationData {
+  const now = new Date().toISOString();
+  const userMessage = { id: crypto.randomUUID(), role: "user" as const, content, createdAt: now };
+  return {
+    id: `pending-${crypto.randomUUID()}`,
+    title: createCaseTitle(content),
+    status: "open",
+    createdAt: now,
+    updatedAt: now,
+    lastMessage: content,
+    messages: [userMessage],
+    intake: { status: "collecting", facts: {} },
+  };
+}
+
+function createCaseTitle(message: string): string {
+  const normalized = message.trim().replace(/\s+/g, " ");
+  return normalized.length <= 60 ? normalized : `${normalized.slice(0, 57).trimEnd()}…`;
 }
 
 async function requestData<T>(path: string, options?: RequestInit): Promise<T> {

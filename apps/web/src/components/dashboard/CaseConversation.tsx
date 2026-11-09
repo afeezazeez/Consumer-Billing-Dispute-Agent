@@ -129,6 +129,7 @@ export function CaseConversation({
               aria-expanded={isMenuOpen}
               aria-haspopup="menu"
               className="claude-title-button"
+              disabled={isSending}
               id="active-case-title"
               onClick={handleToggleMenu}
               type="button"
