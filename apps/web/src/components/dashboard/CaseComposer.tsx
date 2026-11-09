@@ -139,7 +139,6 @@ export function CaseComposer({
         onSubmit={handleSubmit}
       >
         <ComposerAttachments files={files} onRemove={removeAttachment} isUploading={isUploading} />
-        {isUploading && <p role="status">Uploading attachments…</p>}
         {attachmentError && <p className="claude-composer-error" role="alert">{attachmentError}</p>}
         <label className="visually-hidden" htmlFor="claude-case-message">
           Message about your billing dispute
