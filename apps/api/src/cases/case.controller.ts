@@ -1,3 +1,5 @@
+import { isUUID } from "class-validator";
+import type { PendingCaseAttachment } from "./case-attachment";
 import type { NextFunction, Request, Response } from "express";
 import { CaseConversationDto } from "../dtos/cases/case-conversation.dto";
 import { CaseSummaryDto } from "../dtos/cases/case-summary.dto";
@@ -45,6 +47,7 @@ export class CaseController {
       openingMessage: payload.openingMessage.trim(),
       caseId: payload.caseId,
       messageId: payload.messageId,
+      attachments: response.locals.caseAttachments as PendingCaseAttachment[] | undefined,
     }));
   }
 
@@ -78,7 +81,25 @@ export class CaseController {
     await streamCaseTurn(response, () => this.caseService.appendMessage(authenticatedUserId(request), {
       caseId: readCaseId(request),
       content: payload.content.trim(),
+      messageId: payload.messageId,
+      attachments: response.locals.caseAttachments as PendingCaseAttachment[] | undefined,
     }));
+  }
+
+  async readAttachment(request: Request, response: Response): Promise<void> {
+    const { attachmentId } = request.params;
+    if (typeof attachmentId !== "string" || !isUUID(attachmentId)) {
+      throw new ClientErrorException("Attachment not found", ResponseStatus.NOT_FOUND);
+    }
+    const attachment = await this.caseService.findAttachment(authenticatedUserId(request), attachmentId);
+    if (!attachment) throw new ClientErrorException("Attachment not found", ResponseStatus.NOT_FOUND);
+    response.attachment(attachment.name);
+    response.set({
+      "Content-Type": attachment.mediaType,
+      "Cache-Control": "private, no-store",
+      "X-Content-Type-Options": "nosniff",
+    });
+    response.send(attachment.data);
   }
 
   async retryMessage(request: Request, response: Response, next: NextFunction): Promise<void> {

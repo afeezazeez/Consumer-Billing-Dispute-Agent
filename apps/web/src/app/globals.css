@@ -1685,7 +1685,8 @@ button, a {
 }
 
 .agent-activity-disclosure summary:focus-visible,
-.case-message-sources a:focus-visible {
+.case-message-sources a:focus-visible,
+.case-message-attachments button:focus-visible {
   outline: 2px solid var(--dash-primary);
   outline-offset: 2px;
 }
@@ -1701,14 +1702,16 @@ button, a {
   overflow-wrap: anywhere;
 }
 
-.case-message-sources {
+.case-message-sources,
+.case-message-attachments {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
   margin: 4px 0 8px;
 }
 
-.case-message-sources a {
+.case-message-sources a,
+.case-message-attachments button {
   align-items: center;
   background: var(--dash-sidebar-bg);
   border: 1px solid var(--dash-line);
@@ -1722,7 +1725,8 @@ button, a {
   text-decoration: none;
 }
 
-.case-message-sources a:hover {
+.case-message-sources a:hover,
+.case-message-attachments button:hover {
   background: var(--dash-hover);
 }
 

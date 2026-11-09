@@ -198,7 +198,7 @@ interface AgentTurnProgress {
 function createConversationInput(messages: CaseMessageRecord[]): ResponseInputItem[] {
   return messages.map((message) => ({
     role: message.role,
-    content: `Case message ID: ${message.id}\n${message.content}`,
+    content: `Case message ID: ${message.id}\n${message.content}${message.attachments?.length ? "\n[Attachments saved. Contents unavailable for review.]" : ""}`,
   }));
 }
 
@@ -351,6 +351,7 @@ function createAgentInstructions(context: CaseIntakeAgentContext, intake: CaseIn
     firstNameInstruction,
     "Message IDs are internal references only. Never show them or mention them in a reply to the user.",
     "When the user explicitly states facts, call record_case_facts and cite the exact Case message ID. Never guess or invent facts.",
+    "If attachments are marked as saved, their contents are unavailable. Never claim to have read them or treat them as evidence.",
     "Facts from conversation are user statements, not independently verified evidence. Do not describe them as documented proof.",
     "Use the conversation and saved facts to decide what would help the user next. Acknowledge new information naturally. If a detail would change the next step, ask one focused question; otherwise, respond directly or suggest a useful next step. Avoid repeating the case summary unless it helps the user. Keep internal workflow terms and milestones out of replies.",
     "Use web search for current or externally verifiable information when it helps answer the user. Cite retrieved sources; never claim to have searched if you did not.",

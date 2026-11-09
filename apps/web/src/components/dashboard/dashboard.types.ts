@@ -14,7 +14,20 @@ export interface CaseSummary {
   isProcessing: boolean;
 }
 
+export interface CaseAttachment {
+  id: string;
+  name: string;
+  mediaType: string;
+  size: number;
+}
+
+export interface CaseUpload {
+  id: string;
+  files: File[];
+}
+
 export interface CaseMessage {
+  attachments?: CaseAttachment[];
   id: string;
   role: "user" | "assistant";
   content: string;

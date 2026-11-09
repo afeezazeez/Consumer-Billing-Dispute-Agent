@@ -1,3 +1,5 @@
+import type { CaseAttachment, PendingCaseAttachment } from "../cases/case-attachment";
+import { CaseAttachmentEntity } from "./entities/case-attachment.entity";
 import { randomUUID } from "node:crypto";
 import { In, type DataSource, type EntityManager } from "typeorm";
 import type { CaseAgentToolActivity } from "../cases/case-intake-agent";
@@ -59,13 +61,19 @@ export class TypeOrmCaseRepository implements CaseRepository {
   }
 
   async findForUser(userId: string, caseId: string): Promise<CaseConversation | undefined> {
-    const record = await this.dataSource.getRepository(CaseEntity).findOneBy({ id: caseId, userId });
-    if (!record) return undefined;
-    const messages = await this.dataSource.getRepository(CaseMessageEntity).find({
-      where: { caseId },
-      order: { createdAt: "ASC" },
-    });
-    return toConversation(record, messages);
+    return readConversation(this.dataSource.manager, userId, caseId);
+  }
+
+  async findAttachment(userId: string, attachmentId: string): Promise<PendingCaseAttachment | undefined> {
+    const rows = await this.dataSource.query(
+      `SELECT a.id, a.name, a.media_type AS "mediaType", a.size, a.data
+       FROM case_attachments a
+       JOIN case_messages m ON m.id = a.message_id
+       JOIN billing_cases c ON c.id = m.case_id
+       WHERE a.id = $1 AND c.user_id = $2`,
+      [attachmentId, userId],
+    ) as PendingCaseAttachment[];
+    return rows[0];
   }
 
   async deleteForUser(userId: string, caseId: string): Promise<boolean> {
@@ -82,24 +90,33 @@ export class TypeOrmCaseRepository implements CaseRepository {
   }
 
   private async createCase(manager: EntityManager, input: CreatePendingCase): Promise<CaseConversation> {
-    const record = await manager.getRepository(CaseEntity).save({
-      id: input.caseId ?? randomUUID(),
+    const cases = manager.getRepository(CaseEntity);
+    const id = input.caseId ?? randomUUID();
+    await cases.insert({
+      id,
       userId: input.userId,
       title: input.title,
       titleIsProvisional: true,
       status: "open",
       intakeState: input.intake,
     });
-    const message = await manager.getRepository(CaseMessageEntity).save(toMessageEntity(input.userMessage, record.id));
+    const record = await cases.findOneByOrFail({ id });
+    const message = toMessageEntity(input.userMessage, record.id);
+    await manager.getRepository(CaseMessageEntity).insert(message);
+    await saveAttachments(manager, message.id, input.attachments);
     await enqueueTurn(manager, input.userId, record.id, message.id);
-    return toConversation(record, [message]);
+    return toConversation(record, [message], await loadAttachments(manager, [message]));
   }
 
   private async appendMessage(manager: EntityManager, input: AppendPendingMessage): Promise<CaseConversation | undefined> {
     const cases = manager.getRepository(CaseEntity);
-    const record = await cases.findOneBy({ id: input.caseId, userId: input.userId });
+    const record = await cases.findOne({ where: { id: input.caseId, userId: input.userId }, lock: { mode: "pessimistic_write" } });
     if (!record) return undefined;
-    await manager.getRepository(CaseMessageEntity).save(toMessageEntity(input.userMessage, input.caseId));
+    const messages = manager.getRepository(CaseMessageEntity);
+    const existing = await messages.findOneBy({ id: input.userMessage.id, caseId: input.caseId, role: "user" });
+    if (existing) return readConversation(manager, input.userId, input.caseId);
+    await messages.insert(toMessageEntity(input.userMessage, input.caseId));
+    await saveAttachments(manager, input.userMessage.id, input.attachments);
     await enqueueTurn(manager, input.userId, input.caseId, input.userMessage.id);
     await cases.update({ id: input.caseId, userId: input.userId }, { updatedAt: input.userMessage.createdAt });
     return readConversation(manager, input.userId, input.caseId);
@@ -157,7 +174,8 @@ async function readConversation(
 ): Promise<CaseConversation | undefined> {
   const record = await manager.getRepository(CaseEntity).findOneBy({ id: caseId, userId });
   if (!record) return undefined;
-  return toConversation(record, await loadMessages(manager, caseId));
+  const messages = await loadMessages(manager, caseId);
+  return toConversation(record, messages, await loadAttachments(manager, messages));
 }
 
 function toMessageEntity(message: CaseMessageRecord, caseId: string): CaseMessageEntity {
@@ -192,14 +210,14 @@ function toSummaries(cases: CaseEntity[], messages: CaseMessageEntity[]): CaseSu
   }));
 }
 
-function toConversation(record: CaseEntity, messages: CaseMessageEntity[]): CaseConversation {
+function toConversation(record: CaseEntity, messages: CaseMessageEntity[], attachments: Map<string, CaseAttachment[]>): CaseConversation {
   const latestMessage = messages.at(-1)?.content ?? "No messages yet";
   return {
     ...toCaseFields(record),
     createdAt: record.createdAt,
     lastMessage: latestMessage,
     isProcessing: messages.some((message) => message.role === "user" && message.processingStatus === "pending"),
-    messages: messages.map(toMessage),
+    messages: messages.map((message) => ({ ...toMessage(message), attachments: attachments.get(message.id) ?? [] })),
     intake: record.intakeState,
     nextAction: record.nextAction ?? undefined,
   };
@@ -231,4 +249,24 @@ async function enqueueTurn(manager: EntityManager, userId: string, caseId: strin
     status: "queued",
     lockedUntil: null,
   });
+}
+
+
+async function saveAttachments(manager: EntityManager, messageId: string, files?: PendingCaseAttachment[]): Promise<void> {
+  if (files?.length) await manager.getRepository(CaseAttachmentEntity).insert(files.map((file) => ({ ...file, messageId })));
+}
+
+async function loadAttachments(manager: EntityManager, messages: CaseMessageEntity[]): Promise<Map<string, CaseAttachment[]>> {
+  const grouped = new Map<string, CaseAttachment[]>();
+  if (!messages.length) return grouped;
+  const rows = await manager.getRepository(CaseAttachmentEntity).find({
+    where: { messageId: In(messages.map(({ id }) => id)) },
+    order: { name: "ASC", id: "ASC" },
+  });
+  for (const { id, name, mediaType, size, messageId } of rows) {
+    const attachments = grouped.get(messageId) ?? [];
+    attachments.push({ id, name, mediaType, size });
+    grouped.set(messageId, attachments);
+  }
+  return grouped;
 }

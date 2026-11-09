@@ -1,5 +1,6 @@
 "use client";
 
+import type { CaseUpload } from "./dashboard.types";
 import {
   useCallback,
   useRef,
@@ -18,7 +19,7 @@ const MAX_ATTACHMENT_BYTES = 10 * 1024 * 1024;
 interface CaseComposerProps {
   isSending: boolean;
   error: string;
-  onSendMessage: (message: string) => Promise<boolean>;
+  onSendMessage: (message: string, upload?: CaseUpload) => Promise<boolean>;
   variant?: "conversation" | "welcome";
   placeholder?: string;
 }
@@ -32,6 +33,8 @@ export function CaseComposer({
 }: CaseComposerProps) {
   const [message, setMessage] = useState("");
   const [files, setFiles] = useState<File[]>([]);
+  const [isUploading, setIsUploading] = useState(false);
+  const pendingUpload = useRef<{ content: string; upload: CaseUpload }>(undefined);
   const [attachmentError, setAttachmentError] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -49,12 +52,31 @@ export function CaseComposer({
   const handleSubmit = useCallback(
     async (event: FormEvent<HTMLFormElement>) => {
       event.preventDefault();
-      if (!message.trim() || isSending || files.length > 0) return;
-      const submittedMessage = message.trim();
-      setMessage("");
-      if (!await onSendMessage(submittedMessage)) setMessage(submittedMessage);
+      const content = message.trim();
+      if (!content || isSending || isUploading) return;
+      if (files.length === 0) {
+        setMessage("");
+        if (!await onSendMessage(content)) setMessage(content);
+        return;
+      }
+
+      const previous = pendingUpload.current;
+      const upload = previous?.content === content && previous.upload.files === files
+        ? previous.upload
+        : { id: crypto.randomUUID(), files };
+      pendingUpload.current = { content, upload };
+      setIsUploading(true);
+      try {
+        if (await onSendMessage(content, upload)) {
+          pendingUpload.current = undefined;
+          setMessage("");
+          setFiles([]);
+        }
+      } finally {
+        setIsUploading(false);
+      }
     },
-    [files.length, isSending, message, onSendMessage],
+    [files, isSending, isUploading, message, onSendMessage],
   );
 
   const handleKeyDown = useCallback((event: KeyboardEvent<HTMLTextAreaElement>) => {
@@ -92,8 +114,9 @@ export function CaseComposer({
   const handleDrop = useCallback((event: DragEvent<HTMLFormElement>) => {
     if (!event.dataTransfer.files.length) return;
     event.preventDefault();
+    if (isUploading) return;
     addAttachments(event.dataTransfer.files);
-  }, [addAttachments]);
+  }, [addAttachments, isUploading]);
 
   const removeAttachment = useCallback((index: number) => {
     setFiles((current) => current.filter((_, position) => position !== index));
@@ -109,13 +132,14 @@ export function CaseComposer({
       )}
 
       <form
-        aria-busy={isSending}
+        aria-busy={isSending || isUploading}
         className="claude-composer-card"
         onDragOver={handleDragOver}
         onDrop={handleDrop}
         onSubmit={handleSubmit}
       >
-        <ComposerAttachments files={files} onRemove={removeAttachment} />
+        <ComposerAttachments files={files} onRemove={removeAttachment} isUploading={isUploading} />
+        {isUploading && <p role="status">Uploading attachments…</p>}
         {attachmentError && <p className="claude-composer-error" role="alert">{attachmentError}</p>}
         <label className="visually-hidden" htmlFor="claude-case-message">
           Message about your billing dispute
@@ -123,7 +147,8 @@ export function CaseComposer({
         <textarea
           className="claude-composer-textarea"
           id="claude-case-message"
-          maxLength={3000}
+          maxLength={2000}
+          readOnly={isUploading}
           onChange={handleChange}
           onKeyDown={handleKeyDown}
           placeholder={defaultPlaceholder}
@@ -138,6 +163,7 @@ export function CaseComposer({
               accept={ATTACHMENT_TYPES.join(",")}
               aria-label="Upload billing document"
               className="visually-hidden"
+              disabled={isUploading}
               multiple
               onChange={handleFileChange}
               ref={fileInputRef}
@@ -148,7 +174,8 @@ export function CaseComposer({
               aria-label="Add attachment"
               className="claude-attachment-btn"
               onClick={handleAttachmentClick}
-              title="Choose PDFs or images to preview"
+              disabled={isUploading}
+              title="Attach PDFs or images"
               type="button"
             >
               <span aria-hidden="true">＋</span>
@@ -157,12 +184,12 @@ export function CaseComposer({
 
           <div className="claude-composer-right-actions">
             <button
-              aria-label={isSending ? "Sending message" : "Send message"}
+              aria-label={isUploading ? "Uploading attachments" : isSending ? "Sending message" : "Send message"}
               className="claude-composer-send-btn"
-              disabled={!message.trim() || isSending || files.length > 0}
+              disabled={!message.trim() || isSending || isUploading}
               type="submit"
             >
-              {isSending ? (
+              {isSending || isUploading ? (
                 <span className="claude-spinner-dot" />
               ) : (
                 <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">

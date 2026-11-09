@@ -1,3 +1,5 @@
+import { caseAttachmentSchema } from "./entities/case-attachment.entity";
+import { CreateCaseAttachments1710000000008 } from "./migrations/1710000000008-CreateCaseAttachments";
 import { DataSource } from "typeorm";
 import { CreateBillingCases1710000000001 } from "./migrations/1710000000001-CreateBillingCases";
 import type { PostgresConfig } from "../config";
@@ -19,7 +21,7 @@ export function createDataSource(database: PostgresConfig): DataSource {
     database: database.database,
     username: database.username,
     password: database.password,
-    entities: [userSchema, caseSchema, caseMessageSchema, agentTurnJobSchema],
+    entities: [userSchema, caseSchema, caseMessageSchema, agentTurnJobSchema, caseAttachmentSchema],
     migrations: [
       CreateUsers1710000000000,
       CreateBillingCases1710000000001,
@@ -29,6 +31,7 @@ export function createDataSource(database: PostgresConfig): DataSource {
       CreateAgentTurnJobs1710000000005,
       AddProvisionalCaseTitle1710000000006,
       AddCaseNextAction1710000000007,
+      CreateCaseAttachments1710000000008,
     ],
     synchronize: false,
   });

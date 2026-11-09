@@ -1,3 +1,4 @@
+import type { PendingCaseAttachment } from "./case-attachment";
 import { randomUUID } from "node:crypto";
 import { createEmptyCaseIntake } from "./case-intake";
 import type { CaseAgentToolActivity, CaseIntakeAgent, CaseIntakeAgentResult } from "./case-intake-agent";
@@ -5,12 +6,15 @@ import type { AgentTurnJob } from "./agent-turn-job.repository";
 import type { CaseConversation, CaseMessageRecord, CaseRepository, CaseSummary } from "./case.repository";
 
 export interface CreateCaseInput {
+  attachments?: PendingCaseAttachment[];
   openingMessage: string;
   caseId?: string;
   messageId?: string;
 }
 
 export interface AppendCaseMessageInput {
+  attachments?: PendingCaseAttachment[];
+  messageId?: string;
   caseId: string;
   content: string;
 }
@@ -29,13 +33,16 @@ export class CaseService {
 
   async createCase(userId: string, input: CreateCaseInput): Promise<CaseConversation> {
     const existingCase = input.caseId ? await this.caseRepository.findForUser(userId, input.caseId) : undefined;
-    if (existingCase) return this.resumeExistingCase(userId, existingCase, input);
+    if (existingCase) {
+      return input.attachments?.length ? existingCase : this.resumeExistingCase(userId, existingCase, input);
+    }
     const userMessage = createMessage("user", input.openingMessage, input.messageId);
     const billingCase = await this.caseRepository.createPendingCase({
       userId,
       caseId: input.caseId,
       title: createTitle(input.openingMessage),
       userMessage,
+      attachments: input.attachments,
       intake: createEmptyCaseIntake(),
     });
     return billingCase;
@@ -58,11 +65,12 @@ export class CaseService {
   async appendMessage(userId: string, input: AppendCaseMessageInput): Promise<CaseConversation | undefined> {
     const billingCase = await this.caseRepository.findForUser(userId, input.caseId);
     if (!billingCase) return undefined;
-    const userMessage = createMessage("user", input.content);
+    const userMessage = createMessage("user", input.content, input.messageId);
     const updatedCase = await this.caseRepository.appendPendingMessage({
       userId,
       caseId: input.caseId,
       userMessage,
+      attachments: input.attachments,
     });
     if (!updatedCase) return undefined;
     return updatedCase;
@@ -115,6 +123,10 @@ export class CaseService {
     });
     if (!completedCase) throw new Error("Unable to save the agent response");
     return completedCase;
+  }
+
+  findAttachment(userId: string, attachmentId: string) {
+    return this.caseRepository.findAttachment(userId, attachmentId);
   }
 
   listCases(userId: string): Promise<CaseSummary[]> {

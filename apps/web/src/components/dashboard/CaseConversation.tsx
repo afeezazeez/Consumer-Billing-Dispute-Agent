@@ -1,5 +1,6 @@
 "use client";
 
+import type { CaseUpload } from "./dashboard.types";
 import {
   useCallback,
   useEffect,
@@ -19,6 +20,7 @@ import { AgentActivityDisclosure } from "./AgentActivityDisclosure";
 import { AgentActivityText } from "./AgentActivityText";
 import { CaseMessageSources } from "./CaseMessageSources";
 import { CaseMessageActions } from "./CaseMessageActions";
+import { CaseMessageAttachments } from "./CaseMessageAttachments";
 import { EmailDraftCard } from "./EmailDraftCard";
 import { CaseNextActionCard } from "./CaseNextActionCard";
 import type { CaseAgentSource, CaseAgentToolActivity } from "./dashboard.types";
@@ -29,7 +31,7 @@ interface CaseConversationProps {
   isSending: boolean;
   error: string;
   liveToolActivities: CaseAgentToolActivity[];
-  onSendMessage: (message: string) => Promise<boolean>;
+  onSendMessage: (message: string, upload?: CaseUpload) => Promise<boolean>;
   onRetryMessage: (messageId: string, content?: string) => void;
   onDeleteCase: (caseId: string) => void;
   onRenameCase: (caseId: string, title: string) => Promise<boolean>;
@@ -128,10 +130,10 @@ export function CaseConversation({
     history?.scrollTo({ top: history.scrollHeight, behavior: "instant" });
   }, []);
 
-  const handleSend = useCallback((content: string) => {
+  const handleSend = useCallback((content: string, upload?: CaseUpload) => {
     shouldFollowLatestRef.current = true;
     scrollToLatest();
-    return onSendMessage(content);
+    return onSendMessage(content, upload);
   }, [onSendMessage, scrollToLatest]);
 
   useLayoutEffect(() => {
@@ -248,6 +250,9 @@ export function CaseConversation({
                 )}
                 {message.role === "assistant" && (
                   <CaseMessageSources sources={getUnmentionedSources(message.content, message.sources)} />
+                )}
+                {Boolean(message.attachments?.length) && (
+                  <CaseMessageAttachments attachments={message.attachments ?? []} />
                 )}
                 {message.role === "user" && message.processingStatus === "failed" && (
                   <CaseMessageFailure

@@ -6,10 +6,11 @@ import { ComposerAttachmentThumbnail } from "./ComposerAttachmentThumbnail";
 
 interface ComposerAttachmentsProps {
   files: File[];
+  isUploading: boolean;
   onRemove: (index: number) => void;
 }
 
-export function ComposerAttachments({ files, onRemove }: ComposerAttachmentsProps) {
+export function ComposerAttachments({ files, onRemove, isUploading }: ComposerAttachmentsProps) {
   const [preview, setPreview] = useState<File>();
   const openPreview = useCallback((event: MouseEvent<HTMLButtonElement>) => {
     setPreview(files[Number(event.currentTarget.dataset.index)]);
@@ -37,7 +38,7 @@ export function ComposerAttachments({ files, onRemove }: ComposerAttachmentsProp
                   </svg>
                 )}
               </button>
-              <button type="button" data-index={index} onClick={removeFile} aria-label={`Remove ${file.name}`}>×</button>
+              <button type="button" data-index={index} onClick={removeFile} disabled={isUploading} aria-label={`Remove ${file.name}`}>×</button>
             </li>
           );
         })}

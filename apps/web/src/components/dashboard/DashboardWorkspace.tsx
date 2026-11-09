@@ -1,5 +1,6 @@
 "use client";
 
+import type { CaseUpload } from "./dashboard.types";
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { CaseConversation } from "./CaseConversation";
@@ -76,29 +77,39 @@ export function DashboardWorkspace({ caseId: routeCaseId }: DashboardWorkspacePr
     setIsMobileSidebarOpen(false);
   }, []);
 
-  const handleSendMessage = useCallback(async (content: string): Promise<boolean> => {
+  const handleSendMessage = useCallback(async (content: string, upload?: CaseUpload): Promise<boolean> => {
+    const startingPath = window.location.pathname;
     const optimisticCase = activeCase
       ? appendOptimisticMessage(activeCase, content)
       : createPendingCase(content);
     const requestCaseId = optimisticCase.id;
     const requestMessageId = optimisticCase.messages.at(-1)?.id;
-    setActiveCase(optimisticCase);
-    setIsSending(true);
+    if (!upload) {
+      setActiveCase(optimisticCase);
+      setIsSending(true);
+    }
     setError("");
     try {
-      const result = await sendCaseMessage(activeCase, optimisticCase, content);
-      setActiveCase((current) => current?.id === requestCaseId ? result.case : current);
+      const result = await sendCaseMessage(activeCase, optimisticCase, content, upload);
+      const stillOnCase = window.location.pathname === startingPath;
+      if (stillOnCase) {
+        setActiveCase((current) => current?.id === requestCaseId || (upload && !activeCase && !current) ? result.case : current);
+      }
       setCases((current) => upsertCase(current, result.case));
-      if (!activeCase) router.push(`/cases/${result.case.id}`);
+      if (!activeCase && stillOnCase) router.push(`/cases/${result.case.id}`);
       return true;
     } catch {
+      if (upload) {
+        if (window.location.pathname === startingPath) setError("Couldn’t send the attachments. Check the files and try again.");
+        return false;
+      }
       setError("");
       setActiveCase((current) => current?.id === requestCaseId && requestMessageId
         ? updateMessageStatus(current, requestMessageId, "failed")
         : current);
       return true;
     } finally {
-      setIsSending(false);
+      if (!upload) setIsSending(false);
     }
   }, [activeCase, router]);
 
@@ -260,7 +271,16 @@ async function sendCaseMessage(
   activeCase: CaseConversationData | undefined,
   optimisticCase: CaseConversationData,
   content: string,
+  upload?: CaseUpload,
 ): Promise<{ case: CaseConversationData }> {
+  if (upload) {
+    const body = new FormData();
+    body.set(activeCase ? "content" : "openingMessage", content);
+    body.set("messageId", upload.id);
+    if (!activeCase) body.set("caseId", upload.id);
+    for (const file of upload.files) body.append("attachments", file);
+    return requestCaseStream(activeCase ? `/cases/${activeCase.id}/messages/stream` : "/cases/stream", body);
+  }
   if (activeCase) return requestCaseStream(`/cases/${activeCase.id}/messages/stream`, { content });
   const initialMessage = optimisticCase.messages[0];
   return requestCaseStream("/cases/stream", {
@@ -289,9 +309,12 @@ async function requestCaseStream(
   body: unknown,
 ): Promise<{ case: CaseConversationData }> {
   const response = await fetch(`${API_URL}${path}`, {
-    ...postJson(body),
+    method: "POST",
+    body: body instanceof FormData ? body : JSON.stringify(body),
     credentials: "include",
-    headers: { "Content-Type": "application/json", Accept: "text/event-stream" },
+    headers: body instanceof FormData
+      ? { Accept: "text/event-stream", "X-Case-Upload": "1" }
+      : { "Content-Type": "application/json", Accept: "text/event-stream" },
   });
   if (!response.ok) throw new DashboardRequestError(response.status);
   const billingCase = await readCaseStream(response);
@@ -363,10 +386,6 @@ function createCaseRetryPayload(
     caseId: billingCase.id,
     messageId,
   };
-}
-
-function postJson(body: unknown): RequestInit {
-  return { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) };
 }
 
 function createPendingCase(content: string): CaseConversationData {

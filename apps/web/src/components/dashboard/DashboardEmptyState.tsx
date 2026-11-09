@@ -1,5 +1,6 @@
 "use client";
 
+import type { CaseUpload } from "./dashboard.types";
 import { useCallback, useMemo, type MouseEvent } from "react";
 import { CaseComposer } from "./CaseComposer";
 
@@ -7,7 +8,7 @@ interface DashboardEmptyStateProps {
   firstName: string;
   isSending: boolean;
   error: string;
-  onSendMessage: (message: string) => Promise<boolean>;
+  onSendMessage: (message: string, upload?: CaseUpload) => Promise<boolean>;
 }
 
 export function DashboardEmptyState({

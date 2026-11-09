@@ -3,6 +3,7 @@ import type { CaseAgentSource, CaseAgentToolActivity, CaseEmailDraft } from "../
 import { stripInternalCitations } from "../../ai/strip-internal-citations";
 
 export class CaseMessageDto {
+  attachments: NonNullable<CaseMessageRecord["attachments"]>;
   id: string;
   role: "user" | "assistant";
   content: string;
@@ -14,6 +15,7 @@ export class CaseMessageDto {
 
   constructor(message: CaseMessageRecord) {
     this.id = message.id;
+    this.attachments = message.attachments ?? [];
     this.role = message.role;
     this.content = message.role === "assistant" ? stripInternalCitations(message.content) : message.content;
     this.createdAt = message.createdAt;
