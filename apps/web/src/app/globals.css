@@ -1483,7 +1483,6 @@ button, a {
 .claude-agent-thinking {
   align-items: center;
   display: flex;
-  flex-wrap: wrap;
   font-size: 14px;
   gap: 10px;
   padding: 6px 0;
@@ -1504,15 +1503,35 @@ button, a {
   color: var(--dash-ink-soft);
   font-size: 13px;
   max-width: min(100%, 520px);
+  min-width: 0;
 }
 
 .agent-activity-disclosure summary {
   border: 1px solid var(--dash-line);
   border-radius: 999px;
   cursor: pointer;
-  list-style-position: inside;
-  padding: 5px 10px;
+  list-style: none;
+  overflow: hidden;
+  padding: 5px 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   width: fit-content;
+  max-width: 100%;
+}
+
+.agent-activity-disclosure summary::-webkit-details-marker {
+  display: none;
+}
+
+.agent-activity-disclosure summary::before {
+  content: "›";
+  display: inline-block;
+  margin-right: 8px;
+  transition: transform 150ms ease;
+}
+
+.agent-activity-disclosure[open] summary::before {
+  transform: rotate(90deg);
 }
 
 .agent-activity-disclosure summary:focus-visible,

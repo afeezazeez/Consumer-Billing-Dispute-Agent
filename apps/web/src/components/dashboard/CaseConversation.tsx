@@ -213,10 +213,13 @@ export function CaseConversation({
             ))}
             {isAgentWorking && (
               <div aria-live="polite" className="claude-agent-thinking" role="status">
-                <span aria-label="Thinking" className="claude-agent-thinking-text">
-                  {renderThinkingLetters()}
-                </span>
-                <AgentActivityDisclosure activities={liveToolActivities} isLive />
+                {getRunningActivity(liveToolActivities) ? (
+                  <AgentActivityDisclosure activities={liveToolActivities} isLive />
+                ) : (
+                  <span aria-label="Thinking" className="claude-agent-thinking-text">
+                    {renderThinkingLetters()}
+                  </span>
+                )}
               </div>
             )}
           </div>
@@ -247,4 +250,8 @@ function renderThinkingLetters() {
       {letter}
     </span>
   ));
+}
+
+function getRunningActivity(activities: CaseAgentToolActivity[]): boolean {
+  return activities.some((activity) => activity.status === "running");
 }
