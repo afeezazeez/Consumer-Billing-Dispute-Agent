@@ -24,10 +24,14 @@ export class TypeOrmDocumentReviewRepository implements DocumentReviewRepository
         UPDATE case_attachments a SET review_claim = $3, review_started_at = NOW()
         WHERE id = $1 AND ${ownedAttachment} AND (
           document_review IS NULL OR (
-            NOT (document_review ? 'statement') AND NOT (document_review ? 'confirmed')
-            AND document_review #>> '{extracted,provider,value}' IS NULL
-            AND document_review #>> '{extracted,amount,value}' IS NULL
-            AND document_review #>> '{extracted,chargeDate,value}' IS NULL
+            NOT (document_review ? 'confirmed') AND (
+              (document_review ? 'statement' AND NOT (document_review ? 'notices')) OR (
+                NOT (document_review ? 'statement') AND NOT (document_review ? 'notices')
+                AND document_review #>> '{extracted,provider,value}' IS NULL
+                AND document_review #>> '{extracted,amount,value}' IS NULL
+                AND document_review #>> '{extracted,chargeDate,value}' IS NULL
+              )
+            )
           )
         )
         AND (review_claim IS NULL OR review_started_at < NOW() - INTERVAL '2 minutes')
