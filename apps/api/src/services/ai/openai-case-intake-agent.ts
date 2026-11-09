@@ -1,7 +1,6 @@
 import OpenAI from "openai";
 import { toResponseInputItems } from "openai/lib/responses/ResponseInputItems";
 import type {
-  FunctionTool,
   Response,
   ResponseFunctionToolCall,
   ResponseInputItem,
@@ -9,25 +8,17 @@ import type {
 } from "openai/resources/responses/responses";
 import type { CaseIntakeState } from "../../cases/case-intake";
 import type { CaseIntakeAgent, CaseIntakeAgentContext, CaseIntakeAgentResult } from "../../cases/case-intake-agent";
-import { CaseIntakeToolService } from "../../cases/case-intake-tool.service";
+import { RecordCaseIntakeFactsTool } from "./tools/record-case-intake-facts.tool";
 import type { CaseMessageRecord } from "../../cases/case.repository";
 import { ServiceUnavailableException } from "../../exceptions/service-unavailable.exception";
 
 const MAX_TOOL_CALLS = 3;
 const MAX_OUTPUT_TOKENS = 700;
-const INTAKE_TOOL: FunctionTool = {
-  type: "function",
-  name: "record_case_facts",
-  description: "Record only billing-dispute facts explicitly stated by the user, with the ID of the user message that supports each fact.",
-  strict: true,
-  parameters: createFactToolSchema(),
-};
-
 export class OpenAiCaseIntakeAgent implements CaseIntakeAgent {
   constructor(
     private readonly apiKey: string | undefined,
     private readonly model: string,
-    private readonly caseIntakeToolService: CaseIntakeToolService,
+    private readonly recordCaseIntakeFactsTool: RecordCaseIntakeFactsTool,
   ) {}
 
   async respond(context: CaseIntakeAgentContext): Promise<CaseIntakeAgentResult> {
@@ -82,7 +73,7 @@ export class OpenAiCaseIntakeAgent implements CaseIntakeAgent {
       model: this.model,
       instructions: createAgentInstructions(request.context, request.intake),
       input: request.input,
-      tools: [INTAKE_TOOL],
+      tools: [this.recordCaseIntakeFactsTool.definition],
       tool_choice: request.toolChoice,
       parallel_tool_calls: false,
       max_output_tokens: MAX_OUTPUT_TOKENS,
@@ -116,10 +107,10 @@ export class OpenAiCaseIntakeAgent implements CaseIntakeAgent {
     context: ToolCallContext,
     withinLimit: boolean,
   ): Promise<ExecutedToolResult> {
-    if (!withinLimit || call.name !== INTAKE_TOOL.name) {
+    if (!withinLimit || call.name !== this.recordCaseIntakeFactsTool.definition.name) {
       return { executed: false, intake: context.intake, output: { success: false, message: "The requested action is unavailable." } };
     }
-    const result = await this.caseIntakeToolService.recordFacts(parseArguments(call.arguments), context.messages, context.intake);
+    const result = await this.recordCaseIntakeFactsTool.execute(parseArguments(call.arguments), context.messages, context.intake);
     return {
       executed: true,
       intake: result.intake,
@@ -236,33 +227,4 @@ function nextMissingFact(intake: CaseIntakeState): string {
   if (!intake.facts.provider) return "provider or merchant was the charge from";
   if (!intake.facts.issueType) return "happened with the charge";
   return "amount you were charged";
-}
-
-function createFactToolSchema(): Record<string, unknown> {
-  return {
-    type: "object",
-    properties: {
-      provider: nullableTextFactSchema(),
-      issueType: nullableTextFactSchema(),
-      chargeAmount: nullableTextFactSchema(),
-      chargeDate: nullableTextFactSchema(),
-      expectedAmount: nullableTextFactSchema(),
-      desiredOutcome: nullableTextFactSchema(),
-    },
-    required: ["provider", "issueType", "chargeAmount", "chargeDate", "expectedAmount", "desiredOutcome"],
-    additionalProperties: false,
-  };
-}
-
-function nullableTextFactSchema(): Record<string, unknown> {
-  return nullableFactSchema({ type: "string", maxLength: 200 });
-}
-
-function nullableFactSchema(valueSchema: Record<string, unknown>): Record<string, unknown> {
-  return {
-    type: ["object", "null"],
-    properties: { value: valueSchema, sourceMessageId: { type: "string" } },
-    required: ["value", "sourceMessageId"],
-    additionalProperties: false,
-  };
 }

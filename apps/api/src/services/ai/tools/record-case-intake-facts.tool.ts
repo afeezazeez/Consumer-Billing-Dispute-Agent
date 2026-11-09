@@ -1,11 +1,12 @@
 import { plainToInstance } from "class-transformer";
 import { validate } from "class-validator";
+import type { FunctionTool } from "openai/resources/responses/responses";
 import type {
   CaseIntakeFacts,
   CaseIntakeState,
-} from "./case-intake";
-import type { CaseMessageRecord } from "./case.repository";
-import { RecordCaseIntakeFactsToolDto } from "../dtos/cases/record-case-intake-facts-tool.dto";
+} from "../../../cases/case-intake";
+import type { CaseMessageRecord } from "../../../cases/case.repository";
+import { RecordCaseIntakeFactsToolDto } from "../../../dtos/cases/record-case-intake-facts-tool.dto";
 
 interface ToolExecutionResult {
   success: boolean;
@@ -13,8 +14,16 @@ interface ToolExecutionResult {
   intake: CaseIntakeState;
 }
 
-export class CaseIntakeToolService {
-  async recordFacts(
+export class RecordCaseIntakeFactsTool {
+  readonly definition: FunctionTool = {
+    type: "function",
+    name: "record_case_facts",
+    description: "Record only billing-dispute facts explicitly stated by the user, with the ID of the user message that supports each fact.",
+    strict: true,
+    parameters: createFactToolSchema(),
+  };
+
+  async execute(
     input: unknown,
     messages: CaseMessageRecord[],
     currentIntake: CaseIntakeState,
@@ -27,6 +36,34 @@ export class CaseIntakeToolService {
     const intake = { facts, status: getIntakeStatus(facts) };
     return { success: true, message: "Case facts recorded.", intake };
   }
+}
+
+function createFactToolSchema(): Record<string, unknown> {
+  return {
+    type: "object",
+    properties: {
+      provider: nullableTextFactSchema(),
+      issueType: nullableTextFactSchema(),
+      chargeAmount: nullableTextFactSchema(),
+      chargeDate: nullableTextFactSchema(),
+      expectedAmount: nullableTextFactSchema(),
+      desiredOutcome: nullableTextFactSchema(),
+    },
+    required: ["provider", "issueType", "chargeAmount", "chargeDate", "expectedAmount", "desiredOutcome"],
+    additionalProperties: false,
+  };
+}
+
+function nullableTextFactSchema(): Record<string, unknown> {
+  return {
+    type: ["object", "null"],
+    properties: {
+      value: { type: "string", maxLength: 200 },
+      sourceMessageId: { type: "string" },
+    },
+    required: ["value", "sourceMessageId"],
+    additionalProperties: false,
+  };
 }
 
 function rejectedToolResult(intake: CaseIntakeState): ToolExecutionResult {

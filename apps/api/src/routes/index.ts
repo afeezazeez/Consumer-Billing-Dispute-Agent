@@ -12,8 +12,8 @@ import { CaseService } from "../cases/case.service";
 import { TypeOrmCaseRepository } from "../database/typeorm-case.repository";
 import { TypeOrmUserRepository } from "../database/typeorm-user.repository";
 import { healthRouter } from "../health/health.routes";
-import { CaseIntakeToolService } from "../cases/case-intake-tool.service";
 import { OpenAiCaseIntakeAgent } from "../services/ai/openai-case-intake-agent";
+import { RecordCaseIntakeFactsTool } from "../services/ai/tools/record-case-intake-facts.tool";
 
 export function createRoutes(config: AppConfig, dataSource: DataSource): Router {
   const routes = Router();
@@ -38,8 +38,8 @@ function createAuthController(config: AppConfig, dataSource: DataSource): AuthCo
 
 function createCaseController(config: AppConfig, dataSource: DataSource): CaseController {
   const caseRepository = new TypeOrmCaseRepository(dataSource);
-  const caseIntakeToolService = new CaseIntakeToolService();
-  const caseIntakeAgent = new OpenAiCaseIntakeAgent(config.openAiApiKey, config.openAiModel, caseIntakeToolService);
+  const recordCaseIntakeFactsTool = new RecordCaseIntakeFactsTool();
+  const caseIntakeAgent = new OpenAiCaseIntakeAgent(config.openAiApiKey, config.openAiModel, recordCaseIntakeFactsTool);
   const caseService = new CaseService(caseRepository, caseIntakeAgent);
   return new CaseController(caseService);
 }
