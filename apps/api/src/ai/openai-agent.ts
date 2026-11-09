@@ -10,7 +10,6 @@ import type {
   ResponseStreamEvent,
 } from "openai/resources/responses/responses";
 import type { CaseIntakeState } from "../cases/case-intake";
-import { extractNextAction } from "../cases/case-next-action";
 import type {
   CaseAgentProgressHandler,
   CaseAgentSource,
@@ -22,7 +21,7 @@ import type {
 import type { CaseMessageRecord } from "../cases/case.repository";
 import { ServiceUnavailableException } from "../exceptions/service-unavailable.exception";
 import type { AgentTool, AgentToolContext, FunctionAgentTool } from "./tools/agent-tool";
-import { stripInternalCitations } from "./utils/strip-internal-citations";
+import { parseAgentReply } from "./utils/parse-agent-reply";
 
 const MAX_TOOL_CALLS = 3;
 const MAX_OUTPUT_TOKENS = 700;
@@ -394,31 +393,12 @@ function createResult(
   intake: CaseIntakeState,
   progress: AgentTurnProgress,
 ): CaseIntakeAgentResult {
-  const cleanedResponse = stripInternalCitations(removeInternalMessageIds(response)).trim();
-  const titleMatch = cleanedResponse.match(/^\[CASE_TITLE\]([^\r\n]*?)\[\/CASE_TITLE\]\s*/i);
-  const { reply, nextAction } = extractNextAction(cleanedResponse.slice(titleMatch?.[0].length ?? 0));
-  const { answer, emailDraft } = extractEmailDraft(reply);
-  if (!answer && !emailDraft) throw new Error("OpenAI returned an empty response");
   return {
-    response: answer,
-    nextAction,
-    caseTitle: titleMatch?.[1].trim(),
-    emailDraft,
+    ...parseAgentReply(response),
     intake,
     sources: progress.sources,
     toolActivities: progress.activities,
   };
-}
-
-function extractEmailDraft(response: string): { answer: string; emailDraft?: CaseIntakeAgentResult["emailDraft"] } {
-  const match = response.match(/\[EMAIL_DRAFT\]\s*To:\s*(.*?)\s*\nSubject:\s*(.*?)\s*\n\s*([\s\S]*?)\s*\[\/EMAIL_DRAFT\]/i);
-  if (!match) return { answer: response };
-  const emailDraft = { recipients: match[1].trim(), subject: match[2].trim(), body: match[3].trim() };
-  return { answer: "", emailDraft };
-}
-
-function removeInternalMessageIds(response: string): string {
-  return response.replace(/\bCase message ID:\s*[\da-f]{8}(?:-[\da-f]{4}){3}-[\da-f]{12}/gi, "");
 }
 
 function createSafeFallback(intake: CaseIntakeState): string {

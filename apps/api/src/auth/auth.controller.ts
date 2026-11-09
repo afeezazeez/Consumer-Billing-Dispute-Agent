@@ -7,6 +7,8 @@ import { AuthenticationException } from "../exceptions/authentication.exception"
 import type { AppConfig } from "../config";
 import type { AuthService } from "./auth.service";
 import { authenticatedUserId } from "./auth.middleware";
+import { readCallbackParameters, validateOAuthState } from "./utils/oauth-callback";
+import { destroySession, regenerateSession, saveSession } from "./utils/session";
 
 export class AuthController {
   constructor(private readonly authService: AuthService, private readonly config: AppConfig) {}
@@ -64,29 +66,4 @@ export class AuthController {
 
 function getFirstName(displayName: string): string {
   return displayName.trim().split(/\s+/)[0] || "there";
-}
-
-function readCallbackParameters(request: Request): { code: string; state: string } {
-  const code = request.query.code;
-  const state = request.query.state;
-  if (typeof code !== "string" || typeof state !== "string") {
-    throw new Error("OAuth callback parameters are missing");
-  }
-  return { code, state };
-}
-
-function validateOAuthState(expected: string | undefined, received: string): void {
-  if (!expected || expected !== received) throw new Error("OAuth state did not match");
-}
-
-function regenerateSession(request: Request): Promise<void> {
-  return new Promise((resolve, reject) => request.session.regenerate((error) => error ? reject(error) : resolve()));
-}
-
-function saveSession(request: Request): Promise<void> {
-  return new Promise((resolve, reject) => request.session.save((error) => error ? reject(error) : resolve()));
-}
-
-function destroySession(request: Request): Promise<void> {
-  return new Promise((resolve, reject) => request.session.destroy((error) => error ? reject(error) : resolve()));
 }
