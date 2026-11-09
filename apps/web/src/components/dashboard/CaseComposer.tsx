@@ -43,7 +43,13 @@ export function CaseComposer({
   const pendingUpload = useRef<{ content: string; upload: CaseUpload }>(undefined);
   const [attachmentError, setAttachmentError] = useState("");
   const [voiceMessageError, setVoiceMessageError] = useState("");
-  const { status: voiceStatus, error: voiceError, startRecording, stopAndTranscribe } = useVoiceTranscription();
+  const {
+    status: voiceStatus,
+    error: voiceError,
+    startRecording,
+    stopAndTranscribe,
+    cancelVoiceInput,
+  } = useVoiceTranscription();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -115,6 +121,10 @@ export function CaseComposer({
     void handleVoiceAction();
   }, [handleVoiceAction]);
 
+  const handleVoiceCancel = useCallback(() => {
+    cancelVoiceInput();
+  }, [cancelVoiceInput]);
+
   const handleKeyDown = useCallback((event: KeyboardEvent<HTMLTextAreaElement>) => {
     if (event.key === "Enter" && !event.shiftKey) {
       event.preventDefault();
@@ -144,15 +154,15 @@ export function CaseComposer({
   }, [addAttachments]);
 
   const handleDragOver = useCallback((event: DragEvent<HTMLFormElement>) => {
-    if (event.dataTransfer.types.includes("Files")) event.preventDefault();
-  }, []);
+    if (voiceStatus === "idle" && event.dataTransfer.types.includes("Files")) event.preventDefault();
+  }, [voiceStatus]);
 
   const handleDrop = useCallback((event: DragEvent<HTMLFormElement>) => {
-    if (!event.dataTransfer.files.length) return;
+    if (voiceStatus !== "idle" || !event.dataTransfer.files.length) return;
     event.preventDefault();
     if (isUploading) return;
     addAttachments(event.dataTransfer.files);
-  }, [addAttachments, isUploading]);
+  }, [addAttachments, isUploading, voiceStatus]);
 
   const removeAttachment = useCallback((index: number) => {
     const item = attachments[index];
@@ -170,95 +180,96 @@ export function CaseComposer({
 
       <form
         aria-busy={isSending || isUploading || isVoiceBusy(voiceStatus)}
-        className="claude-composer-card"
+        className={`claude-composer-card${voiceStatus !== "idle" ? " is-voice-mode" : ""}`}
         onDragOver={handleDragOver}
         onDrop={handleDrop}
         onSubmit={handleSubmit}
       >
-        <ComposerAttachments attachments={attachments} onRemove={removeAttachment} onRetry={retry} isUploading={isUploading} />
-        {attachmentError && <p className="claude-composer-error" role="alert">{attachmentError}</p>}
-        {voiceStatus !== "idle" && <VoiceInputActivity status={voiceStatus} />}
-        {voiceError && <p className="claude-composer-error" role="alert">{voiceError}</p>}
-        {voiceMessageError && <p className="claude-composer-error" role="alert">{voiceMessageError}</p>}
-        <label className="visually-hidden" htmlFor="claude-case-message">
-          Message about your billing dispute
-        </label>
-        <textarea
-          className="claude-composer-textarea"
-          id="claude-case-message"
-          maxLength={2000}
-          readOnly={isUploading || voiceStatus === "transcribing"}
-          onChange={handleChange}
-          onKeyDown={handleKeyDown}
-          placeholder={defaultPlaceholder}
-          ref={textareaRef}
-          rows={variant === "welcome" ? 3 : 2}
-          value={message}
-        />
-
-        <div className="claude-composer-bottom-bar">
-          <div className="claude-composer-left-actions">
-            <input
-              accept={ATTACHMENT_TYPES.join(",")}
-              aria-label="Upload billing document"
-              className="visually-hidden"
-              disabled={isUploading}
-              multiple
-              onChange={handleFileChange}
-              ref={fileInputRef}
-              tabIndex={-1}
-              type="file"
+        {voiceStatus !== "idle" ? (
+          <VoiceInputActivity status={voiceStatus} onCancel={handleVoiceCancel} onStop={handleVoiceClick} />
+        ) : (
+          <>
+            <ComposerAttachments attachments={attachments} onRemove={removeAttachment} onRetry={retry} isUploading={isUploading} />
+            {attachmentError && <p className="claude-composer-error" role="alert">{attachmentError}</p>}
+            {voiceError && <p className="claude-composer-error" role="alert">{voiceError}</p>}
+            {voiceMessageError && <p className="claude-composer-error" role="alert">{voiceMessageError}</p>}
+            <label className="visually-hidden" htmlFor="claude-case-message">
+              Message about your billing dispute
+            </label>
+            <textarea
+              className="claude-composer-textarea"
+              id="claude-case-message"
+              maxLength={2000}
+              readOnly={isUploading}
+              onChange={handleChange}
+              onKeyDown={handleKeyDown}
+              placeholder={defaultPlaceholder}
+              ref={textareaRef}
+              rows={variant === "welcome" ? 3 : 2}
+              value={message}
             />
-            <button
-              aria-label="Add attachment"
-              className="claude-attachment-btn"
-              onClick={handleAttachmentClick}
-              disabled={isUploading}
-              title="Attach PDFs or images"
-              type="button"
-            >
-              <span aria-hidden="true">＋</span>
-            </button>
-          </div>
 
-          <div className="claude-composer-right-actions">
-            <button
-              aria-label={getVoiceButtonLabel(voiceStatus)}
-              className={`claude-voice-btn${voiceStatus === "recording" ? " is-recording" : ""}`}
-              disabled={isSending || isUploading || hasUnreadyAttachments || (isVoiceBusy(voiceStatus) && voiceStatus !== "recording")}
-              onClick={handleVoiceClick}
-              title={getVoiceButtonLabel(voiceStatus)}
-              type="button"
-            >
-              {voiceStatus === "recording" ? (
-                <svg aria-hidden="true" viewBox="0 0 24 24" fill="none"><rect x="7" y="7" width="10" height="10" rx="2" fill="currentColor" /></svg>
-              ) : (
-                <svg aria-hidden="true" viewBox="0 0 24 24" fill="none">
-                  <rect x="9" y="3" width="6" height="12" rx="3" stroke="currentColor" strokeWidth="1.8" />
-                  <path d="M5.5 11.5a6.5 6.5 0 0 0 13 0M12 18v3m-4 0h8" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
-                </svg>
-              )}
-            </button>
-            <button
-              aria-label={isUploading ? "Uploading attachments" : isSending ? "Sending message" : "Send message"}
-              className="claude-composer-send-btn"
-              disabled={(!message.trim() && voiceStatus !== "recording") || message.length > MAX_MESSAGE_LENGTH || isSending || isUploading || hasUnreadyAttachments || isVoiceBusy(voiceStatus)}
-              type="submit"
-            >
-              {isSending || isUploading ? (
-                <span className="claude-spinner-dot" />
-              ) : (
-                <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                  <path
-                    fillRule="evenodd"
-                    d="M10 17a.75.75 0 0 1-.75-.75V5.612L5.29 9.77a.75.75 0 0 1-1.08-1.04l5.25-5.5a.75.75 0 0 1 1.08 0l5.25 5.5a.75.75 0 1 1-1.08 1.04l-3.96-4.158V16.25A.75.75 0 0 1 10 17Z"
-                    clipRule="evenodd"
-                  />
-                </svg>
-              )}
-            </button>
-          </div>
-        </div>
+            <div className="claude-composer-bottom-bar">
+              <div className="claude-composer-left-actions">
+                <input
+                  accept={ATTACHMENT_TYPES.join(",")}
+                  aria-label="Upload billing document"
+                  className="visually-hidden"
+                  disabled={isUploading}
+                  multiple
+                  onChange={handleFileChange}
+                  ref={fileInputRef}
+                  tabIndex={-1}
+                  type="file"
+                />
+                <button
+                  aria-label="Add attachment"
+                  className="claude-attachment-btn"
+                  onClick={handleAttachmentClick}
+                  disabled={isUploading}
+                  title="Attach PDFs or images"
+                  type="button"
+                >
+                  <span aria-hidden="true">＋</span>
+                </button>
+              </div>
+
+              <div className="claude-composer-right-actions">
+                <button
+                  aria-label="Record a voice message"
+                  className="claude-voice-btn"
+                  disabled={isSending || isUploading || hasUnreadyAttachments}
+                  onClick={handleVoiceClick}
+                  title="Record a voice message"
+                  type="button"
+                >
+                  <svg aria-hidden="true" viewBox="0 0 24 24" fill="none">
+                    <rect x="9" y="3" width="6" height="12" rx="3" stroke="currentColor" strokeWidth="1.8" />
+                    <path d="M5.5 11.5a6.5 6.5 0 0 0 13 0M12 18v3m-4 0h8" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                  </svg>
+                </button>
+                <button
+                  aria-label={isUploading ? "Uploading attachments" : isSending ? "Sending message" : "Send message"}
+                  className="claude-composer-send-btn"
+                  disabled={!message.trim() || message.length > MAX_MESSAGE_LENGTH || isSending || isUploading || hasUnreadyAttachments}
+                  type="submit"
+                >
+                  {isSending || isUploading ? (
+                    <span className="claude-spinner-dot" />
+                  ) : (
+                    <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                      <path
+                        fillRule="evenodd"
+                        d="M10 17a.75.75 0 0 1-.75-.75V5.612L5.29 9.77a.75.75 0 0 1-1.08-1.04l5.25-5.5a.75.75 0 0 1 1.08 0l5.25 5.5a.75.75 0 1 1-1.08 1.04l-3.96-4.158V16.25A.75.75 0 0 1 10 17Z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                  )}
+                </button>
+              </div>
+            </div>
+          </>
+        )}
       </form>
     </div>
   );
@@ -270,13 +281,6 @@ function mergeMessageAndTranscript(message: string, transcription: string | unde
 
 function isVoiceBusy(status: VoiceInputStatus): boolean {
   return status === "requesting" || status === "transcribing";
-}
-
-function getVoiceButtonLabel(status: VoiceInputStatus): string {
-  if (status === "recording") return "Stop recording and transcribe";
-  if (status === "requesting") return "Waiting for microphone access";
-  if (status === "transcribing") return "Transcribing recording";
-  return "Record a voice message";
 }
 
 function getPendingUpload(

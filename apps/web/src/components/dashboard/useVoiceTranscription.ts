@@ -11,13 +11,18 @@ export function useVoiceTranscription() {
   const recorderRef = useRef<MediaRecorder | undefined>(undefined);
   const streamRef = useRef<MediaStream | undefined>(undefined);
   const chunksRef = useRef<Blob[]>([]);
+  const generationRef = useRef(0);
+  const abortControllerRef = useRef<AbortController | undefined>(undefined);
 
   const startRecording = useCallback(async () => {
     setError("");
     setStatus("requesting");
+    const generation = generationRef.current + 1;
+    generationRef.current = generation;
     try {
-      await beginRecording(recorderRef, streamRef, chunksRef, setStatus);
+      await beginRecording(recorderRef, streamRef, chunksRef, setStatus, () => generationRef.current === generation);
     } catch {
+      if (generationRef.current !== generation) return;
       stopTracks(streamRef);
       setStatus("idle");
       setError("Allow microphone access to record a message, or type it instead.");
@@ -27,29 +32,48 @@ export function useVoiceTranscription() {
   const stopAndTranscribe = useCallback(async (): Promise<string | undefined> => {
     const recorder = recorderRef.current;
     if (!recorder || recorder.state === "inactive") return undefined;
+    const generation = generationRef.current + 1;
+    generationRef.current = generation;
+    const abortController = new AbortController();
+    abortControllerRef.current = abortController;
     setError("");
     setStatus("transcribing");
     try {
       const recording = await stopRecording(recorder, chunksRef.current);
+      if (generationRef.current !== generation) return undefined;
       stopTracks(streamRef);
       recorderRef.current = undefined;
       chunksRef.current = [];
-      const transcription = await requestTranscription(recording);
+      const transcription = await requestTranscription(recording, abortController.signal);
+      if (generationRef.current !== generation) return undefined;
       setStatus("idle");
       return transcription;
     } catch (error) {
+      if (generationRef.current !== generation) return undefined;
       stopTracks(streamRef);
       recorderRef.current = undefined;
       chunksRef.current = [];
       setStatus("idle");
       setError(getTranscriptionErrorMessage(error));
       return undefined;
+    } finally {
+      if (abortControllerRef.current === abortController) abortControllerRef.current = undefined;
     }
   }, []);
 
-  useEffect(() => () => releaseRecording(recorderRef, streamRef), []);
+  const cancelVoiceInput = useCallback(() => {
+    generationRef.current += 1;
+    abortControllerRef.current?.abort();
+    abortControllerRef.current = undefined;
+    releaseRecording(recorderRef, streamRef);
+    chunksRef.current = [];
+    setError("");
+    setStatus("idle");
+  }, []);
 
-  return { status, error, startRecording, stopAndTranscribe };
+  useEffect(() => () => cancelVoiceResources(recorderRef, streamRef, abortControllerRef), []);
+
+  return { status, error, startRecording, stopAndTranscribe, cancelVoiceInput };
 }
 
 async function beginRecording(
@@ -57,9 +81,11 @@ async function beginRecording(
   streamRef: MutableRefObject<MediaStream | undefined>,
   chunksRef: MutableRefObject<Blob[]>,
   setStatus: (status: VoiceInputStatus) => void,
+  isCurrentRequest: () => boolean,
 ): Promise<void> {
   if (!navigator.mediaDevices?.getUserMedia || !window.MediaRecorder) throw new Error("Microphone unavailable");
   const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+  if (!isCurrentRequest()) return stopStream(stream);
   streamRef.current = stream;
   chunksRef.current = [];
   const recorder = createRecorder(stream);
@@ -91,13 +117,14 @@ function createRecording(chunks: Blob[], mimeType: string): Blob {
   return new Blob(chunks, { type: normalizeMediaType(mimeType) });
 }
 
-async function requestTranscription(recording: Blob): Promise<string> {
+async function requestTranscription(recording: Blob, signal: AbortSignal): Promise<string> {
   if (!recording.size) throw new Error("Recording was empty");
   const mediaType = normalizeMediaType(recording.type);
   const response = await fetch(`${API_URL}/ai/transcriptions`, {
     method: "POST",
     body: createAudioForm(recording, mediaType),
     credentials: "include",
+    signal,
   });
   return readTranscription(response);
 }
@@ -133,6 +160,19 @@ function releaseRecording(
   if (recorderRef.current?.state === "recording") recorderRef.current.stop();
   recorderRef.current = undefined;
   stopTracks(streamRef);
+}
+
+function stopStream(stream: MediaStream): void {
+  stream.getTracks().forEach((track) => track.stop());
+}
+
+function cancelVoiceResources(
+  recorderRef: MutableRefObject<MediaRecorder | undefined>,
+  streamRef: MutableRefObject<MediaStream | undefined>,
+  abortControllerRef: MutableRefObject<AbortController | undefined>,
+): void {
+  abortControllerRef.current?.abort();
+  releaseRecording(recorderRef, streamRef);
 }
 
 function getTranscriptionErrorMessage(error: unknown): string {
