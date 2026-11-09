@@ -1,3 +1,6 @@
+import { OpenAiDocumentExtractor } from "../ai/openai-document-extractor";
+import { TypeOrmDocumentReviewRepository } from "../database/typeorm-document-review.repository";
+import { DocumentReviewService } from "../documents/document-review.service";
 import { AttachmentService } from "../storage/attachment.service";
 import { CaseAttachmentCleanup } from "../database/case-attachment-cleanup";
 import { CloudinaryAttachmentStorage } from "../storage/cloudinary-attachment-storage";
@@ -26,7 +29,8 @@ export function createRoutes(config: AppConfig, dataSource: DataSource): Router 
 
   routes.use("/health", healthRouter);
   routes.use("/auth", createAuthRouter(createAuthController(config, dataSource), authMiddleware));
-  routes.use("/cases", createCaseRouter(createCaseController(config, dataSource), authMiddleware));
+  const cases = createCaseServices(config, dataSource);
+  routes.use("/cases", createCaseRouter(cases.controller, authMiddleware, cases.documentReviewService));
 
   return routes;
 }
@@ -41,7 +45,7 @@ function createAuthController(config: AppConfig, dataSource: DataSource): AuthCo
   return new AuthController(authService, config);
 }
 
-function createCaseController(config: AppConfig, dataSource: DataSource): CaseController {
+function createCaseServices(config: AppConfig, dataSource: DataSource) {
   const caseRepository = new TypeOrmCaseRepository(dataSource);
   const caseIntakeAgent = new OpenAiAgent(config.openAiApiKey, config.openAiModel, createAgentTools());
   const storage = new CloudinaryAttachmentStorage(config.cloudinary, "bill-agent/case-attachments");
@@ -55,5 +59,10 @@ function createCaseController(config: AppConfig, dataSource: DataSource): CaseCo
     new TypeOrmUserRepository(dataSource),
   );
   agentTurnWorker.start();
-  return new CaseController(caseService);
+  const documentReviewService = new DocumentReviewService(
+    new TypeOrmDocumentReviewRepository(dataSource),
+    new OpenAiDocumentExtractor(config.openAiApiKey, config.openAiModel),
+    (userId, attachmentId) => caseService.findAttachment(userId, attachmentId),
+  );
+  return { controller: new CaseController(caseService), documentReviewService };
 }

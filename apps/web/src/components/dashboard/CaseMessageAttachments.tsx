@@ -3,7 +3,8 @@
 import { useCallback, useState, type MouseEvent } from "react";
 import { PdfFileIcon } from "./PdfFileIcon";
 import { ComposerAttachmentPreview } from "./ComposerAttachmentPreview";
-import type { CaseAttachment } from "./dashboard.types";
+import { DocumentReviewDialog } from "./DocumentReviewDialog";
+import type { CaseAttachment, DocumentReview } from "./dashboard.types";
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
 
@@ -11,6 +12,14 @@ export function CaseMessageAttachments({ attachments }: { attachments: CaseAttac
   const [preview, setPreview] = useState<File>();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [reviewId, setReviewId] = useState<string>();
+  const [reviews, setReviews] = useState<Record<string, DocumentReview>>({});
+  const selected = attachments.find(({ id }) => id === reviewId);
+  const openReview = useCallback((event: MouseEvent<HTMLButtonElement>) => setReviewId(event.currentTarget.dataset.id), []);
+  const closeReview = useCallback(() => setReviewId(undefined), []);
+  const updateReview = useCallback((id: string, review: DocumentReview) => {
+    setReviews((current) => ({ ...current, [id]: review }));
+  }, []);
   const images = attachments.filter(isImage);
   const documents = attachments.filter((attachment) => !isImage(attachment));
   const closePreview = useCallback(() => setPreview(undefined), []);
@@ -55,10 +64,22 @@ export function CaseMessageAttachments({ attachments }: { attachments: CaseAttac
                     </>
                   )}
                 </button>
+                <button type="button" className="case-attachment-review" data-id={attachment.id} onClick={openReview}
+                  aria-label={`Review details for ${attachment.name}`}>
+                  {(reviews[attachment.id] ?? attachment.review)?.confirmed ? "Reviewed" : "Review details"}
+                </button>
               </li>
               ))}
           </ul>
         ))}
+      {selected && (
+        <DocumentReviewDialog
+          key={selected.id}
+          attachment={{ ...selected, review: reviews[selected.id] ?? selected.review }}
+          onReview={updateReview}
+          onClose={closeReview}
+        />
+      )}
       {error && <p role="alert">{error}</p>}
       {preview && <ComposerAttachmentPreview file={preview} onClose={closePreview} />}
     </>

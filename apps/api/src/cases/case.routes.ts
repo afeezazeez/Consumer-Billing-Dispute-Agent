@@ -1,4 +1,6 @@
 import { parseCaseAttachments, parseStagedAttachment } from "../middlewares/case-attachments";
+import { createDocumentReviewRouter } from "../documents/document-review.routes";
+import type { DocumentReviewService } from "../documents/document-review.service";
 import { Router } from "express";
 import type { AuthMiddleware } from "../auth/auth.middleware";
 import { CreateCaseRequestDto } from "../dtos/cases/create-case-request.dto";
@@ -8,7 +10,7 @@ import { RetryCaseMessageRequestDto } from "../dtos/cases/retry-case-message-req
 import { validateBody } from "../middlewares/request-validator";
 import type { CaseController } from "./case.controller";
 
-export function createCaseRouter(controller: CaseController, authMiddleware: AuthMiddleware): Router {
+export function createCaseRouter(controller: CaseController, authMiddleware: AuthMiddleware, documentReviewService: DocumentReviewService): Router {
   const router = Router();
   router.use(authMiddleware.authenticate);
   router.get("/", (request, response, next) => controller.list(request, response, next));
@@ -16,6 +18,7 @@ export function createCaseRouter(controller: CaseController, authMiddleware: Aut
   router.post("/", validateBody(CreateCaseRequestDto), (request, response, next) => controller.create(request, response, next));
   router.post("/attachments/staged", parseStagedAttachment, (request, response) => controller.stageAttachment(request, response));
   router.delete("/attachments/staged/:attachmentId", (request, response) => controller.discardStagedAttachment(request, response));
+  router.use("/attachments/:attachmentId/review", createDocumentReviewRouter(documentReviewService));
   router.get("/attachments/:attachmentId", (request, response) => controller.readAttachment(request, response));
   router.get("/:caseId", (request, response, next) => controller.read(request, response, next));
   router.post("/:caseId/messages/stream", parseCaseAttachments, validateBody(CreateMessageRequestDto), (request, response) => controller.addMessageStream(request, response));

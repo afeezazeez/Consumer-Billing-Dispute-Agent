@@ -282,9 +282,9 @@ async function loadAttachments(manager: EntityManager, messages: CaseMessageEnti
     where: { messageId: In(messages.map(({ id }) => id)) },
     order: { name: "ASC", id: "ASC" },
   });
-  for (const { id, name, mediaType, size, messageId } of rows) {
+  for (const { id, name, mediaType, size, messageId, review } of rows) {
     const attachments = grouped.get(messageId) ?? [];
-    attachments.push({ id, name, mediaType, size });
+    attachments.push({ id, name, mediaType, size, review: review ?? undefined });
     grouped.set(messageId, attachments);
   }
   return grouped;
