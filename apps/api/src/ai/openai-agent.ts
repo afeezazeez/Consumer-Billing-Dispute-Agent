@@ -22,7 +22,7 @@ import type {
 import type { CaseMessageRecord } from "../cases/case.repository";
 import { ServiceUnavailableException } from "../exceptions/service-unavailable.exception";
 import type { AgentTool, AgentToolContext, FunctionAgentTool } from "./tools/agent-tool";
-import { stripInternalCitations } from "./strip-internal-citations";
+import { stripInternalCitations } from "./utils/strip-internal-citations";
 
 const MAX_TOOL_CALLS = 3;
 const MAX_OUTPUT_TOKENS = 700;

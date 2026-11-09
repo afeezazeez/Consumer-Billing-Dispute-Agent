@@ -1,6 +1,6 @@
 import type { CaseMessageRecord } from "../../cases/case.repository";
 import type { CaseAgentSource, CaseAgentToolActivity, CaseEmailDraft } from "../../cases/case-intake-agent";
-import { stripInternalCitations } from "../../ai/strip-internal-citations";
+import { stripInternalCitations } from "../../ai/utils/strip-internal-citations";
 
 export class CaseMessageDto {
   attachments: NonNullable<CaseMessageRecord["attachments"]>;
