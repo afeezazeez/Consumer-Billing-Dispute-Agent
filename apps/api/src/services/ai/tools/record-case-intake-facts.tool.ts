@@ -7,14 +7,9 @@ import type {
 } from "../../../cases/case-intake";
 import type { CaseMessageRecord } from "../../../cases/case.repository";
 import { RecordCaseIntakeFactsToolDto } from "../../../dtos/cases/record-case-intake-facts-tool.dto";
+import type { AgentTool, AgentToolContext, AgentToolResult } from "./agent-tool";
 
-interface ToolExecutionResult {
-  success: boolean;
-  message: string;
-  intake: CaseIntakeState;
-}
-
-export class RecordCaseIntakeFactsTool {
+export class RecordCaseIntakeFactsTool implements AgentTool {
   readonly definition: FunctionTool = {
     type: "function",
     name: "record_case_facts",
@@ -25,16 +20,15 @@ export class RecordCaseIntakeFactsTool {
 
   async execute(
     input: unknown,
-    messages: CaseMessageRecord[],
-    currentIntake: CaseIntakeState,
-  ): Promise<ToolExecutionResult> {
+    context: AgentToolContext,
+  ): Promise<AgentToolResult> {
     const request = plainToInstance(RecordCaseIntakeFactsToolDto, input);
     const validationErrors = await validate(request, { whitelist: true, forbidNonWhitelisted: true });
-    if (validationErrors.length > 0) return rejectedToolResult(currentIntake);
-    if (!sourcesExist(request, messages)) return rejectedToolResult(currentIntake);
-    const facts = mergeFacts(currentIntake.facts, request);
+    if (validationErrors.length > 0) return rejectedToolResult(context.intake);
+    if (!sourcesExist(request, context.messages)) return rejectedToolResult(context.intake);
+    const facts = mergeFacts(context.intake.facts, request);
     const intake = { facts, status: getIntakeStatus(facts) };
-    return { success: true, message: "Case facts recorded.", intake };
+    return acceptedToolResult(intake);
   }
 }
 
@@ -66,8 +60,19 @@ function nullableTextFactSchema(): Record<string, unknown> {
   };
 }
 
-function rejectedToolResult(intake: CaseIntakeState): ToolExecutionResult {
-  return { success: false, message: "Facts must cite a user message in this case.", intake };
+function rejectedToolResult(intake: CaseIntakeState): AgentToolResult {
+  return createToolResult(intake, false, "Facts must cite a user message in this case.");
+}
+
+function acceptedToolResult(intake: CaseIntakeState): AgentToolResult {
+  return createToolResult(intake, true, "Case facts recorded.");
+}
+
+function createToolResult(intake: CaseIntakeState, success: boolean, message: string): AgentToolResult {
+  return {
+    intake,
+    output: { success, message, status: intake.status, facts: intake.facts },
+  };
 }
 
 function sourcesExist(request: RecordCaseIntakeFactsToolDto, messages: CaseMessageRecord[]): boolean {

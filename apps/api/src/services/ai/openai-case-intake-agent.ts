@@ -8,9 +8,9 @@ import type {
 } from "openai/resources/responses/responses";
 import type { CaseIntakeState } from "../../cases/case-intake";
 import type { CaseIntakeAgent, CaseIntakeAgentContext, CaseIntakeAgentResult } from "../../cases/case-intake-agent";
-import { RecordCaseIntakeFactsTool } from "./tools/record-case-intake-facts.tool";
 import type { CaseMessageRecord } from "../../cases/case.repository";
 import { ServiceUnavailableException } from "../../exceptions/service-unavailable.exception";
+import type { AgentTool, AgentToolContext } from "./tools/agent-tool";
 
 const MAX_TOOL_CALLS = 3;
 const MAX_OUTPUT_TOKENS = 700;
@@ -18,7 +18,7 @@ export class OpenAiCaseIntakeAgent implements CaseIntakeAgent {
   constructor(
     private readonly apiKey: string | undefined,
     private readonly model: string,
-    private readonly recordCaseIntakeFactsTool: RecordCaseIntakeFactsTool,
+    private readonly agentTools: AgentTool[],
   ) {}
 
   async respond(context: CaseIntakeAgentContext): Promise<CaseIntakeAgentResult> {
@@ -73,7 +73,7 @@ export class OpenAiCaseIntakeAgent implements CaseIntakeAgent {
       model: this.model,
       instructions: createAgentInstructions(request.context, request.intake),
       input: request.input,
-      tools: [this.recordCaseIntakeFactsTool.definition],
+      tools: this.agentTools.map((tool) => tool.definition),
       tool_choice: request.toolChoice,
       parallel_tool_calls: false,
       max_output_tokens: MAX_OUTPUT_TOKENS,
@@ -95,7 +95,7 @@ export class OpenAiCaseIntakeAgent implements CaseIntakeAgent {
       const toolContext = { messages: context.messages, intake: nextIntake };
       const result = await this.executeToolCall(call, toolContext, callsUsed < context.remainingCalls);
       nextIntake = result.intake;
-      callsUsed += Number(result.executed);
+      callsUsed += 1;
       outputs.push({ type: "function_call_output", call_id: call.call_id, output: JSON.stringify(result.output) });
     }
 
@@ -104,18 +104,15 @@ export class OpenAiCaseIntakeAgent implements CaseIntakeAgent {
 
   private async executeToolCall(
     call: ResponseFunctionToolCall,
-    context: ToolCallContext,
+    context: AgentToolContext,
     withinLimit: boolean,
-  ): Promise<ExecutedToolResult> {
-    if (!withinLimit || call.name !== this.recordCaseIntakeFactsTool.definition.name) {
-      return { executed: false, intake: context.intake, output: { success: false, message: "The requested action is unavailable." } };
+  ): Promise<ToolCallResult> {
+    const agentTool = this.agentTools.find((tool) => tool.definition.name === call.name);
+    if (!withinLimit || !agentTool) {
+      return { intake: context.intake, output: { success: false, message: "The requested action is unavailable." } };
     }
-    const result = await this.recordCaseIntakeFactsTool.execute(parseArguments(call.arguments), context.messages, context.intake);
-    return {
-      executed: true,
-      intake: result.intake,
-      output: { success: result.success, message: result.message, status: result.intake.status, facts: result.intake.facts },
-    };
+    const result = await agentTool.execute(parseArguments(call.arguments), context);
+    return { intake: result.intake, output: result.output };
   }
 
   private createClient(): OpenAI {
@@ -148,13 +145,7 @@ interface ToolExecutionContext {
   remainingCalls: number;
 }
 
-interface ToolCallContext {
-  messages: CaseMessageRecord[];
-  intake: CaseIntakeState;
-}
-
-interface ExecutedToolResult {
-  executed: boolean;
+interface ToolCallResult {
   intake: CaseIntakeState;
   output: Record<string, unknown>;
 }
