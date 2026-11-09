@@ -1,5 +1,5 @@
 import OpenAI, { toFile } from "openai";
-import type { AudioRecording, AudioTranscriber } from "./audio-transcription.service";
+import type { AudioRecording, AudioTranscriber } from "../transcription/audio-transcription.port";
 import { ServiceUnavailableException } from "../exceptions/service-unavailable.exception";
 
 const TRANSCRIPTION_MODEL = "gpt-4o-mini-transcribe";

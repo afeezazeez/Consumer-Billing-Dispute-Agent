@@ -2,7 +2,7 @@ import busboy from "busboy";
 import type { Request, RequestHandler } from "express";
 import { ClientErrorException } from "../exceptions/client.error.exception";
 import { ResponseStatus } from "../enums/response-status";
-import type { AudioRecording } from "../ai/audio-transcription.service";
+import type { AudioRecording } from "./audio-transcription.port";
 
 const MAX_AUDIO_BYTES = 10 * 1024 * 1024;
 const AUDIO_TYPES = ["audio/webm", "audio/mp4"];

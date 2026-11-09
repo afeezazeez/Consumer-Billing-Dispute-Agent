@@ -120,7 +120,7 @@ function createRecording(chunks: Blob[], mimeType: string): Blob {
 async function requestTranscription(recording: Blob, signal: AbortSignal): Promise<string> {
   if (!recording.size) throw new Error("Recording was empty");
   const mediaType = normalizeMediaType(recording.type);
-  const response = await fetch(`${API_URL}/ai/transcriptions`, {
+  const response = await fetch(`${API_URL}/transcriptions`, {
     method: "POST",
     body: createAudioForm(recording, mediaType),
     credentials: "include",
