@@ -28,6 +28,10 @@
   --dash-primary-hover: #1d4ed8;
   --dash-primary-soft: #eff6ff;
   --dash-danger: #dc2626;
+  --dash-danger-text: #b42318;
+  --dash-danger-soft: #fef3f2;
+  --dash-danger-border: #fda29b;
+  --dash-danger-icon-bg: rgb(180 35 24 / 8%);
   --dash-scrim: rgb(15 23 42 / 42%);
 
   --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
@@ -1745,14 +1749,36 @@ button, a {
 }
 
 .case-message-failure {
-  background: #fff1f0;
-  border: 1px solid #f04438;
+  background: var(--dash-danger-soft);
+  border: 1px solid var(--dash-danger-border);
   border-radius: 16px 16px 4px 16px;
-  color: #b42318;
+  color: var(--dash-danger-text);
   margin-top: 8px;
   max-width: 80%;
-  padding: 6px 10px;
+  padding: 12px 14px;
   text-align: left;
+}
+
+.case-message-failure-copy {
+  align-items: center;
+  display: flex;
+  gap: 9px;
+}
+
+.case-message-failure-icon {
+  align-items: center;
+  background: var(--dash-danger-icon-bg);
+  border-radius: 50%;
+  display: inline-flex;
+  flex: 0 0 28px;
+  height: 28px;
+  justify-content: center;
+  width: 28px;
+}
+
+.case-message-failure-icon svg {
+  height: 17px;
+  width: 17px;
 }
 
 .case-message-failure p {
@@ -1782,18 +1808,27 @@ button, a {
 }
 
 .case-message-failure-actions button {
-  background: transparent;
-  border: 1px solid var(--dash-line);
-  border-radius: 6px;
-  color: var(--dash-ink);
+  align-items: center;
+  background: var(--dash-card-bg);
+  border: 1px solid var(--dash-danger-border);
+  border-radius: 10px;
+  color: var(--dash-danger-text);
   cursor: pointer;
-  font-size: 12px;
-  padding: 5px 9px;
+  display: inline-flex;
+  font-size: 13px;
+  gap: 7px;
+  justify-content: center;
+  min-height: 44px;
+  padding: 0 12px;
 }
 
-.case-message-failure-actions button:first-child {
-  border-color: transparent;
-  padding-left: 0;
+.case-message-failure-actions button svg {
+  height: 16px;
+  width: 16px;
+}
+
+.case-message-failure-actions button:hover:not(:disabled) {
+  background: var(--dash-danger-soft);
 }
 
 .case-message-failure-actions button:disabled {
