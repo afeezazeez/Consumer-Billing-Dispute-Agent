@@ -113,8 +113,12 @@ export function CaseConversation({
 
   useLayoutEffect(() => {
     const history = historyRef.current;
-    if (history) history.scrollTo({ top: history.scrollHeight, behavior: "smooth" });
-  }, [billingCase.messages.length, isSending]);
+    if (!history) return;
+    const scrollToLatest = () => { history.scrollTop = history.scrollHeight; };
+    scrollToLatest();
+    const frame = window.requestAnimationFrame(scrollToLatest);
+    return () => window.cancelAnimationFrame(frame);
+  }, [billingCase.messages, isSending, liveToolActivities]);
 
   const handleMenuKeyDown = useCallback((event: ReactKeyboardEvent<HTMLDivElement>) => {
     if (event.key === "Escape") setIsMenuOpen(false);

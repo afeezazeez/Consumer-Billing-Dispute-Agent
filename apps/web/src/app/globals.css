@@ -1819,7 +1819,8 @@ button, a {
   gap: 7px;
   justify-content: center;
   min-height: 44px;
-  padding: 0 12px;
+  padding: 0;
+  width: 44px;
 }
 
 .case-message-failure-actions button svg {

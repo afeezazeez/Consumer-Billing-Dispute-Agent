@@ -48,12 +48,24 @@ export function CaseMessageFailure({ messageId, content, isSending, onRetry }: C
         {isEditing ? (
           <>
             <button disabled={isSending} onClick={handleCancelEdit} type="button">Cancel</button>
-            <button disabled={isSending || !draftContent.trim()} onClick={handleRetry} type="button"><RetryIcon />Retry with changes</button>
+            <button
+              aria-label="Retry with edited message"
+              disabled={isSending || !draftContent.trim()}
+              onClick={handleRetry}
+              title="Retry with edited message"
+              type="button"
+            >
+              <RetryIcon />
+            </button>
           </>
         ) : (
           <>
-            <button disabled={isSending} onClick={handleRetry} type="button"><RetryIcon />Retry</button>
-            <button disabled={isSending} onClick={handleEdit} type="button"><EditIcon />Edit message</button>
+            <button aria-label="Retry message" disabled={isSending} onClick={handleRetry} title="Retry message" type="button">
+              <RetryIcon />
+            </button>
+            <button aria-label="Edit message" disabled={isSending} onClick={handleEdit} title="Edit message" type="button">
+              <EditIcon />
+            </button>
           </>
         )}
       </div>
