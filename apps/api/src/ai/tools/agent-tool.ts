@@ -1,6 +1,6 @@
 import type { FunctionTool } from "openai/resources/responses/responses";
-import type { CaseIntakeState } from "../../../cases/case-intake";
-import type { CaseMessageRecord } from "../../../cases/case.repository";
+import type { CaseIntakeState } from "../../cases/case-intake";
+import type { CaseMessageRecord } from "../../cases/case.repository";
 
 export interface AgentToolContext {
   messages: CaseMessageRecord[];

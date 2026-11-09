@@ -4,9 +4,9 @@ import type { FunctionTool } from "openai/resources/responses/responses";
 import type {
   CaseIntakeFacts,
   CaseIntakeState,
-} from "../../../cases/case-intake";
-import type { CaseMessageRecord } from "../../../cases/case.repository";
-import { RecordCaseIntakeFactsToolDto } from "../../../dtos/cases/record-case-intake-facts-tool.dto";
+} from "../../cases/case-intake";
+import type { CaseMessageRecord } from "../../cases/case.repository";
+import { RecordCaseIntakeFactsToolDto } from "../../dtos/cases/record-case-intake-facts-tool.dto";
 import type { AgentTool, AgentToolContext, AgentToolResult } from "./agent-tool";
 
 export class RecordCaseIntakeFactsTool implements AgentTool {

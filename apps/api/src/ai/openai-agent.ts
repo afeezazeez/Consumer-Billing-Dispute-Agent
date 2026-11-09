@@ -6,15 +6,15 @@ import type {
   ResponseInputItem,
   ResponseOutputItem,
 } from "openai/resources/responses/responses";
-import type { CaseIntakeState } from "../../cases/case-intake";
-import type { CaseIntakeAgent, CaseIntakeAgentContext, CaseIntakeAgentResult } from "../../cases/case-intake-agent";
-import type { CaseMessageRecord } from "../../cases/case.repository";
-import { ServiceUnavailableException } from "../../exceptions/service-unavailable.exception";
+import type { CaseIntakeState } from "../cases/case-intake";
+import type { CaseIntakeAgent, CaseIntakeAgentContext, CaseIntakeAgentResult } from "../cases/case-intake-agent";
+import type { CaseMessageRecord } from "../cases/case.repository";
+import { ServiceUnavailableException } from "../exceptions/service-unavailable.exception";
 import type { AgentTool, AgentToolContext } from "./tools/agent-tool";
 
 const MAX_TOOL_CALLS = 3;
 const MAX_OUTPUT_TOKENS = 700;
-export class OpenAiCaseIntakeAgent implements CaseIntakeAgent {
+export class OpenAiAgent implements CaseIntakeAgent {
   constructor(
     private readonly apiKey: string | undefined,
     private readonly model: string,

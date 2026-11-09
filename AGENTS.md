@@ -10,7 +10,8 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 ## Backend AI tool convention
 
-- Place model-callable tools in `apps/api/src/services/ai/tools/`.
+- Place AI code in `apps/api/src/ai/`; keep the OpenAI adapter in `openai-agent.ts` directly in that folder.
+- Place model-callable tools in `apps/api/src/ai/tools/`.
 - Keep each tool in its own `<verb>-<subject>.tool.ts` file.
 - Keep that tool's model schema and validated execution together in its file.
 - Register every tool in `case-agent-tools.registry.ts`; the agent receives the complete registered collection.
