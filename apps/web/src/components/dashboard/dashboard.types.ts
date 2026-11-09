@@ -14,21 +14,7 @@ export interface CaseSummary {
   isProcessing: boolean;
 }
 
-export type DocumentField = "provider" | "amount" | "chargeDate";
-
-export interface DocumentReview {
-  extracted: Record<DocumentField, {
-    value: string | null;
-    excerpt: string | null;
-    page: number | null;
-    confidence: "clear" | "uncertain" | "unreadable";
-  }>;
-  confirmed?: Record<DocumentField, string | null>;
-  confirmedAt?: string;
-}
-
 export interface CaseAttachment {
-  review?: DocumentReview;
   id: string;
   name: string;
   mediaType: string;

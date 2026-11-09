@@ -1,3 +1,4 @@
+import type { DocumentReviewService } from "../documents/document-review.service";
 import type { AttachmentService } from "../storage/attachment.service";
 import type { PendingCaseAttachment, StoredCaseAttachment } from "./case-attachment";
 import { randomUUID } from "node:crypto";
@@ -33,6 +34,7 @@ export class CaseService {
     private readonly caseRepository: CaseRepository,
     private readonly caseIntakeAgent: CaseIntakeAgent,
     private readonly attachmentService: AttachmentService,
+    private readonly documentReviewService: DocumentReviewService,
   ) {}
 
   async createCase(userId: string, input: CreateCaseInput): Promise<CaseConversation> {
@@ -115,6 +117,7 @@ export class CaseService {
     if (!billingCase) throw new Error("Case disappeared while processing the message");
     const userMessage = billingCase.messages.find((message) => message.id === job.messageId);
     if (!userMessage) throw new Error("Message disappeared while processing the case");
+    await this.readTurnDocuments(job, userMessage);
     const isOpeningTurn = billingCase.messages[0]?.id === job.messageId
       && !billingCase.messages.some((message) => message.role === "assistant");
     let activities = userMessage.toolActivities ?? [];
@@ -144,6 +147,28 @@ export class CaseService {
     });
     if (!completedCase) throw new Error("Unable to save the agent response");
     return completedCase;
+  }
+
+  private async readTurnDocuments(job: AgentTurnJob, message: CaseMessageRecord): Promise<void> {
+    const unread = message.attachments?.filter((attachment) => !attachment.review);
+    if (!unread?.length) return;
+    const activities = (message.toolActivities ?? []).filter(({ name }) => name !== "read_documents");
+    await this.caseRepository.updatePendingMessageActivities(job.userId, job.caseId, job.messageId, [
+      ...activities,
+      { id: `read-${job.messageId}`, name: "read_documents", label: "Reading attachments", status: "running" },
+    ]);
+    try {
+      for (const attachment of unread) {
+        try {
+          attachment.review = await this.documentReviewService.extract(job.userId, attachment.id);
+        } catch {
+          // Keep the file available for preview and let the agent explain what it could read.
+        }
+      }
+    } finally {
+      message.toolActivities = activities;
+      await this.caseRepository.updatePendingMessageActivities(job.userId, job.caseId, job.messageId, activities);
+    }
   }
 
   stageAttachment(userId: string, file: PendingCaseAttachment): Promise<string> {

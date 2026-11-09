@@ -51,7 +51,15 @@ function createCaseServices(config: AppConfig, dataSource: DataSource) {
   const storage = new CloudinaryAttachmentStorage(config.cloudinary, "bill-agent/case-attachments");
   const cleanup = new CaseAttachmentCleanup(dataSource, storage);
   const attachmentService = new AttachmentService(storage, (publicId) => cleanup.enqueue(publicId));
-  const caseService = new CaseService(caseRepository, caseIntakeAgent, attachmentService);
+  const documentReviewService = new DocumentReviewService(
+    new TypeOrmDocumentReviewRepository(dataSource),
+    new OpenAiDocumentExtractor(config.openAiApiKey, config.openAiModel),
+    async (userId, attachmentId) => {
+      const attachment = await caseRepository.findAttachment(userId, attachmentId);
+      return attachment ? attachmentService.read(attachment) : undefined;
+    },
+  );
+  const caseService = new CaseService(caseRepository, caseIntakeAgent, attachmentService, documentReviewService);
   cleanup.start();
   const agentTurnWorker = new AgentTurnWorker(
     new TypeOrmAgentTurnJobRepository(dataSource),
@@ -59,10 +67,5 @@ function createCaseServices(config: AppConfig, dataSource: DataSource) {
     new TypeOrmUserRepository(dataSource),
   );
   agentTurnWorker.start();
-  const documentReviewService = new DocumentReviewService(
-    new TypeOrmDocumentReviewRepository(dataSource),
-    new OpenAiDocumentExtractor(config.openAiApiKey, config.openAiModel),
-    (userId, attachmentId) => caseService.findAttachment(userId, attachmentId),
-  );
   return { controller: new CaseController(caseService), documentReviewService };
 }
