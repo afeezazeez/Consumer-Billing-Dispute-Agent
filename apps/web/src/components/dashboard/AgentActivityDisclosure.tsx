@@ -20,11 +20,14 @@ export function AgentActivityDisclosure({ activities, isLive = false }: AgentAct
             <span className="agent-activity-step-label">{getStepLabel(activity)}</span>
             {activity.sources && getSafeSources(activity.sources).length > 0 && (
               <span className="agent-activity-step-sources">
-                {getSafeSources(activity.sources).map((source) => (
+                {getVisibleSources(activity.sources).map((source) => (
                   <a href={source.url} key={source.url} rel="noopener noreferrer" target="_blank">
-                    {source.title || source.url}
+                    {getSourceLabel(source.url, source.title)}
                   </a>
                 ))}
+                {getHiddenSourceCount(activity.sources) > 0 && (
+                  <small>+{getHiddenSourceCount(activity.sources)} more sources</small>
+                )}
               </span>
             )}
           </li>
@@ -36,16 +39,18 @@ export function AgentActivityDisclosure({ activities, isLive = false }: AgentAct
 
 function getActivitySummary(activities: CaseAgentToolActivity[], isLive: boolean): string {
   const latestActivity = activities.at(-1);
-  if (latestActivity?.name === "web_search" && latestActivity.status === "running") {
+  const runningActivity = [...activities].reverse().find((activity) => activity.status === "running");
+  const openPages = activities.filter((activity) => activity.operation === "open_page").length;
+  if (runningActivity?.name === "web_search") {
     return "Searching the web";
   }
-  if (latestActivity?.name === "web_search" && latestActivity.sources?.length === 1) {
+  if (activities.some((activity) => activity.name === "web_search") && openPages === 1) {
     return "Searched the web, read a page";
   }
-  if (latestActivity?.name === "web_search" && latestActivity.sources?.length) {
-    return `Searched the web, read ${latestActivity.sources.length} pages`;
+  if (activities.some((activity) => activity.name === "web_search") && openPages > 1) {
+    return `Searched the web, read ${openPages} pages`;
   }
-  if (latestActivity?.name === "web_search") return "Searched the web";
+  if (activities.some((activity) => activity.name === "web_search")) return "Searched the web";
   return isLive && latestActivity ? latestActivity.label : `${activities.length} tool${activities.length === 1 ? "" : "s"} used`;
 }
 
@@ -60,8 +65,28 @@ function getSafeSources(sources: NonNullable<CaseAgentToolActivity["sources"]>) 
 }
 
 function getStepLabel(activity: CaseAgentToolActivity): string {
+  if (activity.operation === "open_page") return "Opened a page";
+  if (activity.operation === "find_in_page" && activity.detail) return `Searched within a page for “${activity.detail}”`;
   if (activity.name === "web_search" && activity.detail) return `Searched for “${activity.detail}”`;
   if (activity.name === "web_search" && activity.status === "completed") return "Searched the web";
   if (activity.name === "web_search") return "Searching the web";
   return activity.label;
+}
+
+function getVisibleSources(sources: NonNullable<CaseAgentToolActivity["sources"]>) {
+  return getSafeSources(sources).slice(0, 3);
+}
+
+function getHiddenSourceCount(sources: NonNullable<CaseAgentToolActivity["sources"]>): number {
+  return Math.max(0, getSafeSources(sources).length - 3);
+}
+
+function getSourceLabel(url: string, title: string): string {
+  try {
+    const parsed = new URL(url);
+    const path = parsed.pathname.replace(/\/$/, "");
+    return path ? `${parsed.hostname}${path}` : title || parsed.hostname;
+  } catch {
+    return title || url;
+  }
 }

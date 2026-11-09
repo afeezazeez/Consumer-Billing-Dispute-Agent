@@ -2,6 +2,7 @@ import OpenAI from "openai";
 import { toResponseInputItems } from "openai/lib/responses/ResponseInputItems";
 import type {
   Response,
+  ResponseFunctionWebSearch,
   ResponseFunctionToolCall,
   ResponseInputItem,
   ResponseOutputItem,
@@ -228,10 +229,11 @@ function reportToolActivity(
   status: CaseAgentToolActivity["status"],
   detail?: string,
   sources?: CaseAgentSource[],
+  operation?: CaseAgentToolActivity["operation"],
 ): void {
   const tool = findAgentTool(progress.agentTools, name);
   if (!tool) return;
-  const activity = { id, name, label: tool.label, status, detail, sources };
+  const activity = { id, name, label: tool.label, status, detail, sources, operation };
   const activityIndex = progress.activities.findIndex((item) => item.id === id);
   if (activityIndex >= 0 && isSameActivity(progress.activities[activityIndex], activity)) {
     if (activity.detail || !detail) return;
@@ -256,6 +258,7 @@ function findFunctionTool(agentTools: AgentTool[], name: string): FunctionAgentT
 function isSameActivity(left: CaseAgentToolActivity, right: CaseAgentToolActivity): boolean {
   return left.status === right.status
     && left.detail === right.detail
+    && left.operation === right.operation
     && JSON.stringify(left.sources ?? []) === JSON.stringify(right.sources ?? []);
 }
 
@@ -294,11 +297,34 @@ function addUniqueSource(sources: CaseAgentSource[], source: CaseAgentSource): v
 
 function collectSearchQueries(response: Response, progress: AgentTurnProgress): void {
   for (const item of response.output) {
-    if (item.type !== "web_search_call" || item.action.type !== "search") continue;
-    const detail = item.action.queries?.join("; ") ?? item.action.query;
-    const sources = item.action.sources?.map(({ url }) => ({ title: getHostname(url), url })) ?? [];
-    reportToolActivity(progress, item.id, "web_search", "completed", detail, sources);
+    if (item.type !== "web_search_call") continue;
+    const { detail, operation, sources } = getWebSearchActivity(item.action);
+    reportToolActivity(progress, item.id, "web_search", "completed", detail, sources, operation);
   }
+}
+
+function getWebSearchActivity(action: ResponseFunctionWebSearch["action"]): WebSearchActivity {
+  if (action.type === "search") {
+    return {
+      detail: action.queries?.join("; ") ?? action.query,
+      operation: "search",
+      sources: action.sources?.flatMap(({ url }) => toSource(url)) ?? [],
+    };
+  }
+  if (action.type === "open_page") {
+    return { operation: "open_page", sources: action.url ? toSource(action.url) : [] };
+  }
+  return { detail: action.pattern, operation: "find_in_page", sources: toSource(action.url) };
+}
+
+function toSource(url: string): CaseAgentSource[] {
+  return isHttpUrl(url) ? [{ title: getHostname(url), url }] : [];
+}
+
+interface WebSearchActivity {
+  detail?: string;
+  operation: CaseAgentToolActivity["operation"];
+  sources: CaseAgentSource[];
 }
 
 function getHostname(url: string): string {

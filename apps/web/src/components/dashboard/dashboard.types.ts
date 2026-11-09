@@ -33,6 +33,7 @@ export interface CaseAgentToolActivity {
   name: string;
   label: string;
   status: "running" | "completed";
+  operation?: "search" | "open_page" | "find_in_page";
   detail?: string;
   sources?: CaseAgentSource[];
 }

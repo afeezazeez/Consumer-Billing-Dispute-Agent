@@ -1562,18 +1562,23 @@ button, a {
 }
 
 .agent-activity-step-sources {
-  display: inline-flex;
-  gap: 10px;
+  display: grid;
+  gap: 6px;
   max-width: 100%;
   overflow: hidden;
 }
 
 .agent-activity-step-sources a {
   color: var(--dash-ink);
-  max-width: 42%;
+  display: block;
+  max-width: 100%;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.agent-activity-step-sources small {
+  color: var(--dash-ink-soft);
 }
 
 .agent-activity-tool-name {
