@@ -356,6 +356,10 @@ function createAgentInstructions(context: CaseIntakeAgentContext, intake: CaseIn
     "Format replies in standard Markdown supported by the chat: use **bold** for emphasis, blank lines between paragraphs, and Markdown links like [Wise](https://example.com) for citations. Never output raw HTML or malformed Markdown markers.",
     "When asked to draft an email, return only this exact structure: [EMAIL_DRAFT] on a line, then To: recipient (leave blank if unknown), then Subject: subject, a blank line, the complete email body, and [/EMAIL_DRAFT] on its own line. Do not invent recipient details.",
     "You may answer a direct general-information request, but keep billing-dispute guidance grounded, avoid legal conclusions, and never promise a recovery or send a message for the user.",
+    ...(context.generateCaseTitle ? [
+      "Prefix the final reply with [CASE_TITLE]Short title[/CASE_TITLE] on its own first line, including when the reply is an email draft.",
+      "Use 2 to 6 words to summarize the opening user message in its language. Use only details the user shared and omit sensitive identifiers. For a greeting or an unclear request, use a neutral title.",
+    ] : []),
     `Current saved intake facts: ${JSON.stringify(intake.facts)}`,
   ].join("\n");
 }
@@ -386,10 +390,12 @@ function createResult(
   progress: AgentTurnProgress,
 ): CaseIntakeAgentResult {
   const cleanedResponse = stripInternalCitations(removeInternalMessageIds(response)).trim();
-  const { answer, emailDraft } = extractEmailDraft(cleanedResponse);
+  const titleMatch = cleanedResponse.match(/^\[CASE_TITLE\]([^\r\n]*?)\[\/CASE_TITLE\]\s*/i);
+  const { answer, emailDraft } = extractEmailDraft(cleanedResponse.slice(titleMatch?.[0].length ?? 0));
   if (!answer && !emailDraft) throw new Error("OpenAI returned an empty response");
   return {
     response: answer,
+    caseTitle: titleMatch?.[1].trim(),
     emailDraft,
     intake,
     sources: progress.sources,

@@ -44,6 +44,7 @@ export interface AppendPendingMessage {
 }
 
 export interface CompleteCaseTurn {
+  caseTitle?: string;
   userId: string;
   caseId: string;
   userMessageId: string;

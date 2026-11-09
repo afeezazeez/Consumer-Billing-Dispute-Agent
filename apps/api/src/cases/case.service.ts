@@ -86,12 +86,15 @@ export class CaseService {
     if (!billingCase) throw new Error("Case disappeared while processing the message");
     const userMessage = billingCase.messages.find((message) => message.id === job.messageId);
     if (!userMessage) throw new Error("Message disappeared while processing the case");
+    const isOpeningTurn = billingCase.messages[0]?.id === job.messageId
+      && !billingCase.messages.some((message) => message.role === "assistant");
     let activities = userMessage.toolActivities ?? [];
     let activityWrites = Promise.resolve();
     const result = await this.caseIntakeAgent.respond({
       messages: billingCase.messages,
       intake: billingCase.intake,
       userFirstName,
+      generateCaseTitle: isOpeningTurn,
     }, (activity) => {
       activities = upsertActivity(activities, activity);
       const snapshot = [...activities];
@@ -105,6 +108,7 @@ export class CaseService {
       caseId: job.caseId,
       userMessageId: job.messageId,
       assistantMessage,
+      caseTitle: isOpeningTurn && result.caseTitle ? createTitle(result.caseTitle) : undefined,
       intake: result.intake,
     });
     if (!completedCase) throw new Error("Unable to save the agent response");

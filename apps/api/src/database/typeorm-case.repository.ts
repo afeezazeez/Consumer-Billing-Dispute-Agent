@@ -74,7 +74,10 @@ export class TypeOrmCaseRepository implements CaseRepository {
   }
 
   async renameForUser(userId: string, caseId: string, title: string): Promise<boolean> {
-    const result = await this.dataSource.getRepository(CaseEntity).update({ id: caseId, userId }, { title, updatedAt: new Date() });
+    const result = await this.dataSource.getRepository(CaseEntity).update(
+      { id: caseId, userId },
+      { title, titleIsProvisional: false, updatedAt: new Date() },
+    );
     return (result.affected ?? 0) > 0;
   }
 
@@ -83,6 +86,7 @@ export class TypeOrmCaseRepository implements CaseRepository {
       id: input.caseId ?? randomUUID(),
       userId: input.userId,
       title: input.title,
+      titleIsProvisional: true,
       status: "open",
       intakeState: input.intake,
     });
@@ -113,6 +117,12 @@ export class TypeOrmCaseRepository implements CaseRepository {
       { id: input.caseId, userId: input.userId },
       { updatedAt: input.assistantMessage.createdAt, intakeState: input.intake },
     );
+    if (input.caseTitle) {
+      await manager.getRepository(CaseEntity).update(
+        { id: input.caseId, userId: input.userId, titleIsProvisional: true },
+        { title: input.caseTitle, titleIsProvisional: false, updatedAt: input.assistantMessage.createdAt },
+      );
+    }
     return readConversation(manager, input.userId, input.caseId);
   }
 

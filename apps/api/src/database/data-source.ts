@@ -6,6 +6,7 @@ import { AddCaseIntakeState1710000000002 } from "./migrations/1710000000002-AddC
 import { AddCaseMessageProcessingStatus1710000000003 } from "./migrations/1710000000003-AddCaseMessageProcessingStatus";
 import { AddAgentMessageSourcesAndActivities1710000000004 } from "./migrations/1710000000004-AddAgentMessageSourcesAndActivities";
 import { CreateAgentTurnJobs1710000000005 } from "./migrations/1710000000005-CreateAgentTurnJobs";
+import { AddProvisionalCaseTitle1710000000006 } from "./migrations/1710000000006-AddProvisionalCaseTitle";
 import { agentTurnJobSchema, caseMessageSchema, caseSchema } from "./entities/case.entity";
 import { userSchema } from "./entities/user.entity";
 
@@ -25,6 +26,7 @@ export function createDataSource(database: PostgresConfig): DataSource {
       AddCaseMessageProcessingStatus1710000000003,
       AddAgentMessageSourcesAndActivities1710000000004,
       CreateAgentTurnJobs1710000000005,
+      AddProvisionalCaseTitle1710000000006,
     ],
     synchronize: false,
   });

@@ -4,6 +4,7 @@ import type { CaseIntakeState } from "../../cases/case-intake";
 import type { CaseMessageProcessingStatus } from "../../cases/case.repository";
 
 export class CaseEntity {
+  titleIsProvisional!: boolean;
   id!: string;
   userId!: string;
   title!: string;
@@ -44,6 +45,7 @@ export const caseSchema = new EntitySchema<CaseEntity>({
     id: { type: "uuid", primary: true },
     userId: { name: "user_id", type: "uuid" },
     title: { type: "varchar", length: 140 },
+    titleIsProvisional: { name: "title_is_provisional", type: "boolean", default: false },
     status: { type: "varchar", length: 24, default: "open" },
     createdAt: { name: "created_at", type: "timestamptz", createDate: true },
     updatedAt: { name: "updated_at", type: "timestamptz", updateDate: true },
