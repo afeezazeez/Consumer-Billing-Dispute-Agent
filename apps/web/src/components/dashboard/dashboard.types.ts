@@ -36,6 +36,7 @@ export interface CaseMessage {
   sources: CaseAgentSource[];
   toolActivities: CaseAgentToolActivity[];
   emailDraft?: CaseEmailDraft;
+  nextAction?: { goal: string; action: string };
 }
 
 export interface CaseEmailDraft {

@@ -1,8 +1,8 @@
 import { useCallback } from "react";
-import type { CaseConversation } from "./dashboard.types";
+import type { CaseMessage } from "./dashboard.types";
 
 interface CaseNextActionCardProps {
-  nextAction: NonNullable<CaseConversation["nextAction"]>;
+  nextAction: NonNullable<CaseMessage["nextAction"]>;
   draftId?: string;
 }
 

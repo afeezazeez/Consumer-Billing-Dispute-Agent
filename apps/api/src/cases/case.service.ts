@@ -236,6 +236,7 @@ function createAssistantMessage(result: CaseIntakeAgentResult, createdAt: Date):
     processingStatus: "complete",
     sources: result.sources,
     toolActivities: result.toolActivities,
+    nextAction: result.nextAction,
   };
 }
 

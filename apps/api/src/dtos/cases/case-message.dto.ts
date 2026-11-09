@@ -1,4 +1,5 @@
 import type { CaseMessageRecord } from "../../cases/case.repository";
+import type { CaseNextAction } from "../../cases/case-next-action";
 import type { CaseAgentSource, CaseAgentToolActivity, CaseEmailDraft } from "../../cases/case-intake-agent";
 import { stripInternalCitations } from "../../ai/utils/strip-internal-citations";
 
@@ -12,6 +13,7 @@ export class CaseMessageDto {
   sources: CaseAgentSource[];
   toolActivities: CaseAgentToolActivity[];
   emailDraft?: CaseEmailDraft;
+  nextAction?: CaseNextAction;
 
   constructor(message: CaseMessageRecord) {
     this.id = message.id;
@@ -23,6 +25,7 @@ export class CaseMessageDto {
     this.sources = message.sources ?? [];
     this.toolActivities = message.toolActivities ?? [];
     this.emailDraft = message.emailDraft;
+    this.nextAction = message.nextAction;
   }
 
   static make(message: CaseMessageRecord): CaseMessageDto {

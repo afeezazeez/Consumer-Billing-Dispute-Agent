@@ -26,6 +26,7 @@ export class CaseMessageEntity {
   sources!: CaseAgentSource[];
   toolActivities!: CaseAgentToolActivity[];
   emailDraft!: CaseEmailDraft | null;
+  nextAction!: CaseNextAction | null;
 }
 
 export class AgentTurnJobEntity {
@@ -74,6 +75,7 @@ export const caseMessageSchema = new EntitySchema<CaseMessageEntity>({
     sources: { type: "jsonb", default: () => "'[]'::jsonb" },
     toolActivities: { name: "tool_activities", type: "jsonb", default: () => "'[]'::jsonb" },
     emailDraft: { name: "email_draft", type: "jsonb", nullable: true },
+    nextAction: { name: "next_action", type: "jsonb", nullable: true },
     createdAt: { name: "created_at", type: "timestamptz", createDate: true },
   },
   indices: [{ columns: ["caseId", "createdAt"] }],

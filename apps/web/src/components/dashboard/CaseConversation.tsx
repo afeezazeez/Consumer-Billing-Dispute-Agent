@@ -47,7 +47,6 @@ export function CaseConversation({
   onDeleteCase,
   onRenameCase,
 }: CaseConversationProps) {
-  const latestDraft = billingCase.messages.findLast((message) => message.role === "assistant" && message.emailDraft);
   const menuRef = useRef<HTMLDivElement>(null);
   const historyRef = useRef<HTMLDivElement>(null);
   const historyContentRef = useRef<HTMLDivElement>(null);
@@ -254,6 +253,12 @@ export function CaseConversation({
                 {message.role === "assistant" && (
                   <CaseMessageSources sources={getUnmentionedSources(message.content, message.sources)} />
                 )}
+                {message.role === "assistant" && message.nextAction && (
+                  <CaseNextActionCard
+                    nextAction={message.nextAction}
+                    draftId={message.emailDraft ? `case-draft-${message.id}` : undefined}
+                  />
+                )}
                 {message.role === "user" && message.processingStatus === "failed" && (
                   <CaseMessageFailure
                     content={message.content}
@@ -265,12 +270,6 @@ export function CaseConversation({
                 )}
               </article>
             ))}
-            {billingCase.nextAction && (
-              <CaseNextActionCard
-                nextAction={billingCase.nextAction}
-                draftId={latestDraft ? `case-draft-${latestDraft.id}` : undefined}
-              />
-            )}
             {isAgentWorking && (
               <div aria-live="polite" className="claude-agent-thinking" role="status">
                 {getRunningActivity(liveToolActivities) ? (

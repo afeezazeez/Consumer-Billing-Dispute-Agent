@@ -208,6 +208,7 @@ function toMessageEntity(message: CaseMessageRecord, caseId: string): CaseMessag
     sources: message.sources ?? [],
     toolActivities: message.toolActivities ?? [],
     emailDraft: message.emailDraft ?? null,
+    nextAction: message.nextAction ?? null,
   };
 }
 
@@ -256,6 +257,7 @@ function toMessage(message: CaseMessageEntity): CaseMessageRecord {
     sources: message.sources ?? [],
     toolActivities: message.toolActivities ?? [],
     emailDraft: message.emailDraft ?? undefined,
+    nextAction: message.nextAction ?? undefined,
   };
 }
 

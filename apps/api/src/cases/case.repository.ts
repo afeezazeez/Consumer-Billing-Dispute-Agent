@@ -1,6 +1,7 @@
 import type { CaseAttachment, StoredCaseAttachment } from "./case-attachment";
 import type { CaseAgentSource, CaseAgentToolActivity, CaseEmailDraft } from "./case-intake-agent";
 import type { CaseIntakeState } from "./case-intake";
+import type { CaseNextAction } from "./case-next-action";
 
 export interface CaseMessageRecord {
   attachments?: CaseAttachment[];
@@ -12,6 +13,7 @@ export interface CaseMessageRecord {
   sources?: CaseAgentSource[];
   toolActivities?: CaseAgentToolActivity[];
   emailDraft?: CaseEmailDraft;
+  nextAction?: CaseNextAction;
 }
 
 export type CaseMessageProcessingStatus = "pending" | "complete" | "failed";
@@ -81,4 +83,3 @@ export interface CaseRepository {
   deleteForUser(userId: string, caseId: string): Promise<boolean>;
   renameForUser(userId: string, caseId: string, title: string): Promise<boolean>;
 }
-import type { CaseNextAction } from "./case-next-action";

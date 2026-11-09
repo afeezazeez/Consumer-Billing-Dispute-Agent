@@ -1,4 +1,5 @@
 import { AddDocumentReview1710000000011 } from "./migrations/1710000000011-AddDocumentReview";
+import { AddMessageNextAction1710000000012 } from "./migrations/1710000000012-AddMessageNextAction";
 import { StageCaseAttachments1710000000010 } from "./migrations/1710000000010-StageCaseAttachments";
 import { StoreCaseAttachmentsInCloudinary1710000000009 } from "./migrations/1710000000009-StoreCaseAttachmentsInCloudinary";
 import { caseAttachmentSchema } from "./entities/case-attachment.entity";
@@ -38,6 +39,7 @@ export function createDataSource(database: PostgresConfig): DataSource {
       StoreCaseAttachmentsInCloudinary1710000000009,
       StageCaseAttachments1710000000010,
       AddDocumentReview1710000000011,
+      AddMessageNextAction1710000000012,
     ],
     synchronize: false,
   });
