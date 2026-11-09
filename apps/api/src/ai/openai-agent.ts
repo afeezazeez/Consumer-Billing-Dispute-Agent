@@ -21,6 +21,7 @@ import type {
 import type { CaseMessageRecord } from "../cases/case.repository";
 import { ServiceUnavailableException } from "../exceptions/service-unavailable.exception";
 import type { AgentTool, AgentToolContext, FunctionAgentTool } from "./tools/agent-tool";
+import { stripInternalCitations } from "./strip-internal-citations";
 
 const MAX_TOOL_CALLS = 3;
 const MAX_OUTPUT_TOKENS = 700;
@@ -384,7 +385,7 @@ function createResult(
   intake: CaseIntakeState,
   progress: AgentTurnProgress,
 ): CaseIntakeAgentResult {
-  const cleanedResponse = removeInternalMessageIds(response).trim();
+  const cleanedResponse = stripInternalCitations(removeInternalMessageIds(response)).trim();
   const { answer, emailDraft } = extractEmailDraft(cleanedResponse);
   if (!answer && !emailDraft) throw new Error("OpenAI returned an empty response");
   return {

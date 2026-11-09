@@ -1,5 +1,6 @@
 import type { CaseMessageRecord } from "../../cases/case.repository";
 import type { CaseAgentSource, CaseAgentToolActivity, CaseEmailDraft } from "../../cases/case-intake-agent";
+import { stripInternalCitations } from "../../ai/strip-internal-citations";
 
 export class CaseMessageDto {
   id: string;
@@ -14,7 +15,7 @@ export class CaseMessageDto {
   constructor(message: CaseMessageRecord) {
     this.id = message.id;
     this.role = message.role;
-    this.content = message.content;
+    this.content = message.role === "assistant" ? stripInternalCitations(message.content) : message.content;
     this.createdAt = message.createdAt;
     this.processingStatus = message.processingStatus;
     this.sources = message.sources ?? [];
