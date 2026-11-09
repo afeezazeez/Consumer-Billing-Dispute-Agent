@@ -22,6 +22,10 @@ import { OpenAiAgent } from "../ai/openai-agent";
 import { createAgentTools } from "../ai/tools/agent-tools.registry";
 import { AgentTurnWorker } from "../cases/agent-turn.worker";
 import { TypeOrmAgentTurnJobRepository } from "../database/typeorm-agent-turn-job.repository";
+import { AudioTranscriptionController } from "../ai/audio-transcription.controller";
+import { AudioTranscriptionService } from "../ai/audio-transcription.service";
+import { createAudioTranscriptionRouter } from "../ai/audio-transcription.routes";
+import { OpenAiAudioTranscriber } from "../ai/openai-audio-transcriber";
 
 export function createRoutes(config: AppConfig, dataSource: DataSource): Router {
   const routes = Router();
@@ -29,6 +33,10 @@ export function createRoutes(config: AppConfig, dataSource: DataSource): Router 
 
   routes.use("/health", healthRouter);
   routes.use("/auth", createAuthRouter(createAuthController(config, dataSource), authMiddleware));
+  routes.use("/ai", createAudioTranscriptionRouter(
+    new AudioTranscriptionController(new AudioTranscriptionService(new OpenAiAudioTranscriber(config.openAiApiKey))),
+    authMiddleware,
+  ));
   const cases = createCaseServices(config, dataSource);
   routes.use("/cases", createCaseRouter(cases.controller, authMiddleware, cases.documentReviewService));
 

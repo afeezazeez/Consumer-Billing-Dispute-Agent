@@ -9,13 +9,17 @@ import {
   type DragEvent,
   type FormEvent,
   type KeyboardEvent,
+  type MutableRefObject,
 } from "react";
 import { ComposerAttachments } from "./ComposerAttachments";
+import { VoiceInputActivity } from "./VoiceInputActivity";
 import { useStagedAttachments } from "./useStagedAttachments";
+import { useVoiceTranscription, type VoiceInputStatus } from "./useVoiceTranscription";
 
 const ATTACHMENT_TYPES = ["application/pdf", "image/jpeg", "image/png", "image/webp"];
 const MAX_ATTACHMENTS = 5;
 const MAX_ATTACHMENT_BYTES = 10 * 1024 * 1024;
+const MAX_MESSAGE_LENGTH = 2000;
 
 interface CaseComposerProps {
   isSending: boolean;
@@ -38,6 +42,8 @@ export function CaseComposer({
   const [isUploading, setIsUploading] = useState(false);
   const pendingUpload = useRef<{ content: string; upload: CaseUpload }>(undefined);
   const [attachmentError, setAttachmentError] = useState("");
+  const [voiceMessageError, setVoiceMessageError] = useState("");
+  const { status: voiceStatus, error: voiceError, startRecording, stopAndTranscribe } = useVoiceTranscription();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -49,39 +55,65 @@ export function CaseComposer({
 
   const handleChange = useCallback((event: ChangeEvent<HTMLTextAreaElement>) => {
     setMessage(event.target.value);
+    setVoiceMessageError("");
   }, []);
+
+  const sendMessage = useCallback(async (content: string) => {
+    if (attachments.length === 0) {
+      setMessage("");
+      if (!await onSendMessage(content)) setMessage(content);
+      return;
+    }
+    const attachmentIds = attachments.flatMap(({ id }) => id ? [id] : []);
+    if (attachmentIds.length !== attachments.length) return;
+    const upload = getPendingUpload(pendingUpload, content, attachmentIds);
+    setIsUploading(true);
+    try {
+      if (await onSendMessage(content, upload)) {
+        pendingUpload.current = undefined;
+        setMessage("");
+        clear();
+      }
+    } finally {
+      setIsUploading(false);
+    }
+  }, [attachments, clear, onSendMessage]);
 
   const handleSubmit = useCallback(
     async (event: FormEvent<HTMLFormElement>) => {
       event.preventDefault();
-      const content = message.trim();
-      if (!content || isSending || isUploading || hasUnreadyAttachments) return;
-      if (attachments.length === 0) {
-        setMessage("");
-        if (!await onSendMessage(content)) setMessage(content);
+      if (isSending || isUploading || hasUnreadyAttachments || isVoiceBusy(voiceStatus)) return;
+      const transcription = voiceStatus === "recording" ? await stopAndTranscribe() : undefined;
+      if (voiceStatus === "recording" && !transcription) return;
+      const content = mergeMessageAndTranscript(message, transcription);
+      if (!content) return;
+      if (content.length > MAX_MESSAGE_LENGTH) {
+        setMessage(content);
+        setVoiceMessageError("This transcript is over the message limit. Shorten it before sending.");
         return;
       }
-
-      const attachmentIds = attachments.flatMap(({ id }) => id ? [id] : []);
-      if (attachmentIds.length !== attachments.length) return;
-      const previous = pendingUpload.current;
-      const upload = previous?.content === content && previous.upload.attachmentIds.join() === attachmentIds.join()
-        ? previous.upload
-        : { id: crypto.randomUUID(), attachmentIds };
-      pendingUpload.current = { content, upload };
-      setIsUploading(true);
-      try {
-        if (await onSendMessage(content, upload)) {
-          pendingUpload.current = undefined;
-          setMessage("");
-          clear();
-        }
-      } finally {
-        setIsUploading(false);
-      }
+      setVoiceMessageError("");
+      setMessage(content);
+      await sendMessage(content);
     },
-    [attachments, clear, hasUnreadyAttachments, isSending, isUploading, message, onSendMessage],
+    [hasUnreadyAttachments, isSending, isUploading, message, sendMessage, stopAndTranscribe, voiceStatus],
   );
+
+  const handleVoiceAction = useCallback(async () => {
+    if (voiceStatus === "idle") return startRecording();
+    if (voiceStatus !== "recording") return;
+    const transcription = await stopAndTranscribe();
+    if (!transcription) return;
+    const content = mergeMessageAndTranscript(message, transcription);
+    setMessage(content);
+    setVoiceMessageError(content.length > MAX_MESSAGE_LENGTH
+      ? "This transcript is over the message limit. Shorten it before sending."
+      : "");
+  }, [message, startRecording, stopAndTranscribe, voiceStatus]);
+
+  const handleVoiceClick = useCallback(() => {
+    void handleVoiceAction();
+  }, [handleVoiceAction]);
 
   const handleKeyDown = useCallback((event: KeyboardEvent<HTMLTextAreaElement>) => {
     if (event.key === "Enter" && !event.shiftKey) {
@@ -137,7 +169,7 @@ export function CaseComposer({
       )}
 
       <form
-        aria-busy={isSending || isUploading}
+        aria-busy={isSending || isUploading || isVoiceBusy(voiceStatus)}
         className="claude-composer-card"
         onDragOver={handleDragOver}
         onDrop={handleDrop}
@@ -145,6 +177,9 @@ export function CaseComposer({
       >
         <ComposerAttachments attachments={attachments} onRemove={removeAttachment} onRetry={retry} isUploading={isUploading} />
         {attachmentError && <p className="claude-composer-error" role="alert">{attachmentError}</p>}
+        {voiceStatus !== "idle" && <VoiceInputActivity status={voiceStatus} />}
+        {voiceError && <p className="claude-composer-error" role="alert">{voiceError}</p>}
+        {voiceMessageError && <p className="claude-composer-error" role="alert">{voiceMessageError}</p>}
         <label className="visually-hidden" htmlFor="claude-case-message">
           Message about your billing dispute
         </label>
@@ -152,7 +187,7 @@ export function CaseComposer({
           className="claude-composer-textarea"
           id="claude-case-message"
           maxLength={2000}
-          readOnly={isUploading}
+          readOnly={isUploading || voiceStatus === "transcribing"}
           onChange={handleChange}
           onKeyDown={handleKeyDown}
           placeholder={defaultPlaceholder}
@@ -188,9 +223,26 @@ export function CaseComposer({
 
           <div className="claude-composer-right-actions">
             <button
+              aria-label={getVoiceButtonLabel(voiceStatus)}
+              className={`claude-voice-btn${voiceStatus === "recording" ? " is-recording" : ""}`}
+              disabled={isSending || isUploading || hasUnreadyAttachments || (isVoiceBusy(voiceStatus) && voiceStatus !== "recording")}
+              onClick={handleVoiceClick}
+              title={getVoiceButtonLabel(voiceStatus)}
+              type="button"
+            >
+              {voiceStatus === "recording" ? (
+                <svg aria-hidden="true" viewBox="0 0 24 24" fill="none"><rect x="7" y="7" width="10" height="10" rx="2" fill="currentColor" /></svg>
+              ) : (
+                <svg aria-hidden="true" viewBox="0 0 24 24" fill="none">
+                  <rect x="9" y="3" width="6" height="12" rx="3" stroke="currentColor" strokeWidth="1.8" />
+                  <path d="M5.5 11.5a6.5 6.5 0 0 0 13 0M12 18v3m-4 0h8" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                </svg>
+              )}
+            </button>
+            <button
               aria-label={isUploading ? "Uploading attachments" : isSending ? "Sending message" : "Send message"}
               className="claude-composer-send-btn"
-              disabled={!message.trim() || isSending || isUploading || hasUnreadyAttachments}
+              disabled={(!message.trim() && voiceStatus !== "recording") || message.length > MAX_MESSAGE_LENGTH || isSending || isUploading || hasUnreadyAttachments || isVoiceBusy(voiceStatus)}
               type="submit"
             >
               {isSending || isUploading ? (
@@ -210,4 +262,33 @@ export function CaseComposer({
       </form>
     </div>
   );
+}
+
+function mergeMessageAndTranscript(message: string, transcription: string | undefined): string {
+  return [message.trim(), transcription?.trim()].filter(Boolean).join("\n").trim();
+}
+
+function isVoiceBusy(status: VoiceInputStatus): boolean {
+  return status === "requesting" || status === "transcribing";
+}
+
+function getVoiceButtonLabel(status: VoiceInputStatus): string {
+  if (status === "recording") return "Stop recording and transcribe";
+  if (status === "requesting") return "Waiting for microphone access";
+  if (status === "transcribing") return "Transcribing recording";
+  return "Record a voice message";
+}
+
+function getPendingUpload(
+  pendingUpload: MutableRefObject<{ content: string; upload: CaseUpload } | undefined>,
+  content: string,
+  attachmentIds: string[],
+): CaseUpload {
+  const previous = pendingUpload.current;
+  const isSameUpload = previous?.content === content
+    && previous.upload.attachmentIds.join() === attachmentIds.join();
+  if (isSameUpload) return previous.upload;
+  const upload = { id: crypto.randomUUID(), attachmentIds };
+  pendingUpload.current = { content, upload };
+  return upload;
 }
