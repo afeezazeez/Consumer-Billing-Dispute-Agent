@@ -1945,9 +1945,8 @@ button, a {
   align-items: center;
   background: var(--dash-primary-soft);
   border: 1px solid var(--dash-line);
-  border-radius: 8px;
-  display: flex;
-  max-width: 100%;
+  border-radius: 10px;
+  position: relative;
 }
 
 .composer-attachments button,
@@ -1960,26 +1959,13 @@ button, a {
 .composer-attachments button:first-child {
   align-items: center;
   display: flex;
-  gap: 8px;
-  min-width: 0;
-}
-
-.composer-attachments button:first-child span:last-child {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.composer-attachments .composer-image-attachment {
-  position: relative;
-  border-radius: 10px;
-}
-
-.composer-image-attachment button:first-child {
+  height: 72px;
+  justify-content: center;
   padding: 0;
+  width: 72px;
 }
 
-.composer-image-attachment img {
+.composer-attachments img {
   border-radius: 9px;
   display: block;
   height: 72px;
@@ -1987,7 +1973,13 @@ button, a {
   width: 72px;
 }
 
-.composer-image-attachment button:last-child {
+.composer-pdf-icon {
+  color: var(--dash-danger);
+  height: 40px;
+  width: 34px;
+}
+
+.composer-attachments button:last-child {
   align-items: center;
   background: var(--dash-ink);
   border-radius: 50%;
