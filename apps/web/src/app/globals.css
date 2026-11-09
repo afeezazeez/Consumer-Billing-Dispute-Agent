@@ -1503,6 +1503,82 @@ button, a {
   max-width: var(--chat-content-width);
 }
 
+.case-next-action-card {
+  background: #fff;
+  border: 1px solid var(--dash-line);
+  border-radius: 16px;
+  color: var(--dash-ink);
+  display: grid;
+  gap: 14px;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+  padding: 16px;
+}
+
+.case-next-action-card h2 {
+  align-items: center;
+  display: flex;
+  font-size: 16px;
+  font-weight: 650;
+  gap: 10px;
+  margin: 0;
+}
+
+.case-next-action-card h2 svg {
+  background: var(--dash-primary-soft);
+  border-radius: 8px;
+  color: var(--dash-primary);
+  flex: 0 0 32px;
+  height: 32px;
+  padding: 7px;
+  width: 32px;
+}
+
+.case-next-action-card dl {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+}
+
+.case-next-action-card dt {
+  color: var(--dash-ink-soft);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.case-next-action-card dd {
+  font-size: 14px;
+  margin: 2px 0 0;
+}
+
+.case-next-action-step {
+  background: var(--dash-primary-soft);
+  border-radius: 10px;
+  padding: 10px 12px;
+}
+
+.case-next-action-card button {
+  background: #fff;
+  border: 1px solid var(--dash-line);
+  border-radius: 8px;
+  color: var(--dash-primary);
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 600;
+  justify-self: start;
+  min-height: 36px;
+  padding: 6px 12px;
+}
+
+.case-next-action-card button:hover {
+  background: var(--dash-primary-soft);
+}
+
+.case-next-action-card button:focus-visible {
+  outline: 2px solid var(--dash-primary);
+  outline-offset: 2px;
+}
+
 .claude-agent-thinking {
   align-items: center;
   display: flex;
