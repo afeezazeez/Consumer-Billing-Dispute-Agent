@@ -1,5 +1,5 @@
 import { v2 as cloudinary } from "cloudinary";
-import type { PendingCaseAttachment } from "../cases/case-attachment";
+import type { AttachmentStorage, PendingAttachment } from "./attachment.types";
 import { ServiceUnavailableException } from "../exceptions/service-unavailable.exception";
 
 export interface CloudinaryConfig {
@@ -16,19 +16,22 @@ const extensions: Record<string, string> = {
   "image/webp": "webp",
 };
 
-export class CloudinaryAttachmentStorage {
-  constructor(private readonly config?: CloudinaryConfig) {}
+export class CloudinaryAttachmentStorage implements AttachmentStorage {
+  constructor(
+    private readonly config: CloudinaryConfig | undefined,
+    private readonly prefix: string,
+  ) {}
 
   get configured(): boolean {
     return Boolean(this.config);
   }
 
-  publicIdFor(file: PendingCaseAttachment): string {
+  keyFor(file: PendingAttachment): string {
     this.requireConfig();
-    return `bill-agent/case-attachments/${file.id}.${extensions[file.mediaType]}`;
+    return `${this.prefix}/${file.id}.${extensions[file.mediaType]}`;
   }
 
-  async upload(file: PendingCaseAttachment, publicId: string): Promise<void> {
+  async upload(file: PendingAttachment, publicId: string): Promise<void> {
     const config = this.requireConfig();
     await new Promise<void>((resolve, reject) => {
       const stream = cloudinary.uploader.upload_stream({

@@ -1,15 +1,5 @@
-export interface CaseAttachment {
-  id: string;
-  name: string;
-  mediaType: string;
-  size: number;
-}
-
-export interface PendingCaseAttachment extends CaseAttachment {
-  data: Buffer;
-}
-
-export interface StoredCaseAttachment extends CaseAttachment {
-  data: Buffer | null;
-  cloudinaryPublicId: string | null;
-}
+export type {
+  AttachmentMetadata as CaseAttachment,
+  PendingAttachment as PendingCaseAttachment,
+  StoredAttachment as StoredCaseAttachment,
+} from "../storage/attachment.types";

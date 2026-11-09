@@ -66,7 +66,7 @@ export class TypeOrmCaseRepository implements CaseRepository {
 
   async findAttachment(userId: string, attachmentId: string): Promise<StoredCaseAttachment | undefined> {
     const rows = await this.dataSource.query(
-      `SELECT a.id, a.name, a.media_type AS "mediaType", a.size, a.data, a.cloudinary_public_id AS "cloudinaryPublicId"
+      `SELECT a.id, a.name, a.media_type AS "mediaType", a.size, a.data, a.cloudinary_public_id AS "storageKey"
        FROM case_attachments a
        JOIN case_messages m ON m.id = a.message_id
        JOIN billing_cases c ON c.id = m.case_id

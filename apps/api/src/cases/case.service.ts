@@ -1,5 +1,5 @@
-import { CaseAttachmentService } from "./case-attachment.service";
-import type { PendingCaseAttachment } from "./case-attachment";
+import type { AttachmentService } from "../storage/attachment.service";
+import type { PendingCaseAttachment, StoredCaseAttachment } from "./case-attachment";
 import { randomUUID } from "node:crypto";
 import { createEmptyCaseIntake } from "./case-intake";
 import type { CaseAgentToolActivity, CaseIntakeAgent, CaseIntakeAgentResult } from "./case-intake-agent";
@@ -30,7 +30,7 @@ export class CaseService {
   constructor(
     private readonly caseRepository: CaseRepository,
     private readonly caseIntakeAgent: CaseIntakeAgent,
-    private readonly caseAttachmentService: CaseAttachmentService,
+    private readonly attachmentService: AttachmentService,
   ) {}
 
   async createCase(userId: string, input: CreateCaseInput): Promise<CaseConversation> {
@@ -39,7 +39,7 @@ export class CaseService {
       return input.attachments?.length ? existingCase : this.resumeExistingCase(userId, existingCase, input);
     }
     const userMessage = createMessage("user", input.openingMessage, input.messageId);
-    const billingCase = await this.caseAttachmentService.save(input.attachments, (attachments) => this.caseRepository.createPendingCase({
+    const billingCase = await this.saveWithAttachments(input.attachments, (attachments) => this.caseRepository.createPendingCase({
       userId,
       caseId: input.caseId,
       title: createTitle(input.openingMessage),
@@ -49,6 +49,19 @@ export class CaseService {
     }));
     if (!billingCase) throw new Error("Unable to save case");
     return billingCase;
+  }
+
+  private saveWithAttachments(
+    files: PendingCaseAttachment[] | undefined,
+    persist: (attachments: StoredCaseAttachment[]) => Promise<CaseConversation | undefined>,
+  ): Promise<CaseConversation | undefined> {
+    return this.attachmentService.save(files, async (attachments) => {
+      const result = await persist(attachments);
+      const retainedIds = new Set(result?.messages.flatMap((message) =>
+        message.attachments?.map(({ id }) => id) ?? [],
+      ));
+      return { result, retainedIds };
+    });
   }
 
   private async resumeExistingCase(
@@ -70,7 +83,7 @@ export class CaseService {
     if (!billingCase) return undefined;
     if (input.messageId && billingCase.messages.some(({ id }) => id === input.messageId)) return billingCase;
     const userMessage = createMessage("user", input.content, input.messageId);
-    const updatedCase = await this.caseAttachmentService.save(input.attachments, (attachments) => this.caseRepository.appendPendingMessage({
+    const updatedCase = await this.saveWithAttachments(input.attachments, (attachments) => this.caseRepository.appendPendingMessage({
       userId,
       caseId: input.caseId,
       userMessage,
@@ -131,7 +144,7 @@ export class CaseService {
 
   async findAttachment(userId: string, attachmentId: string) {
     const attachment = await this.caseRepository.findAttachment(userId, attachmentId);
-    return attachment ? this.caseAttachmentService.read(attachment) : undefined;
+    return attachment ? this.attachmentService.read(attachment) : undefined;
   }
 
   listCases(userId: string): Promise<CaseSummary[]> {

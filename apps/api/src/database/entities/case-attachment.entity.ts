@@ -8,7 +8,7 @@ export class CaseAttachmentEntity implements StoredCaseAttachment {
   mediaType!: string;
   size!: number;
   data!: Buffer | null;
-  cloudinaryPublicId!: string | null;
+  storageKey!: string | null;
 }
 
 export const caseAttachmentSchema = new EntitySchema<CaseAttachmentEntity>({
@@ -22,6 +22,6 @@ export const caseAttachmentSchema = new EntitySchema<CaseAttachmentEntity>({
     mediaType: { name: "media_type", type: "varchar", length: 32 },
     size: { type: "integer" },
     data: { type: "bytea", nullable: true, select: false },
-    cloudinaryPublicId: { name: "cloudinary_public_id", type: "text", nullable: true, select: false },
+    storageKey: { name: "cloudinary_public_id", type: "text", nullable: true, select: false },
   },
 });
