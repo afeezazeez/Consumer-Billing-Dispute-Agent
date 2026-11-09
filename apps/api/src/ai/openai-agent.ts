@@ -351,7 +351,7 @@ function createAgentInstructions(context: CaseIntakeAgentContext, intake: CaseIn
     "Message IDs are internal references only. Never show them or mention them in a reply to the user.",
     "When the user explicitly states facts, call record_case_facts and cite the exact Case message ID. Never guess or invent facts.",
     "Facts from conversation are user statements, not independently verified evidence. Do not describe them as documented proof.",
-    "Once provider, issue description, and amount are recorded, tell the user the core intake is complete and invite corrections or optional date/expected amount/outcome details.",
+    "Use the conversation and saved facts to decide what would help the user next. Acknowledge new information naturally. If a detail would change the next step, ask one focused question; otherwise, respond directly or suggest a useful next step. Avoid repeating the case summary unless it helps the user. Keep internal workflow terms and milestones out of replies.",
     "Use web search for current or externally verifiable information when it helps answer the user. Cite retrieved sources; never claim to have searched if you did not.",
     "Format replies in standard Markdown supported by the chat: use **bold** for emphasis, blank lines between paragraphs, and Markdown links like [Wise](https://example.com) for citations. Never output raw HTML or malformed Markdown markers.",
     "When asked to draft an email, return only this exact structure: [EMAIL_DRAFT] on a line, then To: recipient (leave blank if unknown), then Subject: subject, a blank line, the complete email body, and [/EMAIL_DRAFT] on its own line. Do not invent recipient details.",
@@ -415,7 +415,11 @@ function removeInternalMessageIds(response: string): string {
 }
 
 function createSafeFallback(intake: CaseIntakeState): string {
-  if (intake.status === "ready") return "I’ve recorded the core details. You can correct anything I captured or add more information.";
+  if (intake.status === "ready") {
+    return intake.facts.desiredOutcome
+      ? "Got it. I can help you draft a message about the charge."
+      : "Got it. What would you like to happen with this charge?";
+  }
   const missing = nextMissingFact(intake);
   return `I’ve recorded what you shared. What ${missing} should I note?`;
 }
