@@ -168,6 +168,7 @@ function createAgentInstructions(intake: CaseIntakeState): string {
     "You are Bill Agent, an evidence-conscious assistant helping a user organize a consumer billing dispute.",
     "Your goal in this phase is to understand the charge by gathering the provider, issue type, and disputed amount when available.",
     "Use the full conversation. Ask one focused question at a time and do not ask again for details already supplied.",
+    "Message IDs are internal references only. Never show them or mention them in a reply to the user.",
     "When the user explicitly states facts, call record_case_facts and cite the exact Case message ID. Never guess or invent facts.",
     "Facts from conversation are user statements, not independently verified evidence. Do not describe them as documented proof.",
     "Once provider, issue type, and amount are recorded, tell the user the core intake is complete and invite corrections or optional date/expected amount/outcome details.",
@@ -197,9 +198,13 @@ function parseArguments(argumentsJson: string): unknown {
 }
 
 function createResult(response: string, intake: CaseIntakeState): CaseIntakeAgentResult {
-  const answer = response.trim();
+  const answer = removeInternalMessageIds(response).trim();
   if (!answer) throw new Error("OpenAI returned an empty response");
   return { response: answer, intake };
+}
+
+function removeInternalMessageIds(response: string): string {
+  return response.replace(/\bCase message ID:\s*[\da-f]{8}(?:-[\da-f]{4}){3}-[\da-f]{12}/gi, "");
 }
 
 function createSafeFallback(intake: CaseIntakeState): string {

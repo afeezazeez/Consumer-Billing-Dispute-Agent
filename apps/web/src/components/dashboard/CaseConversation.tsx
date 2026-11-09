@@ -10,7 +10,6 @@ import {
   type KeyboardEvent as ReactKeyboardEvent,
 } from "react";
 import { CaseComposer } from "./CaseComposer";
-import { CaseIntakeSummary } from "./CaseIntakeSummary";
 import type { CaseConversation as CaseConversationData } from "./dashboard.types";
 
 interface CaseConversationProps {
@@ -177,14 +176,11 @@ export function CaseConversation({
             ))}
             {isSending && (
               <div aria-live="polite" className="claude-agent-thinking" role="status">
-                <span aria-hidden="true" className="claude-agent-spinner" />
-                <span>Thinking…</span>
+                <span className="claude-agent-thinking-text">Thinking…</span>
               </div>
             )}
           </div>
         </div>
-
-        <CaseIntakeSummary billingCase={billingCase} />
 
         {/* Anchored Composer */}
         <div className="claude-chat-composer-container">
