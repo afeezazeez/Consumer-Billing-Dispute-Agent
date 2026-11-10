@@ -227,13 +227,18 @@ export function CaseConversation({
         {/* Messages Feed */}
         <div className="claude-chat-history" aria-live="polite" onScroll={handleHistoryScroll} ref={historyRef}>
           <div className="claude-chat-history-inner" ref={historyContentRef}>
-            {billingCase.messages.map((message) => (
-              <article
-                className={`claude-message-row ${message.role}`}
-                id={message.emailDraft ? `case-draft-${message.id}` : undefined}
-                tabIndex={message.emailDraft ? -1 : undefined}
-                key={message.id}
-              >
+            {billingCase.messages.map((message, index) => (
+              <div className="claude-message-group" key={message.id}>
+                {shouldShowDateDivider(message.createdAt, billingCase.messages[index - 1]?.createdAt) && (
+                  <time className="claude-message-date" dateTime={message.createdAt} aria-label={formatMessageDate(message.createdAt)}>
+                    {formatMessageDateLabel(message.createdAt)}
+                  </time>
+                )}
+                <article
+                  className={`claude-message-row ${message.role}`}
+                  id={message.emailDraft ? `case-draft-${message.id}` : undefined}
+                  tabIndex={message.emailDraft ? -1 : undefined}
+                >
                 {message.role === "assistant" && (
                   <AgentActivityDisclosure activities={message.toolActivities} />
                 )}
@@ -248,7 +253,7 @@ export function CaseConversation({
                     : <p>{message.content}</p>}
                 </div>
                 {message.role === "assistant" && !message.emailDraft && (
-                  <CaseMessageActions />
+                  <CaseMessageActions messageId={message.id} createdAt={message.createdAt} />
                 )}
                 {message.role === "assistant" && (
                   <CaseMessageSources sources={getUnmentionedSources(message.content, message.sources)} />
@@ -268,7 +273,8 @@ export function CaseConversation({
                     onRetry={onRetryMessage}
                   />
                 )}
-              </article>
+                </article>
+              </div>
             ))}
             {isAgentWorking && (
               <div aria-live="polite" className="claude-agent-thinking" role="status">
@@ -334,4 +340,36 @@ function isSafeWebUrl(url: string): boolean {
   } catch {
     return false;
   }
+}
+
+function shouldShowDateDivider(createdAt: string, previousCreatedAt?: string): boolean {
+  return !previousCreatedAt || getLocalDateKey(createdAt) !== getLocalDateKey(previousCreatedAt);
+}
+
+function formatMessageDateLabel(createdAt: string): string {
+  const date = new Date(createdAt);
+  const today = new Date();
+  const yesterday = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 1);
+  if (getLocalDateKey(createdAt) === getLocalDateKey(today.toISOString())) return "Today";
+  if (getLocalDateKey(createdAt) === getLocalDateKey(yesterday.toISOString())) return "Yesterday";
+  return new Intl.DateTimeFormat(undefined, {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  }).format(date);
+}
+
+function formatMessageDate(createdAt: string): string {
+  return new Intl.DateTimeFormat(undefined, {
+    weekday: "long",
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  }).format(new Date(createdAt));
+}
+
+function getLocalDateKey(value: string): string {
+  const date = new Date(value);
+  return `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
 }

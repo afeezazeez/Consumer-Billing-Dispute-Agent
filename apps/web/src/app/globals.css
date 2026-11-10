@@ -1495,6 +1495,19 @@ button, a {
   max-width: var(--chat-content-width);
 }
 
+.claude-message-group {
+  display: contents;
+}
+
+.claude-message-date {
+  align-self: center;
+  color: var(--dash-ink-soft);
+  font-size: 13px;
+  line-height: 1.4;
+  padding: 4px 10px;
+  text-align: center;
+}
+
 .case-next-action-card {
   background: #fff;
   border: 1px solid var(--dash-line);
@@ -2738,8 +2751,17 @@ button, a {
   }
 }
 .case-message-actions {
+  align-items: center;
   display: flex;
+  gap: 2px;
   margin: 2px 0 4px;
+}
+
+.case-message-time {
+  color: var(--dash-ink-soft);
+  font-size: 12px;
+  line-height: 1;
+  margin-left: 5px;
 }
 
 .case-message-actions button,
