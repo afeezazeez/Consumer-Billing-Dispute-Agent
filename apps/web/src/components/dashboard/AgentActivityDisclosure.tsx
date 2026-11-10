@@ -56,6 +56,7 @@ function getActivitySummary(activities: CaseAgentToolActivity[], isLive: boolean
     return `Searched the web, read ${openPages} pages`;
   }
   if (activities.some((activity) => activity.name === "web_search")) return "Searched the web";
+  if (activities.some((activity) => activity.name === "search_billing_guidance")) return "Searched billing guidance";
   return isLive && latestActivity ? latestActivity.label : `${activities.length} tool${activities.length === 1 ? "" : "s"} used`;
 }
 
@@ -73,6 +74,7 @@ function getStepLabel(activity: CaseAgentToolActivity): string {
   if (activity.operation === "open_page") return "Opened a page";
   if (activity.operation === "find_in_page" && activity.detail) return `Searched within a page for “${activity.detail}”`;
   if (activity.name === "web_search" && activity.detail) return `Searched for “${activity.detail}”`;
+  if (activity.name === "search_billing_guidance") return activity.detail ?? "Searched billing guidance";
   if (activity.name === "web_search" && activity.status === "completed") return "Searched the web";
   if (activity.name === "web_search") return "Searching the web";
   return activity.label;

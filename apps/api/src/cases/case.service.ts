@@ -5,7 +5,7 @@ import type { PendingCaseAttachment, StoredCaseAttachment } from "./case-attachm
 import { randomUUID } from "node:crypto";
 import { createEmptyCaseIntake } from "./case-intake";
 import type { CaseAgentToolActivity, CaseIntakeAgent, CaseIntakeAgentResult } from "./case-intake-agent";
-import type { AgentTurnJob } from "./agent-turn-job.repository";
+import type { AgentTurnQueueJob } from "../jobs/job.types";
 import type { CaseConversation, CaseMessageRecord, CaseRepository, CaseSummary } from "./case.repository";
 
 export interface CreateCaseInput {
@@ -113,7 +113,7 @@ export class CaseService {
     return retryCase;
   }
 
-  async processAgentTurn(job: AgentTurnJob, userFirstName?: string): Promise<CaseConversation> {
+  async processAgentTurn(job: AgentTurnQueueJob, userFirstName?: string): Promise<CaseConversation> {
     const billingCase = await this.caseRepository.findForUser(job.userId, job.caseId);
     if (!billingCase) throw new Error("Case disappeared while processing the message");
     const userMessage = billingCase.messages.find((message) => message.id === job.messageId);
@@ -150,7 +150,11 @@ export class CaseService {
     return completedCase;
   }
 
-  private async readTurnDocuments(job: AgentTurnJob, message: CaseMessageRecord, history: CaseMessageRecord[]): Promise<void> {
+  async failAgentTurn(userId: string, caseId: string, messageId: string): Promise<void> {
+    await this.caseRepository.markMessageFailed(userId, caseId, messageId);
+  }
+
+  private async readTurnDocuments(job: AgentTurnQueueJob, message: CaseMessageRecord, history: CaseMessageRecord[]): Promise<void> {
     const unread = this.findAttachmentsToRead(message, history);
     if (!unread.length) return;
     const activities = (message.toolActivities ?? []).filter(({ name }) => name !== "read_documents");
@@ -184,7 +188,7 @@ export class CaseService {
     }
   }
 
-  private writeDocumentActivity(job: AgentTurnJob, message: CaseMessageRecord, activities: CaseAgentToolActivity[]): Promise<void> {
+  private writeDocumentActivity(job: AgentTurnQueueJob, message: CaseMessageRecord, activities: CaseAgentToolActivity[]): Promise<void> {
     message.toolActivities = activities;
     return this.caseRepository.updatePendingMessageActivities(job.userId, job.caseId, job.messageId, activities);
   }

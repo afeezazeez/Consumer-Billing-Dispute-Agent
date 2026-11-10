@@ -142,6 +142,8 @@ export class OpenAiAgent implements CaseIntakeAgent {
     }
     const result = await agentTool.execute(parseArguments(call.arguments), context);
     reportToolActivity(context.progress, call.id ?? call.call_id, call.name, "completed");
+    for (const source of result.activity?.sources ?? []) addUniqueSource(context.progress.sources, source);
+    reportToolActivity(context.progress, call.id ?? call.call_id, call.name, "completed", result.activity?.detail, result.activity?.sources);
     return { intake: result.intake, output: result.output };
   }
 
@@ -370,7 +372,8 @@ function createAgentInstructions(context: CaseIntakeAgentContext, intake: CaseIn
     "Keep amounts or other details from different sources separate. Use explicit user corrections or confirmations in later advice and update the saved next action when they change it. Do not pass extracted fields to record_case_facts, which records user chat statements.",
     "Facts from conversation are user statements, not independently verified evidence. Do not describe them as documented proof.",
     "Use the conversation and saved facts to decide what would help the user next. Acknowledge new information naturally. If a detail would change the next step, ask one focused question; otherwise, respond directly or suggest a useful next step. Avoid repeating the case summary unless it helps the user. Keep internal workflow terms and milestones out of replies.",
-    "Use web search for current or externally verifiable information when it helps answer the user. Cite retrieved sources; never claim to have searched if you did not.",
+    "For provider-specific billing, refund, cancellation, or dispute guidance, use search_billing_guidance first. Use only relevant returned excerpts, respect their jurisdiction labels, and cite returned source URLs as Markdown links. If no relevant official guidance is available, say so and then use web search if current research is needed.",
+    "Use web search for current information when it helps answer the user. Cite retrieved sources; never claim to have searched if you did not.",
     "Format replies in standard Markdown supported by the chat: use **bold** for emphasis, blank lines between paragraphs, and Markdown links like [Wise](https://example.com) for citations. Never output raw HTML or malformed Markdown markers.",
     "When asked to draft an email, use this exact structure for the reply after any case metadata: [EMAIL_DRAFT] on a line, then To: recipient (leave blank if unknown), then Subject: subject, a blank line, the complete email body, and [/EMAIL_DRAFT] on its own line. Do not invent recipient details.",
     "You may answer a direct general-information request, but keep billing-dispute guidance grounded, avoid legal conclusions, and never promise a recovery or send a message for the user.",

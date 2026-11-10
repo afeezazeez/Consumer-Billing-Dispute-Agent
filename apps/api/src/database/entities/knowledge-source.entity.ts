@@ -2,6 +2,7 @@ import { EntitySchema } from "typeorm";
 
 export class KnowledgeSourceEntity {
   id!: string;
+  activeRevisionId!: string | null;
   key!: string;
   provider!: string;
   title!: string;
@@ -28,6 +29,7 @@ export const knowledgeSourceSchema = new EntitySchema<KnowledgeSourceEntity>({
   tableName: "knowledge_sources",
   columns: {
     id: { type: "uuid", primary: true },
+    activeRevisionId: { name: "active_revision_id", type: "uuid", nullable: true },
     key: { type: "varchar", length: 100, unique: true },
     provider: { type: "varchar", length: 100 },
     title: { type: "varchar", length: 300 },

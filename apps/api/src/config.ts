@@ -4,6 +4,7 @@ export interface AppConfig {
   port: number;
   webOrigin: string;
   database: PostgresConfig;
+  redisUrl: string;
   cloudinary?: CloudinaryConfig;
   googleClientId: string;
   googleClientSecret: string;
@@ -27,6 +28,7 @@ export function loadConfig(): AppConfig {
   return {
     port: Number(process.env.PORT ?? 3001),
     webOrigin: requiredValue("WEB_ORIGIN"),
+    redisUrl: requiredValue("REDIS_URL"),
     database: {
       host: requiredValue("DB_HOST"),
       port: Number(process.env.DB_PORT ?? 5432),

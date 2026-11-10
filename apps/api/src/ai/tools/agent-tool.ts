@@ -14,6 +14,7 @@ export interface AgentToolContext {
 export interface AgentToolResult {
   intake: CaseIntakeState;
   output: Record<string, unknown>;
+  activity?: { detail?: string; sources?: { title: string; url: string }[] };
 }
 
 export interface FunctionAgentTool extends AgentToolBase {

@@ -14,10 +14,14 @@ import { AddAgentMessageSourcesAndActivities1710000000004 } from "./migrations/1
 import { CreateAgentTurnJobs1710000000005 } from "./migrations/1710000000005-CreateAgentTurnJobs";
 import { AddProvisionalCaseTitle1710000000006 } from "./migrations/1710000000006-AddProvisionalCaseTitle";
 import { AddCaseNextAction1710000000007 } from "./migrations/1710000000007-AddCaseNextAction";
-import { agentTurnJobSchema, caseMessageSchema, caseSchema } from "./entities/case.entity";
+import { caseMessageSchema, caseSchema } from "./entities/case.entity";
 import { userSchema } from "./entities/user.entity";
 import { knowledgeSourceSchema } from "./entities/knowledge-source.entity";
 import { CreateKnowledgeSourceCatalog1710000000013 } from "./migrations/1710000000013-CreateKnowledgeSourceCatalog";
+import { AddKnowledgeRevisionsAndVectors1710000000014 } from "./migrations/1710000000014-AddKnowledgeRevisionsAndVectors";
+import { ReplaceAgentQueueWithOutbox1710000000015 } from "./migrations/1710000000015-ReplaceAgentQueueWithOutbox";
+import { AddJobDispatchAndTurnLocks1710000000016 } from "./migrations/1710000000016-AddJobDispatchAndTurnLocks";
+import { AddNigeriaConsumerGuidance1710000000017 } from "./migrations/1710000000017-AddNigeriaConsumerGuidance";
 
 export function createDataSource(database: PostgresConfig): DataSource {
   return new DataSource({
@@ -27,7 +31,7 @@ export function createDataSource(database: PostgresConfig): DataSource {
     database: database.database,
     username: database.username,
     password: database.password,
-    entities: [userSchema, caseSchema, caseMessageSchema, agentTurnJobSchema, caseAttachmentSchema, knowledgeSourceSchema],
+    entities: [userSchema, caseSchema, caseMessageSchema, caseAttachmentSchema, knowledgeSourceSchema],
     migrations: [
       CreateUsers1710000000000,
       CreateBillingCases1710000000001,
@@ -43,6 +47,10 @@ export function createDataSource(database: PostgresConfig): DataSource {
       AddDocumentReview1710000000011,
       AddMessageNextAction1710000000012,
       CreateKnowledgeSourceCatalog1710000000013,
+      AddKnowledgeRevisionsAndVectors1710000000014,
+      ReplaceAgentQueueWithOutbox1710000000015,
+      AddJobDispatchAndTurnLocks1710000000016,
+      AddNigeriaConsumerGuidance1710000000017,
     ],
     synchronize: false,
   });

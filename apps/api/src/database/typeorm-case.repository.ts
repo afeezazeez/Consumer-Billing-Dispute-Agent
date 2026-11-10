@@ -15,7 +15,8 @@ import type {
   CreatePendingCase,
   UpdateFailedMessage,
 } from "../cases/case.repository";
-import { AgentTurnJobEntity, CaseEntity, CaseMessageEntity } from "./entities/case.entity";
+import { CaseEntity, CaseMessageEntity } from "./entities/case.entity";
+import { OutboxRepository } from "../jobs/outbox.repository";
 
 export class TypeOrmCaseRepository implements CaseRepository {
   constructor(private readonly dataSource: DataSource) {}
@@ -34,6 +35,15 @@ export class TypeOrmCaseRepository implements CaseRepository {
 
   prepareFailedMessageRetry(input: UpdateFailedMessage): Promise<CaseConversation | undefined> {
     return this.dataSource.transaction((manager) => this.resetFailedMessage(manager, input));
+  }
+
+  async markMessageFailed(userId: string, caseId: string, messageId: string): Promise<void> {
+    await this.dataSource.query(
+      `UPDATE case_messages AS messages SET processing_status = 'failed'
+       FROM billing_cases AS cases WHERE messages.id = $1 AND messages.case_id = $2
+       AND messages.role = 'user' AND messages.processing_status = 'pending'
+       AND cases.id = messages.case_id AND cases.user_id = $3`, [messageId, caseId, userId],
+    );
   }
 
   async updatePendingMessageActivities(userId: string, caseId: string, messageId: string, activities: CaseAgentToolActivity[]): Promise<void> {
@@ -122,7 +132,7 @@ export class TypeOrmCaseRepository implements CaseRepository {
     await manager.getRepository(CaseMessageEntity).insert(message);
     await saveAttachments(manager, message.id, input.attachments);
     await claimAttachments(manager, input, message.id);
-    await enqueueTurn(manager, input.userId, record.id, message.id);
+    await new OutboxRepository(this.dataSource).enqueue(manager, { type: "agent-turn", userId: input.userId, caseId: record.id, messageId: message.id });
     return toConversation(record, [message], await loadAttachments(manager, [message]));
   }
 
@@ -136,7 +146,7 @@ export class TypeOrmCaseRepository implements CaseRepository {
     await messages.insert(toMessageEntity(input.userMessage, input.caseId));
     await saveAttachments(manager, input.userMessage.id, input.attachments);
     await claimAttachments(manager, input, input.userMessage.id);
-    await enqueueTurn(manager, input.userId, input.caseId, input.userMessage.id);
+    await new OutboxRepository(this.dataSource).enqueue(manager, { type: "agent-turn", userId: input.userId, caseId: input.caseId, messageId: input.userMessage.id });
     await cases.update({ id: input.caseId, userId: input.userId }, { updatedAt: input.userMessage.createdAt });
     return readConversation(manager, input.userId, input.caseId);
   }
@@ -174,13 +184,7 @@ export class TypeOrmCaseRepository implements CaseRepository {
       messageUpdate,
     );
     if (!result.affected) return undefined;
-    const jobs = manager.getRepository(AgentTurnJobEntity);
-    const queuedJob = await jobs.findOneBy({ messageId: input.messageId });
-    if (queuedJob) await jobs.update(
-      { id: queuedJob.id },
-      { status: "queued", lockedUntil: null, createdAt: new Date(), updatedAt: new Date() },
-    );
-    else await enqueueTurn(manager, input.userId, input.caseId, input.messageId);
+    await new OutboxRepository(this.dataSource).enqueue(manager, { type: "agent-turn", userId: input.userId, caseId: input.caseId, messageId: input.messageId });
     await manager.getRepository(CaseEntity).update({ id: input.caseId, userId: input.userId }, { updatedAt: new Date() });
     return readConversation(manager, input.userId, input.caseId);
   }
@@ -260,18 +264,6 @@ function toMessage(message: CaseMessageEntity): CaseMessageRecord {
     nextAction: message.nextAction ?? undefined,
   };
 }
-
-async function enqueueTurn(manager: EntityManager, userId: string, caseId: string, messageId: string): Promise<void> {
-  await manager.getRepository(AgentTurnJobEntity).save({
-    id: randomUUID(),
-    userId,
-    caseId,
-    messageId,
-    status: "queued",
-    lockedUntil: null,
-  });
-}
-
 
 async function saveAttachments(manager: EntityManager, messageId: string, files?: StoredCaseAttachment[]): Promise<void> {
   if (files?.length) await manager.getRepository(CaseAttachmentEntity).insert(files.map((file) => ({ ...file, messageId })));

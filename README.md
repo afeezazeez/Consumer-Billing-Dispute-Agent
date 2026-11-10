@@ -1,56 +1,45 @@
 # Consumer Billing Dispute Agent
 
-An evidence-first agent for investigating billing disputes and preparing a clear, reviewable response.
+An evidence-led agent that helps people investigate consumer billing problems, organize supporting records, and prepare a clear next step. The application uses an LLM with explicit tools, a curated retrieval library, and user-controlled drafts; it does not access provider accounts or send messages.
 
-## Overview
+## Architecture
 
-Billing disputes are often difficult to resolve because the relevant information is scattered across invoices, provider correspondence, and a customer's recollection. This application brings those records into a structured case, identifies gaps, and helps the user prepare an informed next step.
+The repository contains three application processes:
 
-The agent analyzes user-provided billing records, asks targeted follow-up questions, builds a source-linked case summary, and drafts a message for the user to review. Its conclusions distinguish documented facts from user statements, inferences, and unresolved questions.
+- `apps/web`: Next.js user interface.
+- `apps/api`: Express API for identity, cases, documents, and chat requests.
+- `apps/api/src/worker.ts`: background worker for agent turns and knowledge-source refresh.
 
-## Initial scope
+PostgreSQL stores users, cases, messages, attachments metadata, the source catalog, versioned knowledge chunks, vectors, and a durable job outbox. Redis runs BullMQ jobs. When a user sends a message, the API saves the message and its outbox event in one PostgreSQL transaction. The API dispatcher publishes that event to Redis; the worker processes the agent turn. This keeps a saved message from losing its job if Redis is temporarily unavailable. Database locks serialize turns within each case.
 
-The first release focuses on billing charge disputes and includes:
+The retrieval pipeline fetches only the configured official-source URLs, uses conditional HTTP requests and content hashes to skip unchanged pages, splits changed text with LangChain, and stores OpenAI embeddings in PostgreSQL with pgvector. A new source revision becomes active only after all its chunks and vectors are stored. Failed refreshes leave the last active revision available and retry with backoff. BullMQ schedules a daily source check and a five-minute due-source retry check; these jobs run in the worker and are not tied to a particular hosting provider.
 
-- A public landing page with a fictional case preview; it does not create or process a sample case.
-- Private cases that require Google sign-in before users provide records.
-- Document extraction with user review and correction of extracted details.
-- Evidence-linked summaries, case status, and suggested next steps.
-- Editable message drafts with explicit user approval before use.
+## Local setup
 
-The initial release does not access provider accounts, send messages, make payments, or guarantee dispute outcomes. It supports the user's decision-making and does not provide legal representation.
+Requirements: Node.js, PostgreSQL with the `vector` extension available, and Redis. Create the application database and enable pgvector once using a database owner/admin account:
 
-## Product principles
-
-- **Evidence over assertion:** show the source for important claims and label uncertainty.
-- **User control:** let users correct extracted details and approve any proposed action.
-- **Privacy by default:** collect only case-relevant information and isolate each user's records.
-- **Safe failure:** ask for missing information or stop when the evidence is insufficient.
-
-## Repository structure
-
-```text
-apps/
-  web/       Next.js user interface
-  api/       Node.js + Express API
-packages/    Shared TypeScript contracts and validation (added when needed)
+```sql
+CREATE EXTENSION IF NOT EXISTS vector;
 ```
 
-The frontend and API will be separate deployable services in Railway. PostgreSQL will run as a separate Railway database service. They remain in one Git repository so a feature and its related frontend/backend changes can be reviewed and committed together.
-
-## Project status
-
-The Next.js application lives in `apps/web`; the TypeScript Express API lives in `apps/api`. The API currently exposes a health check. PostgreSQL has not been added yet.
-
-## Local development
-
-Install dependencies at the repository root with `npm install`, then run the apps in separate terminals:
+Copy `apps/api/.env.example` to `apps/api/.env` and fill in the database, Redis, Google OAuth, session, OpenAI, and Cloudinary values. Then install dependencies and start each process in a separate terminal:
 
 ```bash
+npm install
 npm run dev:web
 npm run dev:api
+npm run dev:worker
 ```
 
-The frontend runs at `http://localhost:3000`; the API runs at `http://localhost:3001`. Check the API at `http://localhost:3001/health`.
+The web app uses `http://localhost:3000`; the API uses `http://localhost:3001`. The worker and API both apply pending database migrations at startup, protected by a PostgreSQL advisory lock.
 
-Backend environment variable names are documented in `apps/api/.env.example`. The local `apps/api/.env` file is ignored by Git. Google sign-in and database integration are the next implementation step; the API does not consume those settings yet.
+For a production deployment, run the web app, API, and worker as separate processes/services from this repository. Provide PostgreSQL and Redis endpoints through environment variables; keep the worker running for agent turns and scheduled refreshes.
+
+## Build and lint
+
+```bash
+npm run build:api
+npm run lint:api
+npm run build:web
+npm run lint:web
+```

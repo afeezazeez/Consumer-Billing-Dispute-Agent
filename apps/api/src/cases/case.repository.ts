@@ -77,6 +77,7 @@ export interface CaseRepository {
   appendPendingMessage(input: AppendPendingMessage): Promise<CaseConversation | undefined>;
   completeTurn(input: CompleteCaseTurn): Promise<CaseConversation | undefined>;
   prepareFailedMessageRetry(input: UpdateFailedMessage): Promise<CaseConversation | undefined>;
+  markMessageFailed(userId: string, caseId: string, messageId: string): Promise<void>;
   updatePendingMessageActivities(userId: string, caseId: string, messageId: string, activities: CaseAgentToolActivity[]): Promise<void>;
   listForUser(userId: string): Promise<CaseSummary[]>;
   findForUser(userId: string, caseId: string): Promise<CaseConversation | undefined>;
