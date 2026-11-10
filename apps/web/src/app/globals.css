@@ -2753,7 +2753,7 @@ button, a {
 .case-message-actions {
   align-items: center;
   display: flex;
-  gap: 2px;
+  gap: 0;
   margin: 2px 0 4px;
 }
 
@@ -2761,7 +2761,7 @@ button, a {
   color: var(--dash-ink-soft);
   font-size: 12px;
   line-height: 1;
-  margin-left: 5px;
+  margin-left: 2px;
 }
 
 .case-message-actions button,
