@@ -29,6 +29,7 @@ function toKnowledgeSource(entity: KnowledgeSourceEntity): KnowledgeSource {
     provider: entity.provider,
     title: entity.title,
     url: entity.url,
+    jurisdictionCode: entity.jurisdictionCode ?? undefined,
     jurisdictionScope: entity.jurisdictionScope,
     language: entity.language,
     refreshIntervalHours: entity.refreshIntervalHours,

@@ -45,16 +45,18 @@ export class TypeOrmKnowledgeContentRepository implements KnowledgeContentReposi
     );
   }
 
-  async search(embedding: number[], limit: number): Promise<KnowledgeChunkMatch[]> {
+  async search(embedding: number[], limit: number, jurisdictionCode?: string): Promise<KnowledgeChunkMatch[]> {
     const vector = `[${embedding.join(",")}]`;
     return await this.dataSource.query(
-      `SELECT chunks.content, source.title, source.url, source.jurisdiction_scope AS "jurisdictionScope",
+      `SELECT chunks.content, source.title, source.url, source.jurisdiction_code AS "jurisdictionCode",
+        source.jurisdiction_scope AS "jurisdictionScope",
         1 - (chunks.embedding <=> $1::vector) AS similarity
        FROM knowledge_chunks chunks
        JOIN knowledge_source_revisions revision ON revision.id = chunks.revision_id AND revision.status = 'active'
        JOIN knowledge_sources source ON source.active_revision_id = revision.id AND source.enabled = true
+       WHERE source.jurisdiction_code IS NULL OR source.jurisdiction_code = $3
        ORDER BY chunks.embedding <=> $1::vector LIMIT $2`,
-      [vector, limit],
+      [vector, limit, jurisdictionCode ?? ""],
     ) as KnowledgeChunkMatch[];
   }
 }

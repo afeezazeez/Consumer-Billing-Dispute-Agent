@@ -4,6 +4,7 @@ export interface KnowledgeSource {
   provider: string;
   title: string;
   url: string;
+  jurisdictionCode?: string;
   jurisdictionScope: string;
   language: string;
   refreshIntervalHours: number;

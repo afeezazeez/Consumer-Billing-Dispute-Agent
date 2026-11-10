@@ -7,6 +7,7 @@ export class KnowledgeSourceEntity {
   provider!: string;
   title!: string;
   url!: string;
+  jurisdictionCode!: string | null;
   jurisdictionScope!: string;
   language!: string;
   refreshIntervalHours!: number;
@@ -34,6 +35,7 @@ export const knowledgeSourceSchema = new EntitySchema<KnowledgeSourceEntity>({
     provider: { type: "varchar", length: 100 },
     title: { type: "varchar", length: 300 },
     url: { type: "text" },
+    jurisdictionCode: { name: "jurisdiction_code", type: "varchar", length: 2, nullable: true },
     jurisdictionScope: { name: "jurisdiction_scope", type: "varchar", length: 200 },
     language: { type: "varchar", length: 16, default: "en" },
     refreshIntervalHours: { name: "refresh_interval_hours", type: "integer", default: 24 },

@@ -22,6 +22,7 @@ import { AddKnowledgeRevisionsAndVectors1710000000014 } from "./migrations/17100
 import { ReplaceAgentQueueWithOutbox1710000000015 } from "./migrations/1710000000015-ReplaceAgentQueueWithOutbox";
 import { AddJobDispatchAndTurnLocks1710000000016 } from "./migrations/1710000000016-AddJobDispatchAndTurnLocks";
 import { AddNigeriaConsumerGuidance1710000000017 } from "./migrations/1710000000017-AddNigeriaConsumerGuidance";
+import { AddKnowledgeSourceJurisdictions1710000000018 } from "./migrations/1710000000018-AddKnowledgeSourceJurisdictions";
 
 export function createDataSource(database: PostgresConfig): DataSource {
   return new DataSource({
@@ -51,6 +52,7 @@ export function createDataSource(database: PostgresConfig): DataSource {
       ReplaceAgentQueueWithOutbox1710000000015,
       AddJobDispatchAndTurnLocks1710000000016,
       AddNigeriaConsumerGuidance1710000000017,
+      AddKnowledgeSourceJurisdictions1710000000018,
     ],
     synchronize: false,
   });

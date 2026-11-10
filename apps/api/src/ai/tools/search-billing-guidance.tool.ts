@@ -1,6 +1,7 @@
 import type { KnowledgeRetrievalService } from "../../knowledge/knowledge-retrieval.service";
 import type { FunctionTool } from "openai/resources/responses/responses";
 import type { AgentToolContext, AgentToolResult, FunctionAgentTool } from "./agent-tool";
+import { extractExplicitJurisdiction } from "../../knowledge/extract-explicit-jurisdiction";
 
 export class SearchBillingGuidanceTool implements FunctionAgentTool {
   readonly kind = "function" as const;
@@ -18,13 +19,20 @@ export class SearchBillingGuidanceTool implements FunctionAgentTool {
     if (typeof query !== "string" || query.trim().length < 3 || query.length > 500) {
       return { intake: context.intake, output: { success: false, message: "Search query was invalid." } };
     }
-    const matches = await this.knowledgeRetrievalService.search(query.trim());
+    const jurisdictionCode = extractExplicitJurisdiction(context.messages);
+    const matches = await this.knowledgeRetrievalService.search(query.trim(), jurisdictionCode);
+    const sources = uniqueSources(matches.map(({ title, url }) => ({ title, url })));
     return {
       intake: context.intake,
-      output: { success: true, results: matches.map(({ title, url, jurisdictionScope, content }) => ({ title, url, jurisdiction: jurisdictionScope, excerpt: content })) },
-      activity: { detail: `Found ${matches.length} relevant guidance excerpts`, sources: uniqueSources(matches.map(({ title, url }) => ({ title, url }))) },
+      output: { success: true, results: matches.map(({ title, url, jurisdictionScope, jurisdictionCode, content }) => ({ title, url, jurisdiction: jurisdictionScope, jurisdictionCode, excerpt: content })) },
+      activity: { detail: describeSources(sources.length), sources },
     };
   }
+}
+
+function describeSources(count: number): string {
+  if (count === 0) return "No sufficiently relevant guidance sources matched";
+  return `Found guidance from ${count} official source${count === 1 ? "" : "s"}`;
 }
 
 function uniqueSources(sources: { title: string; url: string }[]) {
