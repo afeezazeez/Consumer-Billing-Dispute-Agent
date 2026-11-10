@@ -4,7 +4,7 @@ import type Redis from "ioredis";
 import type { DataSource } from "typeorm";
 import type { AppConfig } from "../config";
 import { createCaseServices } from "../cases/case-services";
-import { CaseTurnLockRepository } from "./case-turn-lock.repository";
+import { CaseTurnLockRepository } from "../database/case-turn-lock.repository";
 import { BACKGROUND_QUEUE_NAME, type BackgroundJob } from "./job.types";
 import { AgentTurnProcessor } from "./agent-turn.processor";
 import { BackgroundJobQueue } from "./background-job-queue";
