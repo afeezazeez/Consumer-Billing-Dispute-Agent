@@ -21,8 +21,10 @@ export class OutboxRepository {
            SELECT id FROM background_job_outbox WHERE status IN ('pending', 'publishing') AND available_at <= NOW()
              AND (locked_until IS NULL OR locked_until < NOW()) ORDER BY created_at
              FOR UPDATE SKIP LOCKED LIMIT $1
-         ) UPDATE background_job_outbox AS event SET status = 'publishing', locked_until = NOW() + INTERVAL '60 seconds', attempts = attempts + 1
-           FROM candidates WHERE event.id = candidates.id RETURNING event.id, event.payload AS job`, [limit],
+         ), claimed AS (
+           UPDATE background_job_outbox AS event SET status = 'publishing', locked_until = NOW() + INTERVAL '60 seconds', attempts = attempts + 1
+             FROM candidates WHERE event.id = candidates.id RETURNING event.id, event.payload
+         ) SELECT id, payload AS job FROM claimed`, [limit],
       ) as { id: string; job: BackgroundJob }[];
       return rows.map((row) => ({ id: row.id, job: row.job }));
     });
