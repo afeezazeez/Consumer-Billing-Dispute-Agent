@@ -2752,16 +2752,18 @@ button, a {
 }
 .case-message-actions {
   align-items: center;
+  align-self: flex-start;
   display: flex;
   gap: 0;
   margin: 2px 0 4px;
+  width: fit-content;
 }
 
 .case-message-time {
   color: var(--dash-ink-soft);
   font-size: 12px;
   line-height: 1;
-  margin-left: 2px;
+  margin-left: 0;
 }
 
 .case-message-actions button,
@@ -2773,10 +2775,10 @@ button, a {
   color: var(--dash-ink-soft);
   cursor: pointer;
   display: inline-flex;
-  height: 34px;
+  height: 30px;
   justify-content: center;
-  padding: 7px;
-  width: 34px;
+  padding: 5px;
+  width: 30px;
 }
 
 .case-message-actions button:hover,
