@@ -16,6 +16,8 @@ import { AddProvisionalCaseTitle1710000000006 } from "./migrations/1710000000006
 import { AddCaseNextAction1710000000007 } from "./migrations/1710000000007-AddCaseNextAction";
 import { agentTurnJobSchema, caseMessageSchema, caseSchema } from "./entities/case.entity";
 import { userSchema } from "./entities/user.entity";
+import { knowledgeSourceSchema } from "./entities/knowledge-source.entity";
+import { CreateKnowledgeSourceCatalog1710000000013 } from "./migrations/1710000000013-CreateKnowledgeSourceCatalog";
 
 export function createDataSource(database: PostgresConfig): DataSource {
   return new DataSource({
@@ -25,7 +27,7 @@ export function createDataSource(database: PostgresConfig): DataSource {
     database: database.database,
     username: database.username,
     password: database.password,
-    entities: [userSchema, caseSchema, caseMessageSchema, agentTurnJobSchema, caseAttachmentSchema],
+    entities: [userSchema, caseSchema, caseMessageSchema, agentTurnJobSchema, caseAttachmentSchema, knowledgeSourceSchema],
     migrations: [
       CreateUsers1710000000000,
       CreateBillingCases1710000000001,
@@ -40,6 +42,7 @@ export function createDataSource(database: PostgresConfig): DataSource {
       StageCaseAttachments1710000000010,
       AddDocumentReview1710000000011,
       AddMessageNextAction1710000000012,
+      CreateKnowledgeSourceCatalog1710000000013,
     ],
     synchronize: false,
   });
