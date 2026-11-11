@@ -8,7 +8,7 @@ import { OutboxDispatcher } from "./jobs/outbox-dispatcher";
 import { OutboxRepository } from "./jobs/outbox.repository";
 import { loadConfig, type PostgresConfig } from "./config";
 import { createDataSource } from "./database/data-source";
-import { runMigrations } from "./database/migrate";
+import { initializeDatabase } from "./database/initialize-database";
 import { createApp } from "./app";
 
 async function startServer(): Promise<void> {
@@ -29,10 +29,7 @@ async function startServer(): Promise<void> {
 }
 
 async function connectDatabase(database: PostgresConfig) {
-  const dataSource = createDataSource(database);
-  await dataSource.initialize();
-  await runMigrations(dataSource);
-  return dataSource;
+  return initializeDatabase(createDataSource(database));
 }
 
 function createPostgresSessionStore(database: PostgresConfig) {

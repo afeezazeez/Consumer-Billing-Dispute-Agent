@@ -1,15 +1,13 @@
 import "dotenv/config";
 import { loadConfig } from "./config";
 import { createDataSource } from "./database/data-source";
-import { runMigrations } from "./database/migrate";
+import { initializeDatabase } from "./database/initialize-database";
 import { createRedisConnection } from "./jobs/redis-connection";
 import { BackgroundWorker } from "./jobs/background-worker";
 
 async function startWorker(): Promise<void> {
   const config = loadConfig();
-  const dataSource = createDataSource(config.database);
-  await dataSource.initialize();
-  await runMigrations(dataSource);
+  const dataSource = await initializeDatabase(createDataSource(config.database));
   const redis = createRedisConnection(config.redisUrl);
   await redis.ping();
   const worker = new BackgroundWorker(redis, dataSource, config);

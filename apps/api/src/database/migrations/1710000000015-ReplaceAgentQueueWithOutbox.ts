@@ -15,12 +15,6 @@ export class ReplaceAgentQueueWithOutbox1710000000015 implements MigrationInterf
         created_at timestamptz NOT NULL DEFAULT NOW()
       );
       CREATE INDEX background_job_outbox_pending_idx ON background_job_outbox(status, available_at, created_at);
-      INSERT INTO background_job_outbox (job_type, payload)
-      SELECT 'agent-turn', jsonb_build_object('type', 'agent-turn', 'userId', jobs.user_id, 'caseId', jobs.case_id, 'messageId', jobs.message_id)
-      FROM agent_turn_jobs jobs
-      JOIN case_messages messages ON messages.id = jobs.message_id
-      WHERE messages.role = 'user' AND messages.processing_status = 'pending'
-      ON CONFLICT DO NOTHING;
       DROP TABLE agent_turn_jobs;
     `);
   }

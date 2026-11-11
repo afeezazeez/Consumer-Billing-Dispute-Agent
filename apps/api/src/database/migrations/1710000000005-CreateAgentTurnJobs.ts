@@ -17,12 +17,6 @@ export class CreateAgentTurnJobs1710000000005 implements MigrationInterface {
         updated_at timestamptz NOT NULL DEFAULT NOW()
       );
       CREATE INDEX agent_turn_jobs_claim_idx ON agent_turn_jobs(status, created_at);
-      INSERT INTO agent_turn_jobs (id, user_id, case_id, message_id, status)
-      SELECT gen_random_uuid(), cases.user_id, messages.case_id, messages.id, 'queued'
-      FROM case_messages AS messages
-      JOIN billing_cases AS cases ON cases.id = messages.case_id
-      WHERE messages.role = 'user' AND messages.processing_status = 'pending'
-      ON CONFLICT (message_id) DO NOTHING;
     `);
   }
 
