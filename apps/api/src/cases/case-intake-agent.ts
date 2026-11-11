@@ -2,8 +2,10 @@ import type { CaseIntakeState } from "./case-intake";
 import type { CaseMessageRecord } from "./case.repository";
 
 export interface CaseIntakeAgentContext {
+  caseId: string;
   nextAction?: CaseNextAction;
   generateCaseTitle?: boolean;
+  messageId: string;
   messages: CaseMessageRecord[];
   intake: CaseIntakeState;
   userFirstName?: string;

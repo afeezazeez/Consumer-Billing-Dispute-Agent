@@ -50,14 +50,21 @@ function getActivitySummary(activities: CaseAgentToolActivity[], isLive: boolean
     return runningActivity.name === "web_search" ? "Searching the web" : runningActivity.label;
   }
   if (activities.some((activity) => activity.name === "web_search") && openPages === 1) {
-    return "Searched the web, read a page";
+    return completedSummary(activities, "Searched the web, read a page");
   }
   if (activities.some((activity) => activity.name === "web_search") && openPages > 1) {
-    return `Searched the web, read ${openPages} pages`;
+    return completedSummary(activities, `Searched the web, read ${openPages} pages`);
   }
-  if (activities.some((activity) => activity.name === "web_search")) return "Searched the web";
-  if (activities.some((activity) => activity.name === "search_billing_guidance")) return "Searched billing guidance";
-  return isLive && latestActivity ? latestActivity.label : `${activities.length} tool${activities.length === 1 ? "" : "s"} used`;
+  if (activities.some((activity) => activity.name === "web_search")) return completedSummary(activities, "Searched the web");
+  if (activities.some((activity) => activity.name === "search_billing_guidance")) {
+    return completedSummary(activities, "Searched billing guidance");
+  }
+  return isLive && latestActivity ? latestActivity.label : `${activities.length} tool call${activities.length === 1 ? "" : "s"}`;
+}
+
+function completedSummary(activities: CaseAgentToolActivity[], label: string): string {
+  const count = activities.length;
+  return `${count} tool call${count === 1 ? "" : "s"} · ${label}`;
 }
 
 function getSafeSources(sources: NonNullable<CaseAgentToolActivity["sources"]>) {

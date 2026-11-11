@@ -10,9 +10,29 @@ The repository contains three application processes:
 - `apps/api`: Express API for identity, cases, documents, and chat requests.
 - `apps/api/src/worker.ts`: background worker for agent turns and knowledge-source refresh.
 
-PostgreSQL stores users, cases, messages, attachments metadata, the source catalog, versioned knowledge chunks, vectors, and a durable job outbox. Redis runs BullMQ jobs. When a user sends a message, the API saves the message and its outbox event in one PostgreSQL transaction. The API dispatcher publishes that event to Redis; the worker processes the agent turn. This keeps a saved message from losing its job if Redis is temporarily unavailable. Database locks serialize turns within each case.
+PostgreSQL stores users, cases, messages, attachment metadata, the source catalog, versioned knowledge chunks, vectors, a durable job outbox, and LangGraph workflow checkpoints. Redis runs BullMQ jobs. When a user sends a message, the API saves the message and its outbox event in one PostgreSQL transaction. The API dispatcher publishes that event to Redis; the worker processes the agent turn. This keeps a saved message from losing its job if Redis is temporarily unavailable. Database locks serialize turns within each case.
+
+LangGraph coordinates each agent turn through explicit model, tool, final-response, and waiting-for-user steps. It limits a turn to three application-tool calls. Checkpoints use the case ID as the thread ID and the incoming message ID as a stable namespace, so retries of one message reuse its workflow history instead of creating another namespace. They store only workflow control state and message IDs. Conversation text, extracted document contents, and model prompts remain in the existing case flow and are not copied into graph state. A later user reply starts a new graph run using the conversation loaded from PostgreSQL. Once the completed assistant response has been saved, the worker deletes that turn's checkpoint rows; failed turns keep checkpoints so BullMQ retries can resume. BullMQ remains responsible for scheduling and retrying background jobs; LangGraph describes the agent's decision flow inside a job.
 
 The retrieval pipeline fetches only the configured official-source URLs, uses conditional HTTP requests and content hashes to skip unchanged pages, splits changed text with LangChain, and stores OpenAI embeddings in PostgreSQL with pgvector. A new source revision becomes active only after all its chunks and vectors are stored. Failed refreshes leave the last active revision available and retry with backoff. BullMQ schedules a daily source check and a five-minute due-source retry check; these jobs run in the worker and are not tied to a particular hosting provider.
+
+### Knowledge source setup and deployment
+
+Database migrations seed the **source catalog** (`knowledge_sources`): approved provider, URL, jurisdiction, and refresh schedule. They do not seed copied guidance text or vectors. After migrations, the worker enqueues an initial refresh and continues checking due sources. For each reachable page it extracts text, creates LangChain chunks, requests embeddings, and stores a numbered revision in `knowledge_source_revisions` plus its vectors and text in `knowledge_chunks`. Only a complete revision becomes active; a failed refresh leaves the previous active revision available. Citations are source metadata returned with retrieved chunks and saved on the assistant message; there is no separate citations table.
+
+For deployment, provision PostgreSQL with pgvector, Redis, `OPENAI_API_KEY`, and a continuously running API and worker. The API and worker apply migrations at startup; the worker must stay running for initial indexing, retries, and the daily refresh scheduler. Check readiness with:
+
+```sql
+SELECT s.key, s.enabled, s.active_revision_id, s.failed_attempts, s.last_error_code,
+       COUNT(c.id) FILTER (WHERE r.status = 'active') AS active_chunks
+FROM knowledge_sources s
+LEFT JOIN knowledge_source_revisions r ON r.id = s.active_revision_id
+LEFT JOIN knowledge_chunks c ON c.revision_id = r.id
+GROUP BY s.key, s.enabled, s.active_revision_id, s.failed_attempts, s.last_error_code
+ORDER BY s.key;
+```
+
+An enabled source with no active revision is catalogued but not yet searchable. The OpenAI Help Center currently rejects the worker's direct fetch with HTTP 403, so its catalog row exists but it has no active chunks; do not treat that as a successful seed. The agent can fall back to web search, but this source needs a supported official feed or a reviewed, versioned seed before its RAG coverage is complete. The CBN complaint source uses the official Complaints Management page; a migration updates existing databases and schedules an immediate refresh.
 
 ## Local setup
 

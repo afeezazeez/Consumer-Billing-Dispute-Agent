@@ -27,7 +27,7 @@ export class RecordCaseIntakeFactsTool implements FunctionAgentTool {
     const request = plainToInstance(RecordCaseIntakeFactsToolDto, input);
     const validationErrors = await validate(request, { whitelist: true, forbidNonWhitelisted: true });
     if (validationErrors.length > 0) return rejectedToolResult(context.intake);
-    if (!sourcesExist(request, context.messages)) return rejectedToolResult(context.intake);
+    if (!factsHaveSupportingUserMessages(request, context.messages)) return rejectedToolResult(context.intake);
     const facts = mergeFacts(context.intake.facts, request);
     const intake = { facts, status: getIntakeStatus(facts) };
     return acceptedToolResult(intake);
@@ -63,7 +63,7 @@ function nullableTextFactSchema(): Record<string, unknown> {
 }
 
 function rejectedToolResult(intake: CaseIntakeState): AgentToolResult {
-  return createToolResult(intake, false, "Facts must cite a user message in this case.");
+  return createToolResult(intake, false, "Each fact must be supported by the cited user message. Keep relative dates such as ‘today’ exactly as stated.");
 }
 
 function acceptedToolResult(intake: CaseIntakeState): AgentToolResult {
@@ -77,12 +77,18 @@ function createToolResult(intake: CaseIntakeState, success: boolean, message: st
   };
 }
 
-function sourcesExist(request: RecordCaseIntakeFactsToolDto, messages: CaseMessageRecord[]): boolean {
-  return Object.values(request).every((fact) => !fact || isUserMessageSource(fact.sourceMessageId, messages));
+function factsHaveSupportingUserMessages(request: RecordCaseIntakeFactsToolDto, messages: CaseMessageRecord[]): boolean {
+  return Object.values(request).every((fact) => !fact || isFactSupportedBySource(fact.sourceMessageId, fact.value, messages));
 }
 
-function isUserMessageSource(messageId: string, messages: CaseMessageRecord[]): boolean {
-  return messages.some((message) => message.id === messageId && message.role === "user");
+function isFactSupportedBySource(messageId: string, value: string, messages: CaseMessageRecord[]): boolean {
+  const source = messages.find((message) => message.id === messageId && message.role === "user");
+  const normalizedValue = normalizeEvidence(value);
+  return Boolean(source && normalizedValue && normalizeEvidence(source.content).includes(normalizedValue));
+}
+
+function normalizeEvidence(value: string): string {
+  return value.normalize("NFKC").replace(/\s+/g, " ").trim().toLowerCase();
 }
 
 function mergeFacts(current: CaseIntakeFacts, request: RecordCaseIntakeFactsToolDto): CaseIntakeFacts {

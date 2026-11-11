@@ -21,7 +21,11 @@ export class BackgroundWorker {
 
   constructor(redis: Redis, dataSource: DataSource, config: AppConfig) {
     this.caseServices = createCaseServices(config, dataSource);
-    this.agentTurnProcessor = new AgentTurnProcessor(this.caseServices.caseService, this.caseServices.userRepository);
+    this.agentTurnProcessor = new AgentTurnProcessor(
+      this.caseServices.caseService,
+      this.caseServices.userRepository,
+      this.caseServices.clearAgentWorkflowTurn,
+    );
     this.backgroundJobQueue = new BackgroundJobQueue(redis);
     this.dispatcher = new OutboxDispatcher(new OutboxRepository(dataSource), this.backgroundJobQueue);
     this.caseTurnLockRepository = new CaseTurnLockRepository(dataSource);
@@ -32,6 +36,7 @@ export class BackgroundWorker {
   }
 
   async start(): Promise<void> {
+    await this.caseServices.initializeAgentWorkflow();
     await this.backgroundJobQueue.scheduleKnowledgeRefresh();
     await this.backgroundJobQueue.enqueueInitialKnowledgeRefresh();
     this.dispatcher.start();
@@ -40,6 +45,7 @@ export class BackgroundWorker {
     await this.dispatcher.stop();
     await this.worker.close();
     await this.backgroundJobQueue.close();
+    await this.caseServices.closeAgentWorkflow();
   }
   private async process(job: Job<BackgroundJob>): Promise<void> {
     if (job.data.type === "agent-turn") return this.processAgentTurn(job as Job<Extract<BackgroundJob, { type: "agent-turn" }>>);

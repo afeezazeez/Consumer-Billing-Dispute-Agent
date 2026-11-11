@@ -1,6 +1,7 @@
 import type { AppConfig } from "../config";
 import { OpenAiDocumentExtractor } from "../ai/openai-document-extractor";
 import { OpenAiAgent } from "../ai/openai-agent";
+import { createAgentWorkflowCheckpointer } from "../ai/agent-workflow-checkpointer";
 import { createAgentTools } from "../ai/tools/agent-tools.registry";
 import { TypeOrmCaseRepository } from "../database/typeorm-case.repository";
 import { TypeOrmDocumentReviewRepository } from "../database/typeorm-document-review.repository";
@@ -20,7 +21,13 @@ export function createCaseServices(config: AppConfig, dataSource: DataSource) {
   const caseRepository = new TypeOrmCaseRepository(dataSource);
   const knowledgeContentRepository = new TypeOrmKnowledgeContentRepository(dataSource);
   const knowledgeRetrievalService = new KnowledgeRetrievalService(config.openAiApiKey, knowledgeContentRepository);
-  const caseIntakeAgent = new OpenAiAgent(config.openAiApiKey, config.openAiModel, createAgentTools(knowledgeRetrievalService));
+  const workflowPersistence = createAgentWorkflowCheckpointer(config.database);
+  const caseIntakeAgent = new OpenAiAgent(
+    config.openAiApiKey,
+    config.openAiModel,
+    createAgentTools(knowledgeRetrievalService),
+    workflowPersistence.checkpointer,
+  );
   const storage = new CloudinaryAttachmentStorage(config.cloudinary, "bill-agent/case-attachments");
   const cleanup = new CaseAttachmentCleanup(dataSource, storage);
   const attachmentService = new AttachmentService(storage, (publicId) => cleanup.enqueue(publicId));
@@ -38,6 +45,9 @@ export function createCaseServices(config: AppConfig, dataSource: DataSource) {
     userRepository: new TypeOrmUserRepository(dataSource),
     knowledgeSourceRepository: new TypeOrmKnowledgeSourceRepository(dataSource),
     knowledgeSourceRefreshService: new KnowledgeSourceRefreshService(config.openAiApiKey, new TypeOrmKnowledgeSourceRepository(dataSource), knowledgeContentRepository),
+    initializeAgentWorkflow: () => workflowPersistence.initialize(),
+    clearAgentWorkflowTurn: (caseId: string, messageId: string) => workflowPersistence.clearTurn(caseId, messageId),
+    closeAgentWorkflow: () => workflowPersistence.close(),
     startCleanup: () => cleanup.start(),
   };
 }

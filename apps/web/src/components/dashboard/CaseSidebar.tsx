@@ -45,6 +45,7 @@ export function CaseSidebar({
   onSignOut,
 }: CaseSidebarProps) {
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
+  const [isCaseListCollapsed, setIsCaseListCollapsed] = useState(false);
 
   const initials = useMemo(() => getInitials(user.displayName), [user.displayName]);
 
@@ -84,6 +85,15 @@ export function CaseSidebar({
     setIsSearchModalOpen(false);
   }, []);
 
+  const handleToggleCaseList = useCallback(() => {
+    setIsCaseListCollapsed((current) => !current);
+  }, []);
+
+  const handleDeleteCase = useCallback((caseId: string) => {
+    if (cases.length === 1) setIsCaseListCollapsed(false);
+    onDeleteCase(caseId);
+  }, [cases.length, onDeleteCase]);
+
   return (
     <>
       {isMobileOpen && (
@@ -108,7 +118,7 @@ export function CaseSidebar({
               <SidebarToggleIcon />
             </button>
             <Link className="claude-brand" href="/">
-              <span className="claude-brand-text">Billing Agent</span>
+              <span className="claude-brand-text">Billzz</span>
             </Link>
           </div>
 
@@ -136,28 +146,42 @@ export function CaseSidebar({
           </button>
         </div>
 
-        {/* Case List (No "Chats and tasks" heading, clean list) */}
-        <div className="claude-sidebar-cases">
-          {cases.length === 0 ? (
-            <div className="claude-empty-cases">
-              <span>Your cases will appear here.</span>
-            </div>
-          ) : (
-            <div className="claude-case-list" role="list">
-              {cases.map((c) => (
-                <CaseListItem
-                  billingCase={c}
-                  isActive={c.id === activeCaseId}
-                  isWorking={c.isProcessing}
-                  key={c.id}
-                  onDelete={onDeleteCase}
-                  onOpen={onSelectCase}
-                  onRename={onRenameCase}
-                />
-              ))}
-            </div>
-          )}
-        </div>
+        {cases.length > 0 && (
+          <div className="claude-sidebar-cases">
+            <button
+              aria-controls="sidebar-case-list"
+              aria-expanded={!isCaseListCollapsed}
+              className="claude-case-section-toggle"
+              onClick={handleToggleCaseList}
+              type="button"
+            >
+              <span>Chats and Cases</span>
+              <svg
+                aria-hidden="true"
+                className={`claude-case-section-chevron${isCaseListCollapsed ? " is-collapsed" : ""}`}
+                viewBox="0 0 20 20"
+                fill="none"
+              >
+                <path d="m5 7.5 5 5 5-5" />
+              </svg>
+            </button>
+            {!isCaseListCollapsed && (
+              <div className="claude-case-list" id="sidebar-case-list" role="list">
+                {cases.map((c) => (
+                  <CaseListItem
+                    billingCase={c}
+                    isActive={c.id === activeCaseId}
+                    isWorking={c.isProcessing}
+                    key={c.id}
+                    onDelete={handleDeleteCase}
+                    onOpen={onSelectCase}
+                    onRename={onRenameCase}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Bottom User Account Row with Always-Visible Sign out option */}
         <div className="claude-sidebar-bottom">

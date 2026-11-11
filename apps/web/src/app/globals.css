@@ -5,6 +5,7 @@
   --marketing-blue: #2563eb;
   --marketing-blue-hover: #1d4ed8;
   --marketing-blue-soft: #eff6ff;
+  --marketing-white: #ffffff;
   --marketing-ink: #0f172a;
   --marketing-slate: #334155;
   --marketing-muted: #64748b;
@@ -710,6 +711,47 @@ button, a {
   padding: 16px 12px;
 }
 
+.claude-case-section-toggle {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  border-radius: 7px;
+  color: var(--dash-ink-soft);
+  cursor: pointer;
+  display: flex;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+  gap: 8px;
+  justify-content: flex-start;
+  min-height: 36px;
+  padding: 6px 10px;
+  position: sticky;
+  text-align: left;
+  top: 0;
+  width: 100%;
+  z-index: 1;
+}
+
+.claude-case-section-toggle:focus-visible {
+  outline: 2px solid var(--dash-primary);
+  outline-offset: 1px;
+}
+
+.claude-case-section-chevron {
+  height: 16px;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.7;
+  transition: transform 150ms ease;
+  width: 16px;
+}
+
+.claude-case-section-chevron.is-collapsed {
+  transform: rotate(-90deg);
+}
+
 .claude-case-row {
   align-items: center;
   border: 1px solid transparent;
@@ -730,7 +772,6 @@ button, a {
   background: var(--dash-active);
   border-color: var(--dash-active-border);
   color: var(--dash-active-text);
-  font-weight: 600;
 }
 
 .claude-case-title {
@@ -1848,7 +1889,7 @@ button, a {
 .claude-message-row.user .claude-message-bubble {
   background: #eff6ff;
   border: 1px solid #dbeafe;
-  border-radius: 16px 16px 4px 16px;
+  border-radius: 18px;
   color: var(--dash-ink);
   font-size: 14px;
   line-height: 1.6;
@@ -2594,9 +2635,9 @@ button, a {
   box-shadow: 0 5px 22px rgba(15, 23, 42, 0.08);
   color: #171717;
   display: flex;
-  gap: 16px;
-  min-height: 76px;
-  padding: 9px 10px;
+  gap: 12px;
+  min-height: 58px;
+  padding: 6px 8px;
   width: 100%;
 }
 
@@ -2607,11 +2648,11 @@ button, a {
   border-radius: 50%;
   cursor: pointer;
   display: inline-flex;
-  flex: 0 0 54px;
-  height: 54px;
+  flex: 0 0 44px;
+  height: 44px;
   justify-content: center;
   transition: background-color 150ms ease, transform 150ms ease;
-  width: 54px;
+  width: 44px;
 }
 
 .voice-panel-icon-btn {
@@ -2649,12 +2690,12 @@ button, a {
 .voice-panel-icon-btn svg,
 .voice-panel-send-btn svg {
   fill: none;
-  height: 23px;
+  height: 18px;
   stroke: currentColor;
   stroke-linecap: round;
   stroke-linejoin: round;
   stroke-width: 1.8;
-  width: 23px;
+  width: 18px;
 }
 
 .voice-panel-activity {
@@ -2668,8 +2709,8 @@ button, a {
 .voice-panel-waveform {
   align-items: center;
   display: flex;
-  gap: 4px;
-  height: 32px;
+  gap: 3px;
+  height: 24px;
   justify-content: space-between;
   overflow: hidden;
   width: 100%;
@@ -2679,8 +2720,8 @@ button, a {
   animation: voice-panel-dot 900ms ease-in-out infinite alternate;
   background: #9a9a9a;
   border-radius: 50%;
-  flex: 0 1 3px;
-  height: 3px;
+  flex: 0 1 2px;
+  height: 2px;
   opacity: 0.7;
 }
 
@@ -2692,8 +2733,8 @@ button, a {
   animation: voice-panel-status 1.4s ease-in-out infinite;
   color: #565656;
   display: inline-flex;
-  font-size: 15px;
-  gap: 10px;
+  font-size: 13px;
+  gap: 8px;
 }
 
 .voice-transcribing-spinner {
@@ -2702,23 +2743,23 @@ button, a {
   border-right-color: var(--dash-primary);
   border-top-color: var(--dash-primary);
   border-radius: 50%;
-  height: 15px;
-  width: 15px;
+  height: 13px;
+  width: 13px;
 }
 
 .voice-requesting-dots {
   align-items: center;
   display: inline-flex;
-  gap: 3px;
-  height: 14px;
+  gap: 2px;
+  height: 11px;
 }
 
 .voice-requesting-dots i {
   animation: voice-requesting-bounce 700ms ease-in-out infinite alternate;
   background: #ddd;
   border-radius: 50%;
-  height: 4px;
-  width: 4px;
+  height: 3px;
+  width: 3px;
 }
 
 .voice-requesting-dots i:nth-child(2) { animation-delay: 140ms; }
@@ -2917,5 +2958,900 @@ button, a {
     min-height: 240px;
     padding-left: 12px;
     padding-right: 12px;
+  }
+}
+
+/* Single-screen Billing Case Agent landing page */
+.landing-page-shell {
+  background:
+    radial-gradient(ellipse at 78% 42%, color-mix(in srgb, var(--marketing-blue) 7%, transparent), transparent 38%),
+    var(--marketing-white);
+  min-height: 100svh;
+  overflow-x: clip;
+}
+
+.landing-header {
+  align-items: center;
+  border-bottom: 1px solid color-mix(in srgb, var(--marketing-line) 76%, transparent);
+  display: flex;
+  justify-content: space-between;
+  margin: 0 auto;
+  max-width: 1440px;
+  min-height: 82px;
+  padding: 16px clamp(24px, 5.4vw, 78px);
+  position: relative;
+  width: 100%;
+  z-index: 2;
+}
+
+.landing-brand,
+.landing-header-right,
+.landing-header-promise,
+.landing-header-action,
+.landing-primary-action {
+  align-items: center;
+  display: inline-flex;
+  white-space: nowrap;
+}
+
+.landing-brand {
+  color: var(--marketing-ink);
+  font-size: 20px;
+  font-weight: 750;
+  letter-spacing: -0.06em;
+}
+
+.landing-brand span {
+  color: var(--marketing-blue);
+}
+
+.landing-header-right {
+  gap: clamp(16px, 2.2vw, 32px);
+}
+
+.landing-header-promise {
+  color: var(--marketing-muted);
+  font-size: 13px;
+  gap: 8px;
+}
+
+.landing-header-promise svg {
+  height: 17px;
+  stroke: var(--marketing-blue);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.5;
+  width: 17px;
+}
+
+.landing-header-action,
+.landing-primary-action {
+  background: var(--marketing-blue);
+  border: 1px solid var(--marketing-blue);
+  border-radius: 11px;
+  box-shadow: 0 8px 18px color-mix(in srgb, var(--marketing-blue) 20%, transparent);
+  color: var(--marketing-white);
+  font-size: 14px;
+  font-weight: 650;
+  gap: 10px;
+  justify-content: center;
+  min-height: 46px;
+  padding: 0 19px;
+  transition: background 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+}
+
+.landing-header-action:hover,
+.landing-primary-action:hover {
+  background: var(--marketing-blue-hover);
+  box-shadow: 0 10px 22px color-mix(in srgb, var(--marketing-blue) 27%, transparent);
+  transform: translateY(-1px);
+}
+
+.landing-header-action svg,
+.landing-primary-action svg {
+  height: 19px;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.7;
+  width: 19px;
+}
+
+.landing-header-action:focus-visible,
+.landing-primary-action:focus-visible,
+.landing-brand:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--marketing-blue) 45%, transparent);
+  outline-offset: 3px;
+}
+
+.landing-main {
+  display: flex;
+  flex: 1;
+  margin: 0 auto;
+  max-width: 1440px;
+  width: 100%;
+}
+
+.landing-hero {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  justify-content: center;
+  padding: 25px clamp(24px, 5.4vw, 78px) 20px;
+}
+
+.landing-hero-grid {
+  align-items: center;
+  display: grid;
+  gap: clamp(44px, 6vw, 86px);
+  grid-template-columns: minmax(0, 0.94fr) minmax(0, 1.06fr);
+  margin: auto 0;
+}
+
+.landing-hero-copy {
+  max-width: 620px;
+  padding: 5px 0;
+}
+
+.landing-eyebrow {
+  align-items: center;
+  color: var(--marketing-blue);
+  display: flex;
+  font-size: 11px;
+  font-weight: 750;
+  gap: 10px;
+  letter-spacing: 0.115em;
+  margin: 0 0 22px;
+}
+
+.landing-eyebrow span {
+  background: var(--marketing-blue);
+  border-radius: 50%;
+  box-shadow: 0 0 0 5px var(--marketing-blue-soft);
+  height: 7px;
+  animation: landing-pulse 2.6s ease-in-out infinite;
+  width: 7px;
+}
+
+.landing-title {
+  color: var(--marketing-ink);
+  font-size: clamp(48px, 5.05vw, 72px);
+  font-weight: 750;
+  letter-spacing: -0.065em;
+  line-height: 0.99;
+  margin: 0;
+  max-width: 660px;
+}
+
+.landing-title span {
+  animation: landing-title-shimmer 7s ease-in-out infinite;
+  background: linear-gradient(105deg, var(--marketing-blue) 0%, var(--marketing-blue-hover) 48%, var(--marketing-blue) 100%);
+  background-clip: text;
+  background-size: 220% 100%;
+  color: transparent;
+  display: block;
+  -webkit-background-clip: text;
+}
+
+.landing-description {
+  color: var(--marketing-slate);
+  font-size: clamp(16px, 1.3vw, 18px);
+  line-height: 1.62;
+  margin: 23px 0 0;
+  max-width: 540px;
+}
+
+.landing-actions {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18px;
+  margin-top: 30px;
+}
+
+.landing-primary-action {
+  min-height: 54px;
+  padding: 0 23px;
+}
+
+.landing-action-note {
+  color: var(--marketing-muted);
+  font-size: 13px;
+  margin: 0;
+}
+
+.landing-flow {
+  align-items: center;
+  color: var(--marketing-slate);
+  display: flex;
+  flex-wrap: wrap;
+  font-size: 12px;
+  gap: 10px;
+  margin-top: 46px;
+}
+
+.landing-flow span {
+  align-items: center;
+  display: inline-flex;
+  gap: 7px;
+  white-space: nowrap;
+}
+
+.landing-flow b {
+  color: var(--marketing-blue);
+  font-size: 10px;
+  letter-spacing: 0.04em;
+}
+
+.landing-flow i {
+  background: var(--marketing-line);
+  height: 1px;
+  width: 22px;
+}
+
+.landing-demo-scene {
+  align-items: center;
+  background:
+    radial-gradient(circle at 55% 46%, color-mix(in srgb, var(--marketing-blue) 12%, transparent), transparent 42%),
+    linear-gradient(145deg, var(--marketing-blue-soft), color-mix(in srgb, var(--marketing-white) 70%, var(--marketing-blue-soft)) 72%);
+  border: 1px solid color-mix(in srgb, var(--marketing-blue) 12%, var(--marketing-line));
+  border-radius: 28px;
+  box-shadow: 0 28px 80px color-mix(in srgb, var(--marketing-ink) 9%, transparent);
+  display: flex;
+  justify-content: center;
+  min-height: 455px;
+  overflow: hidden;
+  padding: 42px clamp(24px, 3.1vw, 44px) 35px;
+  position: relative;
+}
+
+.landing-demo-scene::before {
+  background-image: radial-gradient(color-mix(in srgb, var(--marketing-blue) 22%, transparent) 0.8px, transparent 0.8px);
+  background-size: 17px 17px;
+  content: "";
+  inset: 0;
+  mask-image: linear-gradient(135deg, transparent 5%, var(--marketing-ink) 100%);
+  opacity: 0.28;
+  pointer-events: none;
+  position: absolute;
+}
+
+.landing-demo-scene::after {
+  animation: landing-glow-drift 7.5s ease-in-out infinite alternate;
+  background: radial-gradient(ellipse, color-mix(in srgb, var(--marketing-blue) 19%, transparent), transparent 70%);
+  content: "";
+  filter: blur(20px);
+  height: 62%;
+  left: 3%;
+  opacity: 0.7;
+  pointer-events: none;
+  position: absolute;
+  top: 11%;
+  width: 62%;
+}
+
+.landing-demo-orbit {
+  animation: landing-orbit-spin 34s linear infinite;
+  border: 1px solid color-mix(in srgb, var(--marketing-blue) 13%, transparent);
+  border-radius: 50%;
+  pointer-events: none;
+  position: absolute;
+}
+
+.landing-demo-orbit::after {
+  animation: landing-satellite-pulse 2.4s ease-in-out infinite;
+  background: var(--marketing-blue);
+  border: 2px solid var(--marketing-white);
+  border-radius: 50%;
+  box-shadow: 0 0 16px color-mix(in srgb, var(--marketing-blue) 46%, transparent);
+  content: "";
+  height: 9px;
+  position: absolute;
+  right: 14%;
+  top: 14%;
+  width: 9px;
+}
+
+.landing-demo-orbit-one {
+  height: 500px;
+  right: -145px;
+  top: -260px;
+  width: 500px;
+}
+
+.landing-demo-orbit-two {
+  animation-direction: reverse;
+  animation-duration: 46s;
+  bottom: -330px;
+  height: 560px;
+  left: -315px;
+  width: 560px;
+}
+
+.landing-case-card {
+  animation: landing-card-float 6.5s ease-in-out infinite;
+  background: var(--marketing-white);
+  border: 1px solid color-mix(in srgb, var(--marketing-line) 88%, transparent);
+  border-radius: 19px;
+  box-shadow: 0 20px 55px color-mix(in srgb, var(--marketing-ink) 12%, transparent);
+  max-width: 490px;
+  overflow: hidden;
+  padding: 21px 23px 17px;
+  position: relative;
+  width: 100%;
+  z-index: 1;
+}
+
+.landing-case-card::before {
+  animation: landing-scan 5.8s ease-in-out infinite;
+  background: linear-gradient(90deg, transparent, var(--marketing-blue), transparent);
+  content: "";
+  height: 2px;
+  left: -35%;
+  opacity: 0;
+  pointer-events: none;
+  position: absolute;
+  top: 0;
+  width: 35%;
+}
+
+.landing-case-header,
+.landing-case-brand,
+.landing-case-footer,
+.landing-charge-row,
+.landing-source-link {
+  align-items: center;
+  display: flex;
+}
+
+.landing-case-header {
+  border-bottom: 1px solid var(--marketing-line);
+  justify-content: space-between;
+  padding-bottom: 15px;
+}
+
+.landing-case-brand {
+  color: var(--marketing-slate);
+  font-size: 10px;
+  font-weight: 750;
+  gap: 9px;
+  letter-spacing: 0.08em;
+}
+
+.landing-case-brand > span:last-child {
+  display: block;
+}
+
+.landing-case-brand small {
+  color: var(--marketing-muted);
+  display: block;
+  font-size: 8px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  margin-top: 3px;
+}
+
+.landing-case-brand-mark {
+  align-items: center;
+  background: var(--marketing-blue-soft);
+  border-radius: 8px;
+  color: var(--marketing-blue);
+  display: flex;
+  height: 34px;
+  justify-content: center;
+  width: 34px;
+}
+
+.landing-case-brand-mark svg {
+  height: 19px;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.6;
+  width: 19px;
+}
+
+.landing-example-pill {
+  background: var(--marketing-blue-soft);
+  border: 1px solid color-mix(in srgb, var(--marketing-blue) 12%, transparent);
+  border-radius: 999px;
+  color: var(--marketing-blue);
+  font-size: 10px;
+  font-weight: 650;
+  padding: 6px 10px;
+}
+
+.landing-case-intro {
+  padding: 17px 0 15px;
+}
+
+.landing-case-kicker,
+.landing-insight-label {
+  color: var(--marketing-muted);
+  font-size: 9px;
+  font-weight: 750;
+  letter-spacing: 0.1em;
+}
+
+.landing-case-intro h2 {
+  color: var(--marketing-ink);
+  font-size: 21px;
+  font-weight: 700;
+  letter-spacing: -0.045em;
+  line-height: 1.2;
+  margin: 7px 0 5px;
+}
+
+.landing-case-intro p {
+  color: var(--marketing-muted);
+  font-size: 12px;
+  line-height: 1.45;
+  margin: 0;
+}
+
+.landing-charge-list {
+  border: 1px solid var(--marketing-line);
+  border-radius: 11px;
+  overflow: hidden;
+}
+
+.landing-charge-row {
+  animation: landing-row-arrive 720ms cubic-bezier(0.2, 0.75, 0.3, 1) both;
+  gap: 11px;
+  min-height: 54px;
+  padding: 8px 12px;
+}
+
+.landing-charge-row + .landing-charge-row {
+  border-top: 1px solid var(--marketing-line);
+}
+
+.landing-charge-row-match {
+  animation-delay: 150ms;
+  background: color-mix(in srgb, var(--marketing-blue-soft) 58%, var(--marketing-white));
+}
+
+.landing-charge-index {
+  align-items: center;
+  background: color-mix(in srgb, var(--marketing-line) 42%, var(--marketing-white));
+  border-radius: 7px;
+  color: var(--marketing-muted);
+  display: inline-flex;
+  flex: 0 0 28px;
+  font-size: 9px;
+  font-weight: 700;
+  height: 28px;
+  justify-content: center;
+}
+
+.landing-charge-row-match .landing-charge-index {
+  background: var(--marketing-blue);
+  color: var(--marketing-white);
+}
+
+.landing-charge-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.landing-charge-info strong,
+.landing-charge-info small {
+  display: block;
+}
+
+.landing-charge-info strong {
+  color: var(--marketing-ink);
+  font-size: 11px;
+  font-weight: 650;
+}
+
+.landing-charge-info small {
+  color: var(--marketing-muted);
+  font-size: 9px;
+  margin-top: 3px;
+}
+
+.landing-charge-amount {
+  color: var(--marketing-ink);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+}
+
+.landing-case-insight {
+  animation: landing-insight-arrive 650ms 260ms cubic-bezier(0.2, 0.75, 0.3, 1) both;
+  background: var(--marketing-blue-soft);
+  border-radius: 11px;
+  margin-top: 13px;
+  padding: 12px 13px;
+}
+
+.landing-insight-label {
+  color: var(--marketing-blue);
+  font-size: 8px;
+}
+
+.landing-case-insight p {
+  color: var(--marketing-ink);
+  font-size: 11px;
+  font-weight: 550;
+  line-height: 1.45;
+  margin: 6px 0 8px;
+}
+
+.landing-source-link {
+  color: var(--marketing-slate);
+  font-size: 9px;
+  font-weight: 600;
+  gap: 5px;
+}
+
+.landing-source-link svg {
+  height: 14px;
+  stroke: var(--marketing-blue);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.4;
+  width: 14px;
+}
+
+.landing-case-footer {
+  animation: landing-footer-arrive 600ms 390ms ease-out both;
+  gap: 9px;
+  padding-top: 13px;
+}
+
+.landing-open-dot {
+  background: var(--marketing-blue);
+  border-radius: 50%;
+  box-shadow: 0 0 0 4px var(--marketing-blue-soft);
+  flex: 0 0 7px;
+  height: 7px;
+  margin: 0 3px;
+}
+
+.landing-case-footer > span:nth-child(2) {
+  flex: 1;
+}
+
+.landing-case-footer strong,
+.landing-case-footer small {
+  display: block;
+}
+
+.landing-case-footer strong {
+  color: var(--marketing-ink);
+  font-size: 10px;
+  font-weight: 650;
+}
+
+.landing-case-footer small {
+  color: var(--marketing-muted);
+  font-size: 9px;
+  margin-top: 2px;
+}
+
+.landing-review-label {
+  color: var(--marketing-blue);
+  font-size: 8px;
+  font-weight: 750;
+  letter-spacing: 0.08em;
+}
+
+.landing-trust-strip {
+  align-items: center;
+  border-top: 1px solid color-mix(in srgb, var(--marketing-line) 82%, transparent);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px clamp(20px, 3.6vw, 50px);
+  margin-top: 22px;
+  padding-top: 17px;
+}
+
+.landing-trust-point {
+  align-items: center;
+  color: var(--marketing-slate);
+  display: inline-flex;
+  font-size: 11px;
+  font-weight: 550;
+  gap: 8px;
+}
+
+.landing-trust-point > span {
+  align-items: center;
+  background: var(--marketing-blue-soft);
+  border-radius: 50%;
+  color: var(--marketing-blue);
+  display: inline-flex;
+  height: 20px;
+  justify-content: center;
+  width: 20px;
+}
+
+.landing-trust-point svg {
+  height: 13px;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.8;
+  width: 13px;
+}
+
+.landing-disclaimer {
+  color: var(--marketing-muted);
+  font-size: 10px;
+  margin: 0 0 0 auto;
+}
+
+@media (max-width: 1020px) {
+  .landing-hero {
+    padding-top: 48px;
+  }
+
+  .landing-hero-grid {
+    gap: 40px;
+    grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+  }
+
+  .landing-title {
+    font-size: clamp(45px, 6vw, 62px);
+  }
+
+  .landing-demo-scene {
+    min-height: 420px;
+    padding: 40px 20px 30px;
+  }
+
+  .landing-case-card {
+    padding: 18px 18px 15px;
+  }
+
+  .landing-trust-strip {
+    gap: 12px 24px;
+  }
+}
+
+@media (max-width: 760px) {
+  .landing-header {
+    min-height: 72px;
+    padding: 12px 20px;
+  }
+
+  .landing-header-promise {
+    display: none;
+  }
+
+  .landing-header-action {
+    font-size: 12px;
+    min-height: 42px;
+    padding: 0 13px;
+  }
+
+  .landing-brand {
+    font-size: 18px;
+  }
+
+  .landing-hero {
+    padding: 42px 22px 24px;
+  }
+
+  .landing-hero-grid {
+    gap: 34px;
+    grid-template-columns: 1fr;
+  }
+
+  .landing-eyebrow {
+    font-size: 10px;
+    margin-bottom: 17px;
+  }
+
+  .landing-title {
+    font-size: clamp(44px, 10.5vw, 64px);
+    max-width: 580px;
+  }
+
+  .landing-description {
+    font-size: 16px;
+    margin-top: 18px;
+  }
+
+  .landing-actions {
+    gap: 13px;
+    margin-top: 22px;
+  }
+
+  .landing-flow {
+    gap: 8px;
+    margin-top: 27px;
+  }
+
+  .landing-flow span {
+    font-size: 10px;
+    gap: 5px;
+  }
+
+  .landing-flow i {
+    width: 12px;
+  }
+
+  .landing-demo-scene {
+    border-radius: 22px;
+    min-height: 415px;
+    padding: 42px 20px 28px;
+  }
+
+  .landing-case-card {
+    max-width: 500px;
+  }
+
+  .landing-trust-strip {
+    display: grid;
+    gap: 13px 18px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    margin-top: 25px;
+    padding-top: 18px;
+  }
+
+  .landing-trust-point {
+    font-size: 10px;
+  }
+
+  .landing-disclaimer {
+    grid-column: 1 / -1;
+    margin: 1px 0 0;
+  }
+}
+
+@media (max-width: 430px) {
+  .landing-hero {
+    padding-inline: 18px;
+  }
+
+  .landing-title {
+    font-size: clamp(40px, 10.2vw, 48px);
+  }
+
+  .landing-flow {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .landing-flow i {
+    display: none;
+  }
+
+  .landing-demo-scene {
+    min-height: auto;
+    padding: 40px 12px 22px;
+  }
+
+  .landing-case-card {
+    padding: 16px 13px 14px;
+  }
+
+  .landing-case-intro h2 {
+    font-size: 19px;
+  }
+
+  .landing-trust-strip {
+    grid-template-columns: 1fr;
+  }
+
+  .landing-disclaimer {
+    grid-column: auto;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .landing-header-action,
+  .landing-primary-action {
+    transition: none;
+  }
+
+  .landing-eyebrow span,
+  .landing-title span,
+  .landing-demo-orbit,
+  .landing-demo-scene::after,
+  .landing-demo-orbit::after,
+  .landing-case-card,
+  .landing-case-card::before,
+  .landing-charge-row,
+  .landing-case-insight,
+  .landing-case-footer {
+    animation: none;
+  }
+}
+
+@keyframes landing-pulse {
+  50% {
+    box-shadow: 0 0 0 8px color-mix(in srgb, var(--marketing-blue) 9%, transparent);
+  }
+}
+
+@keyframes landing-orbit-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes landing-glow-drift {
+  to {
+    transform: translate(48%, 25%) scale(1.13);
+  }
+}
+
+@keyframes landing-satellite-pulse {
+  50% {
+    box-shadow: 0 0 24px color-mix(in srgb, var(--marketing-blue) 70%, transparent);
+    transform: scale(1.22);
+  }
+}
+
+@keyframes landing-card-float {
+  50% {
+    transform: translateY(-7px) rotate(-0.35deg);
+  }
+}
+
+@keyframes landing-title-shimmer {
+  0%, 100% {
+    background-position: 0% 50%;
+  }
+
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+@keyframes landing-row-arrive {
+  from {
+    opacity: 0;
+    transform: translateX(12px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes landing-insight-arrive {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.985);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes landing-footer-arrive {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes landing-scan {
+  0%, 12% {
+    opacity: 0;
+    transform: translateX(0);
+  }
+
+  25% {
+    opacity: 0.75;
+  }
+
+  72%, 100% {
+    opacity: 0;
+    transform: translateX(390%);
   }
 }

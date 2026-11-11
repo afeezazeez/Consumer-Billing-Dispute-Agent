@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Billing Case Agent — Make sense of the charge",
+  title: "Billzz — Make sense of the charge",
   description: "Organize billing records, understand what they show, and prepare a response for your review.",
 };
 

@@ -124,7 +124,9 @@ export class CaseService {
     let activities = userMessage.toolActivities ?? [];
     let activityWrites = Promise.resolve();
     const result = await this.caseIntakeAgent.respond({
+      caseId: job.caseId,
       messages: billingCase.messages,
+      messageId: job.messageId,
       intake: billingCase.intake,
       nextAction: billingCase.nextAction,
       userFirstName,

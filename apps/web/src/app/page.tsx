@@ -1,10 +1,6 @@
 import { cookies } from "next/headers";
-import { CtaSection } from "@/components/CtaSection";
 import { HeroSection } from "@/components/HeroSection";
-import { HowItWorks } from "@/components/HowItWorks";
-import { SiteFooter } from "@/components/SiteFooter";
 import { SiteHeader } from "@/components/SiteHeader";
-import { TrustSection } from "@/components/TrustSection";
 
 export const instant = false;
 
@@ -32,15 +28,11 @@ export default async function Home() {
   }
 
   return (
-    <div className="modern-page-wrapper">
+    <div className="modern-page-wrapper landing-page-shell">
       <SiteHeader initialHref={initialHref} />
-      <main>
+      <main className="landing-main">
         <HeroSection initialHref={initialHref} />
-        <HowItWorks />
-        <TrustSection />
-        <CtaSection initialHref={initialHref} />
       </main>
-      <SiteFooter />
     </div>
   );
 }
