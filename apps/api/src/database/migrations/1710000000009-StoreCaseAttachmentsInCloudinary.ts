@@ -8,7 +8,7 @@ export class StoreCaseAttachmentsInCloudinary1710000000009 implements MigrationI
         ADD CONSTRAINT case_attachments_storage_check
           CHECK ((data IS NULL) <> (cloudinary_public_id IS NULL));
       CREATE TABLE case_attachment_cleanup (public_id text PRIMARY KEY);
-      CREATE FUNCTION queue_case_attachment_cleanup() RETURNS trigger AS $$
+      CREATE OR REPLACE FUNCTION queue_case_attachment_cleanup() RETURNS trigger AS $$
       BEGIN
         IF OLD.cloudinary_public_id IS NOT NULL THEN
           INSERT INTO case_attachment_cleanup(public_id) VALUES (OLD.cloudinary_public_id)
