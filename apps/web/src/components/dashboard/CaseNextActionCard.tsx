@@ -1,4 +1,4 @@
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
 import type { CaseMessage } from "./dashboard.types";
 
 interface CaseNextActionCardProps {
@@ -7,12 +7,25 @@ interface CaseNextActionCardProps {
 }
 
 export function CaseNextActionCard({ nextAction, draftId }: CaseNextActionCardProps) {
+  const [copied, setCopied] = useState(false);
+  const summary = `Goal: ${nextAction.goal}\nNext step: ${nextAction.action}`;
   const viewDraft = useCallback(() => {
     if (!draftId) return;
     const draft = document.getElementById(draftId);
     draft?.focus({ preventScroll: true });
     draft?.scrollIntoView({ block: "nearest", behavior: "instant" });
   }, [draftId]);
+  const copySummary = useCallback(async () => {
+    await navigator.clipboard.writeText(summary);
+    setCopied(true);
+    window.setTimeout(() => setCopied(false), 1600);
+  }, [summary]);
+  const downloadSummary = useCallback(() => {
+    const file = new Blob([summary], { type: "text/plain;charset=utf-8" });
+    const url = URL.createObjectURL(file);
+    const link = document.createElement("a");
+    link.href = url; link.download = "billing-case-handoff.txt"; link.click(); URL.revokeObjectURL(url);
+  }, [summary]);
 
   return (
     <section className="case-next-action-card" aria-label="What to do next">
@@ -32,7 +45,11 @@ export function CaseNextActionCard({ nextAction, draftId }: CaseNextActionCardPr
           <dd>{nextAction.action}</dd>
         </div>
       </dl>
-      {draftId && <button type="button" onClick={viewDraft}>View draft</button>}
+      <div className="case-handoff-actions">
+        <button aria-label={copied ? "Handoff summary copied" : "Copy handoff summary"} onClick={copySummary} type="button">{copied ? "Copied" : "Copy summary"}</button>
+        <button onClick={downloadSummary} type="button">Download summary</button>
+        {draftId && <button type="button" onClick={viewDraft}>View draft</button>}
+      </div>
     </section>
   );
 }

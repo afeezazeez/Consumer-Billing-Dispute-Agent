@@ -16,17 +16,21 @@ import { CaseService } from "./case.service";
 import { AttachmentService } from "../storage/attachment.service";
 import { CloudinaryAttachmentStorage } from "../storage/cloudinary-attachment-storage";
 import type { DataSource } from "typeorm";
+import { createGmailConnectorService } from "../connectors/gmail/create-gmail-connector-service";
 
 export function createCaseServices(config: AppConfig, dataSource: DataSource) {
   const caseRepository = new TypeOrmCaseRepository(dataSource);
   const knowledgeContentRepository = new TypeOrmKnowledgeContentRepository(dataSource);
   const knowledgeRetrievalService = new KnowledgeRetrievalService(config.openAiApiKey, knowledgeContentRepository);
+  const emailConnector = createGmailConnectorService(config, dataSource);
   const workflowPersistence = createAgentWorkflowCheckpointer(config.database);
   const caseIntakeAgent = new OpenAiAgent(
     config.openAiApiKey,
     config.openAiModel,
     createAgentTools(knowledgeRetrievalService),
     workflowPersistence.checkpointer,
+    emailConnector,
+    workflowPersistence.clearTurn,
   );
   const storage = new CloudinaryAttachmentStorage(config.cloudinary, "bill-agent/case-attachments");
   const cleanup = new CaseAttachmentCleanup(dataSource, storage);
@@ -40,7 +44,7 @@ export function createCaseServices(config: AppConfig, dataSource: DataSource) {
     },
   );
   return {
-    caseService: new CaseService(caseRepository, caseIntakeAgent, attachmentService, documentReviewService),
+    caseService: new CaseService(caseRepository, caseIntakeAgent, attachmentService, documentReviewService, emailConnector),
     documentReviewService,
     userRepository: new TypeOrmUserRepository(dataSource),
     knowledgeSourceRepository: new TypeOrmKnowledgeSourceRepository(dataSource),

@@ -7,6 +7,7 @@ import { CreateCaseRequestDto } from "../dtos/cases/create-case-request.dto";
 import { CreateMessageRequestDto } from "../dtos/cases/create-message-request.dto";
 import { RenameCaseRequestDto } from "../dtos/cases/rename-case-request.dto";
 import { RetryCaseMessageRequestDto } from "../dtos/cases/retry-case-message-request.dto";
+import { DecideCaseEmailDraftRequestDto } from "../dtos/cases/decide-case-email-draft-request.dto";
 import { ClientErrorException } from "../exceptions/client.error.exception";
 import { ResponseStatus } from "../enums/response-status";
 import { sendSuccessResponse } from "../utils/http/response-handlers";
@@ -133,6 +134,22 @@ export class CaseController {
       });
       if (!result) throw new ClientErrorException("Message is no longer available to retry", ResponseStatus.CONFLICT);
       sendSuccessResponse(response, { case: CaseConversationDto.make(result) }, "Message retry completed");
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async decideEmailDraft(request: Request, response: Response, next: NextFunction): Promise<void> {
+    try {
+      const payload = request.body as DecideCaseEmailDraftRequestDto;
+      const decision = payload.decision === "approve"
+        ? { decision: payload.decision, draft: { recipients: payload.recipients ?? "", subject: payload.subject ?? "", body: payload.body ?? "" } }
+        : { decision: payload.decision };
+      const billingCase = await this.caseService.decideEmailDraft(
+        authenticatedUserId(request), readCaseId(request), readMessageId(request), decision,
+      );
+      if (!billingCase) throw new ClientErrorException("Case or email draft not found", ResponseStatus.NOT_FOUND);
+      sendSuccessResponse(response, { case: CaseConversationDto.make(billingCase) }, "Email draft decision recorded");
     } catch (error) {
       next(error);
     }

@@ -42,16 +42,15 @@ Requirements: Node.js, PostgreSQL with the `vector` extension available, and Red
 CREATE EXTENSION IF NOT EXISTS vector;
 ```
 
-Copy `apps/api/.env.example` to `apps/api/.env` and fill in the database, Redis, Google OAuth, session, OpenAI, and Cloudinary values. Then install dependencies and start each process in a separate terminal:
+Copy `apps/api/.env.example` to `apps/api/.env` and fill in the database, Redis, Google OAuth, session, OpenAI, and Cloudinary values. Then install dependencies and start the frontend and backend in separate terminals:
 
 ```bash
 npm install
 npm run dev:web
 npm run dev:api
-npm run dev:worker
 ```
 
-The web app uses `http://localhost:3000`; the API uses `http://localhost:3001`. The worker and API both apply pending database migrations at startup, protected by a PostgreSQL advisory lock.
+`npm run dev:api` starts both the API server and its BullMQ worker. The web app uses `http://localhost:3000`; the API uses `http://localhost:3001`. The worker and API both apply pending database migrations at startup, protected by a PostgreSQL advisory lock. Use `npm run dev:worker` only when intentionally running the API and worker in separate terminals.
 
 For a production deployment, run the web app, API, and worker as separate processes/services from this repository. Provide PostgreSQL and Redis endpoints through environment variables; keep the worker running for agent turns and scheduled refreshes.
 

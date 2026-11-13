@@ -5,17 +5,20 @@ import { useCallback, useEffect, useRef, useState, type MouseEvent } from "react
 interface CaseMessageActionsProps {
   messageId: string;
   createdAt: string;
+  agentTurnDurationMs?: number;
+  role?: "assistant" | "user";
 }
 
 let activeUtterance: SpeechSynthesisUtterance | undefined;
 let activeMessageId: string | undefined;
 let activeStatusHandler: ((isSpeaking: boolean) => void) | undefined;
 
-export function CaseMessageActions({ messageId, createdAt }: CaseMessageActionsProps) {
+export function CaseMessageActions({ messageId, createdAt, agentTurnDurationMs, role = "assistant" }: CaseMessageActionsProps) {
   const [status, setStatus] = useState<"idle" | "copied" | "failed">("idle");
   const [isSpeaking, setIsSpeaking] = useState(false);
   const resetTimer = useRef<number>(undefined);
-  const label = status === "copied" ? "Copied response" : status === "failed" ? "Copy failed. Try again" : "Copy response";
+  const itemName = role === "user" ? "message" : "response";
+  const label = status === "copied" ? `Copied ${itemName}` : status === "failed" ? "Copy failed. Try again" : `Copy ${itemName}`;
   const timeLabel = formatMessageTime(createdAt);
 
   useEffect(() => () => {
@@ -24,7 +27,8 @@ export function CaseMessageActions({ messageId, createdAt }: CaseMessageActionsP
   }, [messageId]);
 
   const handleCopy = useCallback(async (event: MouseEvent<HTMLButtonElement>) => {
-    const response = event.currentTarget.closest("article")?.querySelector<HTMLElement>(".assistant-markdown");
+    const selector = role === "user" ? ".claude-message-bubble" : ".assistant-markdown";
+    const response = event.currentTarget.closest("article")?.querySelector<HTMLElement>(selector);
     if (!response) return;
 
     try {
@@ -35,7 +39,7 @@ export function CaseMessageActions({ messageId, createdAt }: CaseMessageActionsP
     }
     window.clearTimeout(resetTimer.current);
     resetTimer.current = window.setTimeout(() => setStatus("idle"), 1600);
-  }, []);
+  }, [role]);
 
   const handleToggleSpeech = useCallback((event: MouseEvent<HTMLButtonElement>) => {
     const response = event.currentTarget.closest("article")?.querySelector<HTMLElement>(".assistant-markdown");
@@ -44,11 +48,11 @@ export function CaseMessageActions({ messageId, createdAt }: CaseMessageActionsP
   }, [messageId]);
 
   return (
-    <div className="case-message-actions">
+    <div className={`case-message-actions${role === "user" ? " is-user" : ""}`}>
       <button aria-label={label} onClick={handleCopy} title={label} type="button">
         {status === "copied" ? <CheckIcon /> : <CopyIcon />}
       </button>
-      <button
+      {role === "assistant" && <button
         aria-label={isSpeaking ? "Stop reading response" : "Read response aloud"}
         aria-pressed={isSpeaking}
         onClick={handleToggleSpeech}
@@ -56,14 +60,24 @@ export function CaseMessageActions({ messageId, createdAt }: CaseMessageActionsP
         type="button"
       >
         {isSpeaking ? <StopIcon /> : <SpeakerIcon />}
-      </button>
+      </button>}
       <time className="case-message-time" dateTime={createdAt}>{timeLabel}</time>
+      {role === "assistant" && agentTurnDurationMs !== undefined && (
+        <span aria-label={`Response took ${formatTurnDuration(agentTurnDurationMs)}`} className="case-message-duration">
+          {formatTurnDuration(agentTurnDurationMs)}
+        </span>
+      )}
     </div>
   );
 }
 
 function formatMessageTime(createdAt: string): string {
   return new Intl.DateTimeFormat(undefined, { hour: "numeric", minute: "2-digit" }).format(new Date(createdAt));
+}
+
+function formatTurnDuration(durationMs: number): string {
+  const seconds = Math.max(1, Math.round(durationMs / 1000));
+  return `${seconds}s`;
 }
 
 function toggleSpeech(messageId: string, text: string, onStatusChange: (isSpeaking: boolean) => void): void {

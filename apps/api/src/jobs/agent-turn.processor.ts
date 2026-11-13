@@ -15,8 +15,10 @@ export class AgentTurnProcessor {
     if (!message || message.role !== "user") return;
     if (message.processingStatus !== "pending") return this.clearCompletedTurn(message.processingStatus, job);
     const user = await this.userRepository.findById(job.userId);
-    await this.caseService.processAgentTurn(job, user?.displayName.split(/\s+/)[0]);
-    await this.clearWorkflowCheckpoint(job.caseId, job.messageId);
+    const completedCase = await this.caseService.processAgentTurn(job, user?.displayName.split(/\s+/)[0]);
+    if (!hasPendingEmailApproval(completedCase, job.messageId)) {
+      await this.clearWorkflowCheckpoint(job.caseId, job.messageId);
+    }
   }
   async fail(job: AgentTurnQueueJob): Promise<void> {
     await this.caseService.failAgentTurn(job.userId, job.caseId, job.messageId);
@@ -25,4 +27,11 @@ export class AgentTurnProcessor {
   private async clearCompletedTurn(status: CaseMessageRecord["processingStatus"], job: AgentTurnQueueJob): Promise<void> {
     if (status === "complete") await this.clearWorkflowCheckpoint(job.caseId, job.messageId);
   }
+}
+
+function hasPendingEmailApproval(billingCase: Awaited<ReturnType<CaseService["processAgentTurn"]>>, messageId: string): boolean {
+  return billingCase?.messages.some((message) =>
+    message.role === "assistant" && message.emailDraft?.status === "waiting_approval" &&
+    new Date(message.createdAt).getTime() > (billingCase.messages.find((item) => item.id === messageId)?.createdAt.getTime() ?? 0),
+  ) ?? false;
 }

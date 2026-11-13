@@ -23,7 +23,7 @@ import { CaseMessageActions } from "./CaseMessageActions";
 import { CaseMessageAttachments } from "./CaseMessageAttachments";
 import { EmailDraftCard } from "./EmailDraftCard";
 import { CaseNextActionCard } from "./CaseNextActionCard";
-import type { CaseAgentSource, CaseAgentToolActivity } from "./dashboard.types";
+import type { CaseAgentSource, CaseAgentToolActivity, CaseEmailDraft } from "./dashboard.types";
 import type { CaseConversation as CaseConversationData } from "./dashboard.types";
 
 interface CaseConversationProps {
@@ -35,6 +35,7 @@ interface CaseConversationProps {
   onRetryMessage: (messageId: string, content?: string) => void;
   onDeleteCase: (caseId: string) => void;
   onRenameCase: (caseId: string, title: string) => Promise<boolean>;
+  onEmailDraftDecision: (messageId: string, decision: "approve" | "cancel", draft?: Pick<CaseEmailDraft, "recipients" | "subject" | "body">) => Promise<{ success: boolean; message?: string }>;
 }
 
 export function CaseConversation({
@@ -46,6 +47,7 @@ export function CaseConversation({
   onRetryMessage,
   onDeleteCase,
   onRenameCase,
+  onEmailDraftDecision,
 }: CaseConversationProps) {
   const menuRef = useRef<HTMLDivElement>(null);
   const historyRef = useRef<HTMLDivElement>(null);
@@ -240,40 +242,46 @@ export function CaseConversation({
                   tabIndex={message.emailDraft ? -1 : undefined}
                 >
                 {message.role === "assistant" && (
-                  <AgentActivityDisclosure activities={message.toolActivities} />
+                  <AgentActivityDisclosure activities={getActivitiesWithEmailHistory(message)} />
                 )}
                 {message.attachments && message.attachments.length > 0 && (
                   <CaseMessageAttachments attachments={message.attachments} />
                 )}
                 <div className="claude-message-bubble">
                   {message.role === "assistant"
-                    ? message.emailDraft
-                      ? <EmailDraftCard draft={message.emailDraft} />
-                      : <AssistantMessage content={message.content} />
+                    ? renderAssistantContent(message, onEmailDraftDecision)
                     : <p>{message.content}</p>}
                 </div>
-                {message.role === "assistant" && !message.emailDraft && (
-                  <CaseMessageActions messageId={message.id} createdAt={message.createdAt} />
-                )}
-                {message.role === "assistant" && (
-                  <CaseMessageSources sources={getUnmentionedSources(message.content, message.sources)} />
-                )}
-                {message.role === "assistant" && message.nextAction && (
-                  <CaseNextActionCard
-                    nextAction={message.nextAction}
-                    draftId={message.emailDraft ? `case-draft-${message.id}` : undefined}
+                {message.role === "assistant" && (!message.emailDraft || message.emailDraft.status === "sent") && (
+                  <CaseMessageActions
+                    agentTurnDurationMs={message.agentTurnDurationMs}
+                    createdAt={message.createdAt}
+                    messageId={message.id}
                   />
                 )}
-                {message.role === "user" && message.processingStatus === "failed" && (
-                  <CaseMessageFailure
-                    content={message.content}
-                    isSending={isAgentWorking}
-                    key={`${message.id}-${message.content}-${message.processingStatus}`}
-                    messageId={message.id}
-                    onRetry={onRetryMessage}
+                {message.role === "user" && (
+                  <CaseMessageActions createdAt={message.createdAt} messageId={message.id} role="user" />
+                )}
+                {message.role === "assistant" && !message.emailDraft && (
+                  <CaseMessageSources sources={getUnmentionedSources(message.content, message.sources)} />
+                )}
+                {message.role === "assistant" && message.nextAction && !message.emailDraft && (
+                  <CaseNextActionCard
+                    nextAction={message.nextAction}
                   />
                 )}
                 </article>
+                {message.role === "user" && message.processingStatus === "failed" && (
+                  <article aria-label="Message delivery error" className="claude-message-row assistant is-failed">
+                    <CaseMessageFailure
+                      content={message.content}
+                      isSending={isAgentWorking}
+                      key={`${message.id}-${message.content}-${message.processingStatus}`}
+                      messageId={message.id}
+                      onRetry={onRetryMessage}
+                    />
+                  </article>
+                )}
               </div>
             ))}
             {isAgentWorking && (
@@ -281,7 +289,7 @@ export function CaseConversation({
                 {getRunningActivity(liveToolActivities) ? (
                   <AgentActivityDisclosure activities={liveToolActivities} isLive />
                 ) : (
-                  <AgentActivityText label="Thinking" />
+                  <AgentActivityText label={liveToolActivities.length > 0 ? "Working" : "Thinking"} />
                 )}
               </div>
             )}
@@ -300,6 +308,31 @@ export function CaseConversation({
       </div>
     </div>
   );
+}
+
+function renderAssistantContent(
+  message: CaseConversationData["messages"][number],
+  onDecision: CaseConversationProps["onEmailDraftDecision"],
+): React.ReactNode {
+  const draft = message.emailDraft;
+  if (draft?.status === "sent") return <AssistantMessage content={draft.sentConfirmation || "Your email was sent successfully."} />;
+  if (draft) return <>
+    {message.content.trim() && <AssistantMessage content={message.content} />}
+    <EmailDraftCard draft={draft} messageId={message.id} onDecision={onDecision} />
+  </>;
+  return <AssistantMessage content={message.content} />;
+}
+
+function getActivitiesWithEmailHistory(message: CaseConversationData["messages"][number]): CaseAgentToolActivity[] {
+  const events = message.emailDraft?.events ?? [];
+  const emailActivities = events.map((event, index) => ({
+    id: `${message.id}-email-${index}`,
+    name: event.status === "sending" ? "send_email" : "email_draft",
+    label: event.summary,
+    status: event.status === "sending" ? "running" as const : "completed" as const,
+    actionStatus: event.status,
+  }));
+  return [...message.toolActivities, ...emailActivities];
 }
 
 function getRunningActivity(activities: CaseAgentToolActivity[]): boolean {

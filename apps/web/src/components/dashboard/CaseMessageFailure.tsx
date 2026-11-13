@@ -33,7 +33,7 @@ export function CaseMessageFailure({ messageId, content, isSending, onRetry }: C
   return (
     <div className="case-message-failure" role="status">
       <div className="case-message-failure-copy">
-        <p>Bill Agent couldn’t respond. Your message is kept here.</p>
+        <p>We’re having trouble connecting to our servers.<br />Please try again later.</p>
       </div>
       {isEditing && (
         <textarea

@@ -33,16 +33,28 @@ export interface CaseMessage {
   content: string;
   createdAt: string;
   processingStatus: "pending" | "complete" | "failed";
+  agentTurnDurationMs?: number;
   sources: CaseAgentSource[];
   toolActivities: CaseAgentToolActivity[];
   emailDraft?: CaseEmailDraft;
   nextAction?: { goal: string; action: string };
 }
 
+export type CaseEmailDraftStatus = "waiting_approval" | "sending" | "sent" | "failed" | "cancelled";
+
 export interface CaseEmailDraft {
   recipients: string;
   subject: string;
   body: string;
+  supportingEvidence?: string[];
+  gmailConnected?: boolean;
+  status: CaseEmailDraftStatus;
+  events: { status: CaseEmailDraftStatus; occurredAt: string; summary: string }[];
+  approvedAt?: string;
+  sentAt?: string;
+  sentConfirmation?: string;
+  deliveryError?: string;
+  deliveryDiagnostic?: { certainty: string; providerCode: string; statusCode?: number };
 }
 
 export interface CaseAgentSource {
@@ -55,6 +67,7 @@ export interface CaseAgentToolActivity {
   name: string;
   label: string;
   status: "running" | "completed";
+  actionStatus?: CaseEmailDraftStatus;
   operation?: "search" | "open_page" | "find_in_page";
   detail?: string;
   sources?: CaseAgentSource[];

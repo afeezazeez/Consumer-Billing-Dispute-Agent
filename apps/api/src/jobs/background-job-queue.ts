@@ -9,7 +9,13 @@ export class BackgroundJobQueue {
   }
 
   async enqueue(id: string, job: BackgroundJob): Promise<void> {
-    await this.queue.add(job.type, job, { jobId: id, attempts: 4, backoff: { type: "exponential", delay: 2_000 }, removeOnComplete: 500, removeOnFail: 2_000 });
+    await this.queue.add(job.type, job, {
+      jobId: id,
+      attempts: job.type === "agent-turn" ? 1 : 4,
+      backoff: { type: "exponential", delay: 2_000 },
+      removeOnComplete: 500,
+      removeOnFail: 2_000,
+    });
   }
 
   async enqueueInitialKnowledgeRefresh(): Promise<void> {

@@ -1,5 +1,6 @@
 import type { CaseAttachment, StoredCaseAttachment } from "./case-attachment";
-import type { CaseAgentSource, CaseAgentToolActivity, CaseEmailDraft } from "./case-intake-agent";
+import type { CaseAgentSource, CaseAgentToolActivity } from "./case-intake-agent";
+import type { ApprovedCaseEmailDraft, CaseEmailDraft } from "./case-email-draft";
 import type { CaseIntakeState } from "./case-intake";
 import type { CaseNextAction } from "./case-next-action";
 
@@ -10,6 +11,7 @@ export interface CaseMessageRecord {
   content: string;
   createdAt: Date;
   processingStatus: CaseMessageProcessingStatus;
+  agentTurnDurationMs?: number;
   sources?: CaseAgentSource[];
   toolActivities?: CaseAgentToolActivity[];
   emailDraft?: CaseEmailDraft;
@@ -69,6 +71,21 @@ export interface UpdateFailedMessage {
   content?: string;
 }
 
+export interface DecideCaseEmailDraft {
+  userId: string;
+  caseId: string;
+  messageId: string;
+  decision: "approve" | "cancel";
+  approvedDraft?: ApprovedCaseEmailDraft;
+}
+
+export interface UpdateCaseEmailDraft {
+  userId: string;
+  caseId: string;
+  messageId: string;
+  draft: CaseEmailDraft;
+}
+
 export interface CaseRepository {
   stageAttachment(userId: string, attachment: StoredCaseAttachment): Promise<void>;
   discardStagedAttachment(userId: string, attachmentId: string): Promise<void>;
@@ -83,4 +100,6 @@ export interface CaseRepository {
   findForUser(userId: string, caseId: string): Promise<CaseConversation | undefined>;
   deleteForUser(userId: string, caseId: string): Promise<boolean>;
   renameForUser(userId: string, caseId: string, title: string): Promise<boolean>;
+  decideEmailDraft(input: DecideCaseEmailDraft): Promise<CaseConversation | undefined>;
+  updateEmailDraft(input: UpdateCaseEmailDraft): Promise<CaseConversation | undefined>;
 }

@@ -11,7 +11,7 @@
     "build:web": "npm run build --workspace=@billing-agent/web",
     "start:web": "npm run start --workspace=@billing-agent/web",
     "lint:web": "npm run lint --workspace=@billing-agent/web",
-    "dev:api": "npm run dev --workspace=@billing-agent/api",
+    "dev:api": "node scripts/dev-backend.mjs",
     "dev:worker": "npm run dev:worker --workspace=@billing-agent/api",
     "start:worker": "npm run start:worker --workspace=@billing-agent/api",
     "build:api": "npm run build --workspace=@billing-agent/api",

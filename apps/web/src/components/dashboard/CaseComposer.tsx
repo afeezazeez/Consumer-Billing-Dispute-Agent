@@ -180,35 +180,35 @@ export function CaseComposer({
 
       <form
         aria-busy={isSending || isUploading || isVoiceBusy(voiceStatus)}
-        className={`claude-composer-card${voiceStatus !== "idle" ? " is-voice-mode" : ""}`}
+        className="claude-composer-card"
         onDragOver={handleDragOver}
         onDrop={handleDrop}
         onSubmit={handleSubmit}
       >
-        {voiceStatus !== "idle" ? (
-          <VoiceInputActivity status={voiceStatus} onCancel={handleVoiceCancel} onStop={handleVoiceClick} />
-        ) : (
-          <>
-            <ComposerAttachments attachments={attachments} onRemove={removeAttachment} onRetry={retry} isUploading={isUploading} />
-            {attachmentError && <p className="claude-composer-error" role="alert">{attachmentError}</p>}
-            {voiceError && <p className="claude-composer-error" role="alert">{voiceError}</p>}
-            {voiceMessageError && <p className="claude-composer-error" role="alert">{voiceMessageError}</p>}
-            <label className="visually-hidden" htmlFor="claude-case-message">
-              Message about your billing dispute
-            </label>
-            <textarea
-              className="claude-composer-textarea"
-              id="claude-case-message"
-              maxLength={2000}
-              readOnly={isUploading}
-              onChange={handleChange}
-              onKeyDown={handleKeyDown}
-              placeholder={defaultPlaceholder}
-              ref={textareaRef}
-              rows={variant === "welcome" ? 3 : 2}
-              value={message}
-            />
+        <>
+          <ComposerAttachments attachments={attachments} onRemove={removeAttachment} onRetry={retry} isUploading={isUploading} />
+          {attachmentError && <p className="claude-composer-error" role="alert">{attachmentError}</p>}
+          {voiceError && <p className="claude-composer-error" role="alert">{voiceError}</p>}
+          {voiceMessageError && <p className="claude-composer-error" role="alert">{voiceMessageError}</p>}
+          <label className="visually-hidden" htmlFor="claude-case-message">
+            Message about your billing dispute
+          </label>
+          <textarea
+            className="claude-composer-textarea"
+            id="claude-case-message"
+            maxLength={2000}
+            readOnly={isUploading}
+            onChange={handleChange}
+            onKeyDown={handleKeyDown}
+            placeholder={defaultPlaceholder}
+            ref={textareaRef}
+            rows={variant === "welcome" ? 3 : 2}
+            value={message}
+          />
 
+          {voiceStatus !== "idle" ? (
+            <VoiceInputActivity status={voiceStatus} onCancel={handleVoiceCancel} onStop={handleVoiceClick} />
+          ) : (
             <div className="claude-composer-bottom-bar">
               <div className="claude-composer-left-actions">
                 <input
@@ -268,8 +268,8 @@ export function CaseComposer({
                 </button>
               </div>
             </div>
-          </>
-        )}
+          )}
+        </>
       </form>
     </div>
   );

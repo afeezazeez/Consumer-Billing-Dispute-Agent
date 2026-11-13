@@ -1,10 +1,14 @@
 import type { CaseIntakeState } from "./case-intake";
 import type { CaseMessageRecord } from "./case.repository";
+import type { ApprovedCaseEmailDraft } from "./case-email-draft";
+import type { EmailApprovalDecision } from "./case-email-draft";
 
 export interface CaseIntakeAgentContext {
+  userId: string;
   caseId: string;
   nextAction?: CaseNextAction;
   generateCaseTitle?: boolean;
+  gmailConnected: boolean;
   messageId: string;
   messages: CaseMessageRecord[];
   intake: CaseIntakeState;
@@ -15,16 +19,12 @@ export interface CaseIntakeAgentResult {
   nextAction?: CaseNextAction;
   caseTitle?: string;
   response: string;
-  emailDraft?: CaseEmailDraft;
+  emailDraft?: ApprovedCaseEmailDraft;
+  approvalPending?: boolean;
+  gmailConnected?: boolean;
   intake: CaseIntakeState;
   sources: CaseAgentSource[];
   toolActivities: CaseAgentToolActivity[];
-}
-
-export interface CaseEmailDraft {
-  recipients: string;
-  subject: string;
-  body: string;
 }
 
 export interface CaseAgentSource {
@@ -46,5 +46,6 @@ export type CaseAgentProgressHandler = (activity: CaseAgentToolActivity) => void
 
 export interface CaseIntakeAgent {
   respond(context: CaseIntakeAgentContext, onProgress?: CaseAgentProgressHandler): Promise<CaseIntakeAgentResult>;
+  resumeEmailApproval(userId: string, caseId: string, messageId: string, decision: EmailApprovalDecision): Promise<string | undefined>;
 }
 import type { CaseNextAction } from "./case-next-action";

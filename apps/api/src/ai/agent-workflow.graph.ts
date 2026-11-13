@@ -1,9 +1,10 @@
-import { Annotation, END, START, StateGraph, type BaseCheckpointSaver } from "@langchain/langgraph";
+import { Annotation, Command, END, interrupt, isInterrupted, START, StateGraph, type BaseCheckpointSaver } from "@langchain/langgraph";
+import type { ApprovedCaseEmailDraft, EmailApprovalDecision } from "../cases/case-email-draft";
 
-export const MAX_AGENT_TOOL_CALLS = 3;
+export const MAX_AGENT_TOOL_CALLS = 2;
 
-type WorkflowPhase = "new" | "request_model" | "execute_tools" | "request_final" | "finish" | "waiting_for_user";
-type ModelRoute = "execute_tools" | "finish";
+type WorkflowPhase = "new" | "request_model" | "execute_tools" | "request_final" | "approval_gate" | "finish" | "waiting_for_user";
+type ModelRoute = "execute_tools" | "approval_gate" | "finish";
 type ToolRoute = "request_model" | "request_final";
 
 export interface AgentWorkflowHandlers {
@@ -11,16 +12,21 @@ export interface AgentWorkflowHandlers {
   executeTools(remainingCalls: number): Promise<number>;
   requestFinalResponse(): Promise<void>;
   finish(): Promise<void>;
+  getEmailDraft(): ApprovedCaseEmailDraft | undefined;
+  sendEmail(userId: string, draft: ApprovedCaseEmailDraft): Promise<void>;
 }
 
 export interface AgentWorkflowTurn {
   caseId: string;
   messageId: string;
+  userId: string;
 }
 
 const WorkflowState = Annotation.Root({
   caseId: Annotation<string>,
   messageId: Annotation<string>,
+  userId: Annotation<string>,
+  emailDraft: Annotation<ApprovedCaseEmailDraft | undefined>,
   phase: Annotation<WorkflowPhase>({
     reducer: (_current, update) => update,
     default: () => "new",
@@ -38,14 +44,24 @@ export async function runAgentWorkflow(
   checkpointer: BaseCheckpointSaver,
   turn: AgentWorkflowTurn,
   handlers: AgentWorkflowHandlers,
+): Promise<boolean> {
+  const graph = buildAgentWorkflowGraph(checkpointer, handlers);
+  const result = await graph.invoke(turn, createWorkflowConfig(turn));
+  return isInterrupted(result);
+}
+
+export async function resumeAgentWorkflow(
+  checkpointer: BaseCheckpointSaver,
+  turn: AgentWorkflowTurn,
+  handlers: AgentWorkflowHandlers,
+  decision: EmailApprovalDecision,
 ): Promise<void> {
   const graph = buildAgentWorkflowGraph(checkpointer, handlers);
-  await graph.invoke(turn, {
-    configurable: {
-      thread_id: turn.caseId,
-      checkpoint_ns: createTurnCheckpointNamespace(turn.messageId),
-    },
-  });
+  await graph.invoke(new Command({ resume: decision }), createWorkflowConfig(turn));
+}
+
+function createWorkflowConfig(turn: AgentWorkflowTurn) {
+  return { configurable: { thread_id: turn.caseId, checkpoint_ns: createTurnCheckpointNamespace(turn.messageId) } };
 }
 
 function createTurnCheckpointNamespace(messageId: string): string {
@@ -61,12 +77,14 @@ function buildAgentWorkflowGraph(
     .addNode("request_model", requestModel(handlers))
     .addNode("execute_tools", executeTools(handlers))
     .addNode("request_final", requestFinalResponse(handlers))
+    .addNode("approval_gate", approvalGate(handlers))
     .addNode("finish", finishTurn(handlers))
     .addEdge(START, "begin_turn")
     .addEdge("begin_turn", "request_model")
-    .addConditionalEdges("request_model", routeModel, { execute_tools: "execute_tools", finish: "finish" })
+    .addConditionalEdges("request_model", routeModel, { execute_tools: "execute_tools", approval_gate: "approval_gate", finish: "finish" })
     .addConditionalEdges("execute_tools", routeTools, { request_model: "request_model", request_final: "request_final" })
-    .addEdge("request_final", "finish")
+    .addConditionalEdges("request_final", routeDraft, { approval_gate: "approval_gate", finish: "finish" })
+    .addEdge("approval_gate", "finish")
     .addEdge("finish", END);
   return graph.compile({ checkpointer });
 }
@@ -76,7 +94,11 @@ function beginTurn(): WorkflowStateUpdate {
 }
 
 function requestModel(handlers: AgentWorkflowHandlers) {
-  return async (): Promise<WorkflowStateUpdate> => ({ phase: await handlers.requestModel() });
+  return async (): Promise<WorkflowStateUpdate> => {
+    const phase = await handlers.requestModel();
+    const emailDraft = handlers.getEmailDraft();
+    return { phase: emailDraft ? "approval_gate" : phase, emailDraft };
+  };
 }
 
 function executeTools(handlers: AgentWorkflowHandlers) {
@@ -90,8 +112,20 @@ function executeTools(handlers: AgentWorkflowHandlers) {
 function requestFinalResponse(handlers: AgentWorkflowHandlers) {
   return async (): Promise<WorkflowStateUpdate> => {
     await handlers.requestFinalResponse();
-    return { phase: "finish" };
+    return { phase: handlers.getEmailDraft() ? "approval_gate" : "finish", emailDraft: handlers.getEmailDraft() };
   };
+}
+
+function approvalGate(handlers: AgentWorkflowHandlers) {
+  return async (state: WorkflowStateValue): Promise<WorkflowStateUpdate> => {
+    const decision = interrupt<unknown, EmailApprovalDecision>({ type: "email_draft_approval", draft: state.emailDraft });
+    if (decision.decision === "approve" && decision.draft) await handlers.sendEmail(state.userId, decision.draft);
+    return { phase: "finish", emailDraft: decision.draft ?? state.emailDraft };
+  };
+}
+
+function routeDraft(state: WorkflowStateValue): "approval_gate" | "finish" {
+  return state.emailDraft ? "approval_gate" : "finish";
 }
 
 function finishTurn(handlers: AgentWorkflowHandlers) {
@@ -102,7 +136,8 @@ function finishTurn(handlers: AgentWorkflowHandlers) {
 }
 
 function routeModel(state: WorkflowStateValue): ModelRoute {
-  return state.phase === "execute_tools" ? "execute_tools" : "finish";
+  if (state.phase === "execute_tools") return "execute_tools";
+  return state.phase === "approval_gate" ? "approval_gate" : "finish";
 }
 
 function routeTools(state: WorkflowStateValue): ToolRoute {

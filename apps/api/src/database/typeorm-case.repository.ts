@@ -5,6 +5,7 @@ import { CaseAttachmentEntity } from "./entities/case-attachment.entity";
 import { randomUUID } from "node:crypto";
 import { In, type DataSource, type EntityManager } from "typeorm";
 import type { CaseAgentToolActivity } from "../cases/case-intake-agent";
+import { appendEmailDraftEvent, type CaseEmailDraft } from "../cases/case-email-draft";
 import type {
   AppendPendingMessage,
   CaseConversation,
@@ -14,6 +15,8 @@ import type {
   CompleteCaseTurn,
   CreatePendingCase,
   UpdateFailedMessage,
+  DecideCaseEmailDraft,
+  UpdateCaseEmailDraft,
 } from "../cases/case.repository";
 import { CaseEntity, CaseMessageEntity } from "./entities/case.entity";
 import { OutboxRepository } from "../jobs/outbox.repository";
@@ -56,6 +59,29 @@ export class TypeOrmCaseRepository implements CaseRepository {
        AND cases.id = messages.case_id AND cases.user_id = $4`,
       [JSON.stringify(activities), messageId, caseId, userId],
     );
+  }
+
+  decideEmailDraft(input: DecideCaseEmailDraft): Promise<CaseConversation | undefined> {
+    return this.dataSource.transaction(async (manager) => {
+      const draft = await lockEmailDraft(manager, input);
+      if (!draft || draft.status !== "waiting_approval") return undefined;
+      const decided = input.decision === "approve"
+        ? approveEmailDraft(draft, input.approvedDraft)
+        : appendEmailDraftEvent(draft, "cancelled", "Draft cancelled; no email was sent.");
+      await manager.getRepository(CaseMessageEntity).update({ id: input.messageId, caseId: input.caseId }, { emailDraft: decided });
+      return readConversation(manager, input.userId, input.caseId);
+    });
+  }
+
+  updateEmailDraft(input: UpdateCaseEmailDraft): Promise<CaseConversation | undefined> {
+    return this.dataSource.transaction(async (manager) => {
+      const caseRecord = await manager.getRepository(CaseEntity).findOneBy({ id: input.caseId, userId: input.userId });
+      if (!caseRecord) return undefined;
+      const result = await manager.getRepository(CaseMessageEntity).update(
+        { id: input.messageId, caseId: input.caseId, role: "assistant" }, { emailDraft: input.draft },
+      );
+      return result.affected ? readConversation(manager, input.userId, input.caseId) : undefined;
+    });
   }
 
   async listForUser(userId: string): Promise<CaseSummary[]> {
@@ -201,6 +227,24 @@ async function readConversation(
   return toConversation(record, messages, await loadAttachments(manager, messages));
 }
 
+async function lockEmailDraft(manager: EntityManager, input: DecideCaseEmailDraft): Promise<CaseEmailDraft | undefined> {
+  const rows = await manager.query(
+    `SELECT messages.email_draft AS draft FROM case_messages messages
+     JOIN billing_cases cases ON cases.id = messages.case_id
+     WHERE messages.id = $1 AND messages.case_id = $2 AND messages.role = 'assistant'
+       AND cases.user_id = $3 FOR UPDATE OF messages`,
+    [input.messageId, input.caseId, input.userId],
+  ) as { draft: CaseEmailDraft | null }[];
+  return rows[0]?.draft ?? undefined;
+}
+
+function approveEmailDraft(draft: CaseEmailDraft, approvedDraft?: DecideCaseEmailDraft["approvedDraft"]): CaseEmailDraft {
+  if (!approvedDraft) throw new Error("An approved email draft snapshot is required");
+  const approvedAt = new Date().toISOString();
+  const sending = appendEmailDraftEvent({ ...draft, ...approvedDraft, approvedAt }, "sending", "You approved this exact draft; sending through Gmail.");
+  return sending;
+}
+
 function toMessageEntity(message: CaseMessageRecord, caseId: string): CaseMessageEntity {
   return {
     id: message.id,
@@ -209,6 +253,7 @@ function toMessageEntity(message: CaseMessageRecord, caseId: string): CaseMessag
     content: message.content,
     createdAt: message.createdAt,
     processingStatus: message.processingStatus,
+    agentTurnDurationMs: message.agentTurnDurationMs ?? null,
     sources: message.sources ?? [],
     toolActivities: message.toolActivities ?? [],
     emailDraft: message.emailDraft ?? null,
@@ -258,6 +303,7 @@ function toMessage(message: CaseMessageEntity): CaseMessageRecord {
     content: message.content,
     createdAt: message.createdAt,
     processingStatus: message.processingStatus,
+    agentTurnDurationMs: message.agentTurnDurationMs ?? undefined,
     sources: message.sources ?? [],
     toolActivities: message.toolActivities ?? [],
     emailDraft: message.emailDraft ?? undefined,

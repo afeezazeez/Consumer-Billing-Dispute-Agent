@@ -5,5 +5,7 @@ declare module "express-session" {
     userId?: string;
     firstName?: string;
     oauthState?: string;
+    gmailConnectorOAuthState?: string;
+    gmailConnectorReturnTo?: string;
   }
 }

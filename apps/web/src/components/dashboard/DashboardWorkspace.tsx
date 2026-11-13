@@ -2,6 +2,7 @@
 
 import type { CaseUpload } from "./dashboard.types";
 import { useCallback, useEffect, useState } from "react";
+import type { Dispatch, ReactNode, SetStateAction } from "react";
 import { useRouter } from "next/navigation";
 import { CaseConversation } from "./CaseConversation";
 import { CaseDeleteModal } from "./CaseDeleteModal";
@@ -10,6 +11,7 @@ import { DashboardEmptyState } from "./DashboardEmptyState";
 import type {
   CaseAgentToolActivity,
   CaseConversation as CaseConversationData,
+  CaseEmailDraft,
   CaseSummary,
   DashboardUser,
 } from "./dashboard.types";
@@ -18,9 +20,11 @@ const API_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001";
 
 interface DashboardWorkspaceProps {
   caseId?: string;
+  view?: "dashboard" | "connectors";
+  children?: ReactNode;
 }
 
-export function DashboardWorkspace({ caseId: routeCaseId }: DashboardWorkspaceProps) {
+export function DashboardWorkspace({ caseId: routeCaseId, view = "dashboard", children }: DashboardWorkspaceProps) {
   const router = useRouter();
   const [user, setUser] = useState<DashboardUser>();
   const [cases, setCases] = useState<CaseSummary[]>([]);
@@ -178,6 +182,15 @@ export function DashboardWorkspace({ caseId: routeCaseId }: DashboardWorkspacePr
     }
   }, []);
 
+  const handleEmailDraftDecision = useCallback(async (
+    messageId: string,
+    decision: "approve" | "cancel",
+    draft?: Pick<CaseEmailDraft, "recipients" | "subject" | "body">,
+  ): Promise<{ success: boolean; message?: string }> => {
+    if (!activeCase) return { success: false, message: "Open the case again and retry this action." };
+    return decideEmailDraft(activeCase.id, messageId, decision, draft, setActiveCase, setCases);
+  }, [activeCase]);
+
   const handleSignOut = useCallback(async () => {
     setIsSigningOut(true);
     setSignOutError("");
@@ -213,6 +226,7 @@ export function DashboardWorkspace({ caseId: routeCaseId }: DashboardWorkspacePr
       <CaseSidebar
         activeCaseId={activeCase?.id ?? ""}
         cases={cases}
+        isConnectorsActive={view === "connectors"}
         isCollapsed={isSidebarCollapsed}
         isMobileOpen={isMobileSidebarOpen}
         isSigningOut={isSigningOut}
@@ -226,7 +240,7 @@ export function DashboardWorkspace({ caseId: routeCaseId }: DashboardWorkspacePr
         signOutError={signOutError}
         user={user}
       />
-      <section className="dashboard-main" aria-label="Billing case chat">
+      <section className="dashboard-main" aria-label={view === "connectors" ? "Connectors" : "Billing case chat"}>
         <button
           aria-label="Open cases sidebar"
           className="dashboard-mobile-menu-toggle"
@@ -237,13 +251,14 @@ export function DashboardWorkspace({ caseId: routeCaseId }: DashboardWorkspacePr
             <path d="M4 6h16M4 12h16M4 18h16" stroke="currentColor" strokeLinecap="round" strokeWidth="1.8" />
           </svg>
         </button>
-        {activeCase ? (
+        {view === "connectors" ? children : activeCase ? (
           <CaseConversation
             billingCase={activeCase}
             error={error}
             isSending={isSending}
             liveToolActivities={getPendingActivities(activeCase)}
             onDeleteCase={promptDeleteCase}
+            onEmailDraftDecision={handleEmailDraftDecision}
             onRenameCase={handleRenameCase}
             onRetryMessage={handleRetryMessage}
             onSendMessage={handleSendMessage}
@@ -267,6 +282,71 @@ export function DashboardWorkspace({ caseId: routeCaseId }: DashboardWorkspacePr
       />
     </main>
   );
+}
+
+async function decideEmailDraft(
+  caseId: string,
+  messageId: string,
+  decision: "approve" | "cancel",
+  draft: Pick<CaseEmailDraft, "recipients" | "subject" | "body"> | undefined,
+  setActiveCase: Dispatch<SetStateAction<CaseConversationData | undefined>>,
+  setCases: Dispatch<SetStateAction<CaseSummary[]>>,
+): Promise<{ success: boolean; message?: string }> {
+  setActiveCase((current) => updateEmailDraftView(current, caseId, messageId, decision));
+  try {
+    const result = await requestData<{ case: CaseConversationData }>(`/cases/${caseId}/messages/${messageId}/email-draft/decision`, {
+      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ decision, ...draft }),
+    });
+    setActiveCase((current) => current?.id === caseId ? result.case : current);
+    setCases((current) => upsertCase(current, result.case));
+    return { success: true };
+  } catch (error) {
+    await refreshEmailDraftCase(caseId, setActiveCase);
+    return { success: false, message: getEmailDecisionError(error) };
+  }
+}
+
+function updateEmailDraftView(
+  billingCase: CaseConversationData | undefined,
+  caseId: string,
+  messageId: string,
+  decision: "approve" | "cancel",
+): CaseConversationData | undefined {
+  if (!billingCase || billingCase.id !== caseId) return billingCase;
+  const status = decision === "approve" ? "sending" : "cancelled";
+  return {
+    ...billingCase,
+    messages: billingCase.messages.map((message) => message.id !== messageId || !message.emailDraft ? message : {
+      ...message,
+      emailDraft: {
+        ...message.emailDraft,
+        status,
+        events: [...message.emailDraft.events, {
+          status,
+          occurredAt: new Date().toISOString(),
+          summary: decision === "approve" ? "Sending the approved email through Gmail." : "Draft cancelled; no email was sent.",
+        }],
+      },
+    }),
+  };
+}
+
+async function refreshEmailDraftCase(
+  caseId: string,
+  setActiveCase: Dispatch<SetStateAction<CaseConversationData | undefined>>,
+): Promise<void> {
+  try {
+    const latest = await requestData<{ case: CaseConversationData }>(`/cases/${caseId}`);
+    setActiveCase((current) => current?.id === caseId ? latest.case : current);
+  } catch {
+    // Keep the last visible state; a page refresh can reload the recorded decision.
+  }
+}
+
+function getEmailDecisionError(error: unknown): string {
+  if (error instanceof DashboardRequestError && error.status === 422) return "Connect Gmail before sending. Open Connectors, connect your account, then return to this draft.";
+  if (error instanceof DashboardRequestError && error.status === 409) return "This draft already has a decision. Refresh the conversation to see its current status.";
+  return "We couldn’t complete that email action. Refresh the conversation and check the draft status.";
 }
 
 async function sendCaseMessage(

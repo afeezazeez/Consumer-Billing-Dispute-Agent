@@ -7,6 +7,7 @@ import { CreateCaseRequestDto } from "../dtos/cases/create-case-request.dto";
 import { CreateMessageRequestDto } from "../dtos/cases/create-message-request.dto";
 import { RenameCaseRequestDto } from "../dtos/cases/rename-case-request.dto";
 import { RetryCaseMessageRequestDto } from "../dtos/cases/retry-case-message-request.dto";
+import { DecideCaseEmailDraftRequestDto } from "../dtos/cases/decide-case-email-draft-request.dto";
 import { validateBody } from "../middlewares/request-validator";
 import type { CaseController } from "./case.controller";
 
@@ -24,6 +25,7 @@ export function createCaseRouter(controller: CaseController, authMiddleware: Aut
   router.post("/:caseId/messages/stream", parseCaseAttachments, validateBody(CreateMessageRequestDto), (request, response) => controller.addMessageStream(request, response));
   router.post("/:caseId/messages", validateBody(CreateMessageRequestDto), (request, response, next) => controller.addMessage(request, response, next));
   router.post("/:caseId/messages/:messageId/retry/stream", validateBody(RetryCaseMessageRequestDto), (request, response) => controller.retryMessageStream(request, response));
+  router.post("/:caseId/messages/:messageId/email-draft/decision", validateBody(DecideCaseEmailDraftRequestDto), (request, response, next) => controller.decideEmailDraft(request, response, next));
   router.post("/:caseId/messages/:messageId/retry", validateBody(RetryCaseMessageRequestDto), (request, response, next) => controller.retryMessage(request, response, next));
   router.delete("/:caseId", (request, response, next) => controller.delete(request, response, next));
   router.patch("/:caseId", validateBody(RenameCaseRequestDto), (request, response, next) => controller.rename(request, response, next));

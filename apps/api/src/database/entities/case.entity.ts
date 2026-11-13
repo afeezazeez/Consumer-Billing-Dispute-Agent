@@ -1,6 +1,7 @@
 import { EntitySchema } from "typeorm";
 import type { CaseNextAction } from "../../cases/case-next-action";
-import type { CaseAgentSource, CaseAgentToolActivity, CaseEmailDraft } from "../../cases/case-intake-agent";
+import type { CaseAgentSource, CaseAgentToolActivity } from "../../cases/case-intake-agent";
+import type { CaseEmailDraft } from "../../cases/case-email-draft";
 import type { CaseIntakeState } from "../../cases/case-intake";
 import type { CaseMessageProcessingStatus } from "../../cases/case.repository";
 
@@ -23,6 +24,7 @@ export class CaseMessageEntity {
   content!: string;
   createdAt!: Date;
   processingStatus!: CaseMessageProcessingStatus;
+  agentTurnDurationMs!: number | null;
   sources!: CaseAgentSource[];
   toolActivities!: CaseAgentToolActivity[];
   emailDraft!: CaseEmailDraft | null;
@@ -61,6 +63,7 @@ export const caseMessageSchema = new EntitySchema<CaseMessageEntity>({
     role: { type: "varchar", length: 12 },
     content: { type: "text" },
     processingStatus: { name: "processing_status", type: "varchar", length: 16, default: "complete" },
+    agentTurnDurationMs: { name: "agent_turn_duration_ms", type: "integer", nullable: true },
     sources: { type: "jsonb", default: () => "'[]'::jsonb" },
     toolActivities: { name: "tool_activities", type: "jsonb", default: () => "'[]'::jsonb" },
     emailDraft: { name: "email_draft", type: "jsonb", nullable: true },

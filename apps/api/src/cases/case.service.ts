@@ -5,6 +5,11 @@ import type { PendingCaseAttachment, StoredCaseAttachment } from "./case-attachm
 import { randomUUID } from "node:crypto";
 import { createEmptyCaseIntake } from "./case-intake";
 import type { CaseAgentToolActivity, CaseIntakeAgent, CaseIntakeAgentResult } from "./case-intake-agent";
+import { appendEmailDraftEvent, createPendingEmailDraft, type ApprovedCaseEmailDraft, type CaseEmailDraft, type EmailApprovalDecision } from "./case-email-draft";
+import type { EmailConnector } from "../connectors/email/email-connector.interface";
+import { EmailDeliveryError } from "../connectors/email/email-delivery-error";
+import { ClientErrorException } from "../exceptions/client.error.exception";
+import { ResponseStatus } from "../enums/response-status";
 import type { AgentTurnQueueJob } from "../jobs/job.types";
 import type { CaseConversation, CaseMessageRecord, CaseRepository, CaseSummary } from "./case.repository";
 
@@ -36,6 +41,7 @@ export class CaseService {
     private readonly caseIntakeAgent: CaseIntakeAgent,
     private readonly attachmentService: AttachmentService,
     private readonly documentReviewService: DocumentReviewService,
+    private readonly emailConnector: EmailConnector,
   ) {}
 
   async createCase(userId: string, input: CreateCaseInput): Promise<CaseConversation> {
@@ -114,6 +120,7 @@ export class CaseService {
   }
 
   async processAgentTurn(job: AgentTurnQueueJob, userFirstName?: string): Promise<CaseConversation> {
+    const startedAt = Date.now();
     const billingCase = await this.caseRepository.findForUser(job.userId, job.caseId);
     if (!billingCase) throw new Error("Case disappeared while processing the message");
     const userMessage = billingCase.messages.find((message) => message.id === job.messageId);
@@ -125,9 +132,11 @@ export class CaseService {
     let activityWrites = Promise.resolve();
     const result = await this.caseIntakeAgent.respond({
       caseId: job.caseId,
+      userId: job.userId,
       messages: billingCase.messages,
       messageId: job.messageId,
       intake: billingCase.intake,
+      gmailConnected: (await this.emailConnector.getStatus(job.userId)).connected,
       nextAction: billingCase.nextAction,
       userFirstName,
       generateCaseTitle: isOpeningTurn,
@@ -138,7 +147,7 @@ export class CaseService {
         this.caseRepository.updatePendingMessageActivities(job.userId, job.caseId, job.messageId, snapshot));
     });
     await activityWrites;
-    const assistantMessage = createAssistantMessage(result, userMessage.createdAt);
+    const assistantMessage = createAssistantMessage(result, userMessage.createdAt, Date.now() - startedAt);
     const completedCase = await this.caseRepository.completeTurn({
       userId: job.userId,
       caseId: job.caseId,
@@ -154,6 +163,46 @@ export class CaseService {
 
   async failAgentTurn(userId: string, caseId: string, messageId: string): Promise<void> {
     await this.caseRepository.markMessageFailed(userId, caseId, messageId);
+  }
+
+  async decideEmailDraft(userId: string, caseId: string, messageId: string, decision: EmailApprovalDecision): Promise<CaseConversation | undefined> {
+    if (decision.decision === "approve") await this.ensureGmailConnected(userId);
+    if (decision.decision === "approve") validateApprovedDraft(decision.draft);
+    const approvedDraft = decision.decision === "approve" ? decision.draft : undefined;
+    const billingCase = await this.caseRepository.decideEmailDraft({ userId, caseId, messageId, decision: decision.decision, approvedDraft });
+    if (!billingCase) throw new ClientErrorException("This email draft is no longer waiting for a decision.", ResponseStatus.CONFLICT);
+    let assistantReply: string | undefined;
+    try {
+      assistantReply = await this.caseIntakeAgent.resumeEmailApproval(userId, caseId, messageId, decision);
+    } catch (error) {
+      logEmailDeliveryFailure(error, caseId, messageId);
+      return decision.decision === "approve"
+        ? this.updateEmailDraftStatus(userId, caseId, messageId, billingCase, "failed", getEmailDeliveryMessage(error), error)
+        : billingCase;
+    }
+    return decision.decision === "approve"
+      ? this.updateEmailDraftStatus(userId, caseId, messageId, billingCase, "sent", "Gmail accepted the email.", undefined, assistantReply)
+      : billingCase;
+  }
+
+  private async ensureGmailConnected(userId: string): Promise<void> {
+    const status = await this.emailConnector.getStatus(userId);
+    if (!status.connected) throw new ClientErrorException("Connect Gmail before approving and sending this draft.", ResponseStatus.UNPROCESSABLE_ENTITY);
+  }
+
+  private updateEmailDraftStatus(userId: string, caseId: string, messageId: string, billingCase: CaseConversation, status: "sent" | "failed", summary: string, error?: unknown, assistantReply?: string): Promise<CaseConversation | undefined> {
+    const draft = billingCase.messages.find((item) => item.id === messageId)?.emailDraft;
+    if (!draft) return Promise.resolve(billingCase);
+    const updated = appendEmailDraftEvent(draft, status, summary);
+    if (status === "sent") {
+      updated.sentAt = new Date().toISOString();
+      if (assistantReply) updated.sentConfirmation = assistantReply;
+    }
+    else {
+      updated.deliveryError = summary;
+      updated.deliveryDiagnostic = getEmailDeliveryDiagnostic(error);
+    }
+    return this.caseRepository.updateEmailDraft({ userId, caseId, messageId, draft: updated });
   }
 
   private async readTurnDocuments(job: AgentTurnQueueJob, message: CaseMessageRecord, history: CaseMessageRecord[]): Promise<void> {
@@ -215,8 +264,16 @@ export class CaseService {
     return this.caseRepository.listForUser(userId);
   }
 
-  findCase(userId: string, caseId: string): Promise<CaseConversation | undefined> {
-    return this.caseRepository.findForUser(userId, caseId);
+  async findCase(userId: string, caseId: string): Promise<CaseConversation | undefined> {
+    const billingCase = await this.caseRepository.findForUser(userId, caseId);
+    if (!billingCase) return undefined;
+    const gmailConnected = (await this.emailConnector.getStatus(userId)).connected;
+    return {
+      ...billingCase,
+      messages: billingCase.messages.map((message) => message.emailDraft
+        ? { ...message, emailDraft: { ...message.emailDraft, gmailConnected } }
+        : message),
+    };
   }
 
   deleteCase(userId: string, caseId: string): Promise<boolean> {
@@ -228,18 +285,54 @@ export class CaseService {
   }
 }
 
+function logEmailDeliveryFailure(error: unknown, caseId: string, messageId: string): void {
+  const details = error instanceof EmailDeliveryError
+    ? { certainty: error.certainty, providerCode: error.providerCode, statusCode: error.statusCode }
+    : { certainty: "unknown", providerCode: "unexpected_error" };
+  console.error(JSON.stringify({ event: "gmail_email_delivery_failed", caseId, messageId, ...details }));
+}
+
+function getEmailDeliveryMessage(error: unknown): string {
+  if (error instanceof EmailDeliveryError && error.certainty === "not_sent") {
+    return "Gmail authorization failed before sending. Reconnect Gmail, then create a new draft.";
+  }
+  if (error instanceof EmailDeliveryError && error.certainty === "rejected") {
+    return "Gmail rejected this email. Check the recipient and connection, then create a new draft.";
+  }
+  return "Delivery is uncertain. Check Gmail Sent before taking another action.";
+}
+
+function getEmailDeliveryDiagnostic(error: unknown): CaseEmailDraft["deliveryDiagnostic"] {
+  if (!(error instanceof EmailDeliveryError)) return { certainty: "unknown", providerCode: "unexpected_error" };
+  return { certainty: error.certainty, providerCode: error.providerCode, statusCode: error.statusCode };
+}
+
+function validateApprovedDraft(draft?: ApprovedCaseEmailDraft): asserts draft is ApprovedCaseEmailDraft {
+  if (!draft || !draft.recipients.trim() || !draft.subject.trim() || !draft.body.trim()) {
+    throw new ClientErrorException("Add a recipient, subject, and message before sending.");
+  }
+  if (/[\r\n]/.test(draft.recipients) || /[\r\n]/.test(draft.subject)) {
+    throw new ClientErrorException("Recipient and subject fields cannot contain line breaks.");
+  }
+  const emails = draft.recipients.split(/[;,]/).map((item) => item.trim());
+  if (emails.some((email) => !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))) {
+    throw new ClientErrorException("Enter a valid email address for each recipient.");
+  }
+}
+
 function createMessage(role: CaseMessageRecord["role"], content: string, messageId?: string): CaseMessageRecord {
   return { id: messageId ?? randomUUID(), role, content, createdAt: new Date(), processingStatus: "pending" };
 }
 
-function createAssistantMessage(result: CaseIntakeAgentResult, createdAt: Date): CaseMessageRecord {
+function createAssistantMessage(result: CaseIntakeAgentResult, createdAt: Date, durationMs: number): CaseMessageRecord {
   return {
     id: randomUUID(),
     role: "assistant",
     content: result.response,
-    emailDraft: result.emailDraft,
+    emailDraft: result.emailDraft ? createPendingEmailDraft(result.emailDraft, new Date(createdAt.getTime() + 1), result.gmailConnected ?? false) : undefined,
     createdAt: new Date(createdAt.getTime() + 1),
     processingStatus: "complete",
+    agentTurnDurationMs: durationMs,
     sources: result.sources,
     toolActivities: result.toolActivities,
     nextAction: result.nextAction,

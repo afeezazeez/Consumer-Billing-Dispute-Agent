@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { AgentActivityText } from "./AgentActivityText";
+import { GmailBrandIcon } from "./GmailBrandIcon";
 import type { CaseAgentToolActivity } from "./dashboard.types";
 
 interface AgentActivityDisclosureProps {
@@ -14,11 +15,15 @@ export function AgentActivityDisclosure({ activities, isLive = false }: AgentAct
 
   return (
     <details className="agent-activity-disclosure" aria-live={isLive ? "polite" : undefined}>
-      <summary>{isLive ? <AgentActivityText label={summary} /> : summary}</summary>
+      <summary>
+        {hasEmailActivity(activities) && <GmailBrandIcon className="gmail-activity-icon" />}
+        {isLive ? <AgentActivityText label={summary} /> : summary}
+      </summary>
       <ul>
         {(visibleActivities.length > 0 ? visibleActivities : activities).map((activity) => (
           <li className="agent-activity-step" key={activity.id}>
             <span className="agent-activity-step-label">
+              {activity.actionStatus && <GmailBrandIcon className="gmail-activity-icon" />}
               {isLive && activity.status === "running"
                 ? <AgentActivityText label={getStepLabel(activity)} />
                 : getStepLabel(activity)}
@@ -42,7 +47,13 @@ export function AgentActivityDisclosure({ activities, isLive = false }: AgentAct
   );
 }
 
+function hasEmailActivity(activities: CaseAgentToolActivity[]): boolean {
+  return activities.some((activity) => activity.actionStatus !== undefined);
+}
+
 function getActivitySummary(activities: CaseAgentToolActivity[], isLive: boolean): string {
+  const emailAction = [...activities].reverse().find((activity) => activity.actionStatus);
+  if (emailAction?.actionStatus) return getEmailActivitySummary(emailAction.actionStatus);
   const latestActivity = activities.at(-1);
   const runningActivity = [...activities].reverse().find((activity) => activity.status === "running");
   const openPages = activities.filter((activity) => activity.operation === "open_page").length;
@@ -62,6 +73,14 @@ function getActivitySummary(activities: CaseAgentToolActivity[], isLive: boolean
   return isLive && latestActivity ? latestActivity.label : `${activities.length} tool call${activities.length === 1 ? "" : "s"}`;
 }
 
+function getEmailActivitySummary(status: NonNullable<CaseAgentToolActivity["actionStatus"]>): string {
+  if (status === "waiting_approval") return "Email draft ready · Waiting for your approval";
+  if (status === "sending") return "Sending email through Gmail";
+  if (status === "sent") return "Email sent through Gmail";
+  if (status === "failed") return "Email delivery could not be confirmed";
+  return "Email draft cancelled · Nothing was sent";
+}
+
 function completedSummary(activities: CaseAgentToolActivity[], label: string): string {
   const count = activities.length;
   return `${count} tool call${count === 1 ? "" : "s"} · ${label}`;
@@ -78,6 +97,7 @@ function getSafeSources(sources: NonNullable<CaseAgentToolActivity["sources"]>) 
 }
 
 function getStepLabel(activity: CaseAgentToolActivity): string {
+  if (activity.actionStatus) return activity.label;
   if (activity.operation === "open_page") return "Opened a page";
   if (activity.operation === "find_in_page" && activity.detail) return `Searched within a page for “${activity.detail}”`;
   if (activity.name === "web_search" && activity.detail) return `Searched for “${activity.detail}”`;

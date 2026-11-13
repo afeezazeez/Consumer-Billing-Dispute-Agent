@@ -20,10 +20,6 @@ export default function WorkspaceLayout({ children }: WorkspaceLayoutProps) {
 function WorkspaceContent({ children }: WorkspaceLayoutProps) {
   const pathname = usePathname();
   const caseId = pathname.match(/^\/cases\/([^/]+)$/)?.[1];
-  return (
-    <>
-      <DashboardWorkspace caseId={caseId} />
-      {children}
-    </>
-  );
+  const view = pathname === "/connectors" ? "connectors" : "dashboard";
+  return <DashboardWorkspace caseId={caseId} view={view}>{children}</DashboardWorkspace>;
 }

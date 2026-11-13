@@ -22,6 +22,9 @@ import { AddKnowledgeRevisionsAndVectors1710000000014 } from "./migrations/17100
 import { ReplaceAgentQueueWithOutbox1710000000015 } from "./migrations/1710000000015-ReplaceAgentQueueWithOutbox";
 import { AddJobDispatchAndTurnLocks1710000000016 } from "./migrations/1710000000016-AddJobDispatchAndTurnLocks";
 import { AddKnowledgeSourceJurisdictions1710000000018 } from "./migrations/1710000000018-AddKnowledgeSourceJurisdictions";
+import { gmailConnectorSchema } from "./entities/gmail-connector.entity";
+import { CreateGmailConnectors1710000000019 } from "./migrations/1710000000019-CreateGmailConnectors";
+import { AddAgentTurnDurationToCaseMessages1710000000020 } from "./migrations/1710000000020-AddAgentTurnDurationToCaseMessages";
 
 export function createDataSource(database: PostgresConfig): DataSource {
   return new DataSource({
@@ -31,7 +34,7 @@ export function createDataSource(database: PostgresConfig): DataSource {
     database: database.database,
     username: database.username,
     password: database.password,
-    entities: [userSchema, caseSchema, caseMessageSchema, caseAttachmentSchema, knowledgeSourceSchema],
+    entities: [userSchema, caseSchema, caseMessageSchema, caseAttachmentSchema, knowledgeSourceSchema, gmailConnectorSchema],
     migrations: [
       CreateUsers1710000000000,
       CreateBillingCases1710000000001,
@@ -51,6 +54,8 @@ export function createDataSource(database: PostgresConfig): DataSource {
       ReplaceAgentQueueWithOutbox1710000000015,
       AddJobDispatchAndTurnLocks1710000000016,
       AddKnowledgeSourceJurisdictions1710000000018,
+      CreateGmailConnectors1710000000019,
+      AddAgentTurnDurationToCaseMessages1710000000020,
     ],
     synchronize: false,
   });

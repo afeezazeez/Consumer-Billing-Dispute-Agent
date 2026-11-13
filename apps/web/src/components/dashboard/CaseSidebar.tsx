@@ -17,6 +17,7 @@ interface CaseSidebarProps {
   user: DashboardUser;
   isSigningOut: boolean;
   signOutError: string;
+  isConnectorsActive: boolean;
   isCollapsed: boolean;
   isMobileOpen: boolean;
   onCloseMobile: () => void;
@@ -34,6 +35,7 @@ export function CaseSidebar({
   user,
   isSigningOut,
   signOutError,
+  isConnectorsActive,
   isCollapsed,
   isMobileOpen,
   onCloseMobile,
@@ -118,7 +120,7 @@ export function CaseSidebar({
               <SidebarToggleIcon />
             </button>
             <Link className="claude-brand" href="/">
-              <span className="claude-brand-text">Billzz</span>
+              <span className="claude-brand-text">Bill Agent</span>
             </Link>
           </div>
 
@@ -132,6 +134,18 @@ export function CaseSidebar({
             <span className="claude-new-plus">＋</span>
             <span className="claude-new-text">New case</span>
           </button>
+
+          <Link
+            aria-current={isConnectorsActive ? "page" : undefined}
+            aria-label="Connectors"
+            className={`claude-nav-item${isConnectorsActive ? " is-active" : ""}`}
+            href="/connectors"
+            onClick={onCloseMobile}
+            title="Connectors"
+          >
+            <ConnectorsIcon />
+            <span className="claude-nav-text">Connectors</span>
+          </Link>
 
           {/* Search Button */}
           <button
@@ -251,6 +265,14 @@ function SearchIcon() {
     <svg aria-hidden="true" className="claude-icon" viewBox="0 0 24 24">
       <circle cx="11" cy="11" r="7" stroke="currentColor" strokeWidth="1.75" fill="none" />
       <path d="m16 16 4.5 4.5" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+function ConnectorsIcon() {
+  return (
+    <svg aria-hidden="true" className="claude-icon" viewBox="0 0 24 24" fill="none">
+      <path d="M5.2 3.8a5 5 0 0 0 5.9 6.6l7.2 7.2a2 2 0 0 0 2.8-2.8l-7.2-7.2a5 5 0 0 0-6.6-5.9l2.8 2.8-2.1 2.1-2.8-2.8ZM18.8 3.8a5 5 0 0 1-5.9 6.6l-7.2 7.2a2 2 0 0 1-2.8-2.8l7.2-7.2a5 5 0 0 1 6.6-5.9l-2.8 2.8L16 6.6l2.8-2.8Z" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.6" />
     </svg>
   );
 }

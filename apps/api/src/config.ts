@@ -9,10 +9,16 @@ export interface AppConfig {
   googleClientId: string;
   googleClientSecret: string;
   googleRedirectUri: string;
+  gmailConnector?: GmailConnectorConfig;
   sessionSecret: string;
   openAiApiKey: string | undefined;
   openAiModel: string;
   isProduction: boolean;
+}
+
+export interface GmailConnectorConfig {
+  redirectUri: string;
+  tokenEncryptionKey: string;
 }
 
 export interface PostgresConfig {
@@ -40,11 +46,22 @@ export function loadConfig(): AppConfig {
     googleClientId: requiredValue("GOOGLE_CLIENT_ID"),
     googleClientSecret: requiredValue("GOOGLE_CLIENT_SECRET"),
     googleRedirectUri: requiredValue("GOOGLE_REDIRECT_URI"),
+    gmailConnector: readGmailConnectorConfig(),
     sessionSecret: requiredValue("SESSION_SECRET"),
     openAiApiKey: optionalValue("OPENAI_API_KEY"),
     openAiModel: process.env.OPENAI_MODEL?.trim() || "gpt-5.6-terra",
     isProduction,
   };
+}
+
+function readGmailConnectorConfig(): GmailConnectorConfig | undefined {
+  const redirectUri = optionalValue("GMAIL_GOOGLE_REDIRECT_URI");
+  const tokenEncryptionKey = optionalValue("GMAIL_TOKEN_ENCRYPTION_KEY");
+  if (!redirectUri || !tokenEncryptionKey) return undefined;
+  if (!/^[\da-f]{64}$/i.test(tokenEncryptionKey)) {
+    throw new Error("GMAIL_TOKEN_ENCRYPTION_KEY must be a 32-byte hexadecimal value");
+  }
+  return { redirectUri, tokenEncryptionKey };
 }
 
 function readDatabasePassword(isProduction: boolean): string {

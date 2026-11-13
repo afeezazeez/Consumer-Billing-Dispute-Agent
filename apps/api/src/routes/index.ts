@@ -15,6 +15,9 @@ import { AudioTranscriptionService } from "../transcription/audio-transcription.
 import { createAudioTranscriptionRouter } from "../transcription/audio-transcription.routes";
 import { OpenAiAudioTranscriber } from "../ai/openai-audio-transcriber";
 import { createCaseServices } from "../cases/case-services";
+import { GmailConnectorController } from "../connectors/gmail/gmail-connector.controller";
+import { createGmailConnectorService } from "../connectors/gmail/create-gmail-connector-service";
+import { createGmailConnectorRouter } from "../connectors/gmail/gmail-connector.routes";
 
 export function createRoutes(config: AppConfig, dataSource: DataSource): Router {
   const routes = Router();
@@ -22,6 +25,10 @@ export function createRoutes(config: AppConfig, dataSource: DataSource): Router 
 
   routes.use("/health", healthRouter);
   routes.use("/auth", createAuthRouter(createAuthController(config, dataSource), authMiddleware));
+  routes.use("/connectors/gmail", createGmailConnectorRouter(
+    createGmailConnectorController(config, dataSource),
+    authMiddleware,
+  ));
   routes.use("/transcriptions", createAudioTranscriptionRouter(
     new AudioTranscriptionController(new AudioTranscriptionService(new OpenAiAudioTranscriber(config.openAiApiKey))),
     authMiddleware,
@@ -31,6 +38,10 @@ export function createRoutes(config: AppConfig, dataSource: DataSource): Router 
   routes.use("/cases", createCaseRouter(new CaseController(cases.caseService), authMiddleware, cases.documentReviewService));
 
   return routes;
+}
+
+function createGmailConnectorController(config: AppConfig, dataSource: DataSource): GmailConnectorController {
+  return new GmailConnectorController(createGmailConnectorService(config, dataSource), config);
 }
 
 function createAuthController(config: AppConfig, dataSource: DataSource): AuthController {

@@ -1,6 +1,7 @@
 import type { CaseMessageRecord } from "../../cases/case.repository";
 import type { CaseNextAction } from "../../cases/case-next-action";
-import type { CaseAgentSource, CaseAgentToolActivity, CaseEmailDraft } from "../../cases/case-intake-agent";
+import type { CaseAgentSource, CaseAgentToolActivity } from "../../cases/case-intake-agent";
+import type { CaseEmailDraft } from "../../cases/case-email-draft";
 import { stripInternalCitations } from "../../ai/utils/strip-internal-citations";
 
 export class CaseMessageDto {
@@ -10,6 +11,7 @@ export class CaseMessageDto {
   content: string;
   createdAt: Date;
   processingStatus: CaseMessageRecord["processingStatus"];
+  agentTurnDurationMs?: number;
   sources: CaseAgentSource[];
   toolActivities: CaseAgentToolActivity[];
   emailDraft?: CaseEmailDraft;
@@ -22,6 +24,7 @@ export class CaseMessageDto {
     this.content = message.role === "assistant" ? stripInternalCitations(message.content) : message.content;
     this.createdAt = message.createdAt;
     this.processingStatus = message.processingStatus;
+    this.agentTurnDurationMs = message.agentTurnDurationMs;
     this.sources = message.sources ?? [];
     this.toolActivities = message.toolActivities ?? [];
     this.emailDraft = message.emailDraft;
