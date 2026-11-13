@@ -28,7 +28,6 @@ import type { AgentTool, AgentToolContext, FunctionAgentTool } from "./tools/age
 import { isStandaloneAcknowledgment, mayCreateEmailDraft } from "./utils/email-draft-intent";
 import { parseAgentReply } from "./utils/parse-agent-reply";
 
-const MAX_MODEL_CALLS_PER_TURN = 4;
 export class OpenAiAgent implements CaseIntakeAgent {
   constructor(
     private readonly apiKey: string | undefined,
@@ -103,16 +102,12 @@ export class OpenAiAgent implements CaseIntakeAgent {
         if (calls.length === 0) result = createResult(response.output_text, intake, progress, context);
         return calls.length > 0 ? "execute_tools" : "finish";
       },
-      executeTools: async (remainingCalls) => {
+      executeTools: async () => {
         const execution = await this.executeToolCalls(calls, {
-          messages: context.messages, intake, remainingCalls, progress,
+          messages: context.messages, intake, progress,
         });
         intake = execution.intake;
         input = continueConversation(input, modelOutput, execution.outputs);
-        return execution.callsUsed;
-      },
-      requestFinalResponse: async () => {
-        result = await this.requestFinalResponse(client, { input, context, intake, progress });
       },
       finish: async () => {
         if (!result) throw new Error("Agent workflow finished without a response");
@@ -123,14 +118,6 @@ export class OpenAiAgent implements CaseIntakeAgent {
     const approvalPending = await runAgentWorkflow(this.checkpointer, context, handlers);
     if (!result) throw new Error("Agent workflow finished without a response");
     return { ...result, approvalPending, gmailConnected: context.gmailConnected };
-  }
-
-  private async requestFinalResponse(
-    client: OpenAI,
-    request: FinalResponseRequest,
-  ): Promise<CaseIntakeAgentResult> {
-    const response = await this.requestResponse(client, { ...request, toolChoice: "none" });
-    return createResult(response.output_text || createSafeFallback(request.intake), request.intake, request.progress, request.context);
   }
 
   private async requestResponse(
@@ -179,21 +166,17 @@ export class OpenAiAgent implements CaseIntakeAgent {
   ): Promise<ToolExecutionBatch> {
     const outputs: ResponseInputItem[] = [];
     let nextIntake = context.intake;
-    let callsUsed = 0;
-
     for (const call of calls) {
       const toolContext = { messages: context.messages, intake: nextIntake };
       const result = await this.executeToolCall(call, {
         ...toolContext,
-        withinLimit: callsUsed < context.remainingCalls,
         progress: context.progress,
       });
       nextIntake = result.intake;
-      callsUsed += 1;
       outputs.push({ type: "function_call_output", call_id: call.call_id, output: JSON.stringify(result.output) });
     }
 
-    return { outputs, intake: nextIntake, callsUsed };
+    return { outputs, intake: nextIntake };
   }
 
   private async executeToolCall(
@@ -201,7 +184,7 @@ export class OpenAiAgent implements CaseIntakeAgent {
     context: ToolCallContext,
   ): Promise<ToolCallResult> {
     const agentTool = findFunctionTool(this.agentTools, call.name);
-    if (!context.withinLimit || !agentTool) {
+    if (!agentTool) {
       return { intake: context.intake, output: { success: false, message: "The requested action is unavailable." } };
     }
     if (call.name === "record_case_facts" && context.progress.caseFactsRecorded) {
@@ -263,7 +246,6 @@ function createApprovalHandlers(emailConnector: EmailConnector): AgentWorkflowHa
   return {
     requestModel: async () => { throw new Error("Approval workflow cannot request a model response"); },
     executeTools: async () => { throw new Error("Approval workflow cannot execute agent tools"); },
-    requestFinalResponse: async () => { throw new Error("Approval workflow cannot generate a response"); },
     finish: async () => undefined,
     getEmailDraft: () => undefined,
     sendEmail: (userId, draft) => emailConnector.sendEmail(userId, draft),
@@ -273,7 +255,6 @@ function createApprovalHandlers(emailConnector: EmailConnector): AgentWorkflowHa
 interface ToolExecutionBatch {
   outputs: ResponseInputItem[];
   intake: CaseIntakeState;
-  callsUsed: number;
 }
 
 class IncompleteOpenAIResponseError extends Error {
@@ -297,12 +278,10 @@ interface AgentResponseRequest extends FinalResponseRequest {
 interface ToolExecutionContext {
   messages: CaseMessageRecord[];
   intake: CaseIntakeState;
-  remainingCalls: number;
   progress: AgentTurnProgress;
 }
 
 interface ToolCallContext extends AgentToolContext {
-  withinLimit: boolean;
   progress: AgentTurnProgress;
 }
 
@@ -352,9 +331,6 @@ function createAgentTurnProgress(
 }
 
 function beginModelCall(progress: AgentTurnProgress): number {
-  if (progress.modelCalls >= MAX_MODEL_CALLS_PER_TURN) {
-    throw new Error("Agent reached the model-call limit for this turn");
-  }
   progress.modelCalls += 1;
   return progress.modelCalls;
 }
@@ -648,20 +624,4 @@ function createConnectGmailPrompt(
     sources: progress.sources,
     toolActivities: progress.activities,
   };
-}
-
-function createSafeFallback(intake: CaseIntakeState): string {
-  if (intake.status === "ready") {
-    return intake.facts.desiredOutcome
-      ? "Got it. I can help you draft a message about the charge."
-      : "Got it. What would you like to happen with this charge?";
-  }
-  const missing = nextMissingFact(intake);
-  return `I’ve recorded what you shared. What ${missing} should I note?`;
-}
-
-function nextMissingFact(intake: CaseIntakeState): string {
-  if (!intake.facts.provider) return "provider or merchant was the charge from";
-  if (!intake.facts.issueType) return "happened with the charge";
-  return "amount you were charged";
 }

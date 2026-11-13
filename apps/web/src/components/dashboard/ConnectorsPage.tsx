@@ -23,14 +23,17 @@ export function ConnectorsPage() {
   }, []);
 
   const loadStatus = useCallback(async () => {
-    setIsLoading(true);
-    setError("");
-    try { setStatus(await getGmailStatus()); }
+    try {
+      setStatus(await getGmailStatus());
+      setError("");
+    }
     catch { setError("We couldn’t load the Gmail connection. Please try again."); }
     finally { setIsLoading(false); }
   }, []);
 
   const handleRetry = useCallback(() => {
+    setIsLoading(true);
+    setError("");
     void loadStatus();
   }, [loadStatus]);
 
@@ -54,9 +57,20 @@ export function ConnectorsPage() {
   }, []);
 
   useEffect(() => {
-    void loadStatus();
+    let isCurrent = true;
+    getGmailStatus().then((nextStatus) => {
+      if (!isCurrent) return;
+      setStatus(nextStatus);
+      setError("");
+      setIsLoading(false);
+    }).catch(() => {
+      if (!isCurrent) return;
+      setError("We couldn’t load the Gmail connection. Please try again.");
+      setIsLoading(false);
+    });
     readConnectionResult(setToast);
-  }, [loadStatus]);
+    return () => { isCurrent = false; };
+  }, []);
 
   useEffect(() => {
     if (!toast) return;
