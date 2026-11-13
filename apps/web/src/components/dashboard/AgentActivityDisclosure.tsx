@@ -75,7 +75,7 @@ function getActivitySummary(activities: CaseAgentToolActivity[], isLive: boolean
 
 function getEmailActivitySummary(status: NonNullable<CaseAgentToolActivity["actionStatus"]>): string {
   if (status === "waiting_approval") return "Email draft ready · Waiting for your approval";
-  if (status === "sending") return "Sending email through Gmail";
+  if (status === "sending") return "Email is sending through Gmail";
   if (status === "sent") return "Email sent through Gmail";
   if (status === "failed") return "Email delivery could not be confirmed";
   return "Email draft cancelled · Nothing was sent";

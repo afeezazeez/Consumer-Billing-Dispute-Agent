@@ -20,6 +20,7 @@ export function EmailDraftCard({ draft, messageId, onDecision }: EmailDraftCardP
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [copied, setCopied] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(false);
   const editable = draft.status === "waiting_approval" && !isSubmitting;
 
   const handleApprove = useCallback(async () => {
@@ -45,22 +46,33 @@ export function EmailDraftCard({ draft, messageId, onDecision }: EmailDraftCardP
   }, []);
   const handleSubjectChange = useCallback((event: ChangeEvent<HTMLInputElement>) => setSubject(event.currentTarget.value), []);
   const handleBodyChange = useCallback((event: ChangeEvent<HTMLTextAreaElement>) => setBody(event.currentTarget.value), []);
+  const handleToggleCollapsed = useCallback(() => setIsCollapsed((collapsed) => !collapsed), []);
   const handleConnectGmail = useCallback(() => {
     const returnTo = pathname.startsWith("/cases/") ? pathname : "/dashboard";
     window.location.assign(`${API_URL}/connectors/gmail/google?returnTo=${encodeURIComponent(returnTo)}`);
   }, [pathname]);
 
   return (
-    <article aria-label="Email draft" className="email-draft-card">
-      <DraftToolbar copied={copied} draft={draft} onCopy={handleCopy} onDownload={handleDownload} />
-      <DraftStatus draft={draft} error={error} />
-      <DraftEvidence evidence={draft.supportingEvidence ?? []} />
-      <DraftRecipients editable={editable} error={error} onChange={handleRecipientsChange} recipients={recipients} />
-      <DraftSubject editable={editable} onChange={handleSubjectChange} subject={subject} />
-      <DraftBody body={body} editable={editable} onChange={handleBodyChange} />
-      {draft.status === "waiting_approval" && (
-        <DraftActions connected={Boolean(draft.gmailConnected) && !error.includes("Connect Gmail")} isSubmitting={isSubmitting} onApprove={handleApprove} onCancel={handleCancel} onConnect={handleConnectGmail} />
-      )}
+    <article aria-label="Email draft" className={`email-draft-card${isCollapsed ? " is-collapsed" : ""}`}>
+      <DraftToolbar
+        collapsed={isCollapsed}
+        copied={copied}
+        draft={draft}
+        onCopy={handleCopy}
+        onDownload={handleDownload}
+        onToggleCollapsed={handleToggleCollapsed}
+        messageId={messageId}
+      />
+      <div aria-hidden={isCollapsed} className="email-draft-content" hidden={isCollapsed} id={`email-draft-content-${messageId}`}>
+        <DraftStatus draft={draft} error={error} />
+        <DraftEvidence evidence={draft.supportingEvidence ?? []} />
+        <DraftRecipients editable={editable} error={error} onChange={handleRecipientsChange} recipients={recipients} />
+        <DraftSubject editable={editable} onChange={handleSubjectChange} subject={subject} />
+        <DraftBody body={body} editable={editable} onChange={handleBodyChange} />
+        {draft.status === "waiting_approval" && (
+          <DraftActions connected={Boolean(draft.gmailConnected) && !error.includes("Connect Gmail")} isSubmitting={isSubmitting} onApprove={handleApprove} onCancel={handleCancel} onConnect={handleConnectGmail} />
+        )}
+      </div>
     </article>
   );
 }
@@ -94,14 +106,27 @@ function downloadEmail(recipients: string, subject: string, body: string): void 
   link.href = url; link.download = "billing-dispute-draft.eml"; link.click(); URL.revokeObjectURL(url);
 }
 
-function DraftToolbar({ copied, draft, onCopy, onDownload }: {
-  copied: boolean; draft: CaseEmailDraft; onCopy: () => void; onDownload: () => void;
+function DraftToolbar({ collapsed, copied, draft, messageId, onCopy, onDownload, onToggleCollapsed }: {
+  collapsed: boolean; copied: boolean; draft: CaseEmailDraft; messageId: string;
+  onCopy: () => void; onDownload: () => void; onToggleCollapsed: () => void;
 }) {
   return (
     <header className="email-draft-toolbar">
       <span className="email-draft-title">{draft.subject || "Email draft"}</span>
       <button aria-label={copied ? "Copied email draft" : "Copy email draft"} onClick={onCopy} title="Copy draft" type="button">{copied ? <CheckIcon /> : <CopyIcon />}</button>
       <button aria-label="Download email draft" onClick={onDownload} title="Download draft" type="button"><DownloadIcon /></button>
+      <button
+        aria-controls={`email-draft-content-${messageId}`}
+        aria-expanded={!collapsed}
+        aria-label={`${collapsed ? "Expand" : "Collapse"} email draft`}
+        onClick={onToggleCollapsed}
+        title={`${collapsed ? "Expand" : "Collapse"} email draft`}
+        type="button"
+      >
+        <svg aria-hidden="true" className={collapsed ? "is-collapsed" : ""} viewBox="0 0 24 24" fill="none">
+          <path d="m7 10 5 5 5-5" stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8" />
+        </svg>
+      </button>
     </header>
   );
 }
@@ -142,7 +167,7 @@ function getDraftStatusText(draft: CaseEmailDraft): { title: string; description
 
 function DraftEvidence({ evidence }: { evidence: string[] }) {
   if (evidence.length === 0) return null;
-  return <section aria-label="Supporting evidence" className="email-draft-evidence"><h3>Supporting evidence</h3><ul>{evidence.map((item, index) => <li key={`${index}-${item}`}>{item}</li>)}</ul></section>;
+  return <section aria-label="Case details used to prepare this draft" className="email-draft-evidence"><h3>Case details used</h3><ul>{evidence.map((item, index) => <li key={`${index}-${item}`}>{item}</li>)}</ul></section>;
 }
 
 function DraftRecipients({ editable, error, onChange, recipients }: { editable: boolean; error: string; onChange: (event: ChangeEvent<HTMLInputElement>) => void; recipients: string }) {

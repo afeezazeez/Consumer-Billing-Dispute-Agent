@@ -237,21 +237,26 @@ export function CaseConversation({
                   </time>
                 )}
                 <article
-                  className={`claude-message-row ${message.role}`}
+                  className={`claude-message-row ${message.role}${message.emailDraft ? " has-email-draft" : ""}`}
                   id={message.emailDraft ? `case-draft-${message.id}` : undefined}
                   tabIndex={message.emailDraft ? -1 : undefined}
                 >
                 {message.role === "assistant" && (
-                  <AgentActivityDisclosure activities={getActivitiesWithEmailHistory(message)} />
+                  <AgentActivityDisclosure
+                    activities={getActivitiesWithEmailHistory(message)}
+                    isLive={message.emailDraft?.status === "sending"}
+                  />
                 )}
                 {message.attachments && message.attachments.length > 0 && (
                   <CaseMessageAttachments attachments={message.attachments} />
                 )}
-                <div className="claude-message-bubble">
-                  {message.role === "assistant"
-                    ? renderAssistantContent(message, onEmailDraftDecision)
-                    : <p>{message.content}</p>}
-                </div>
+                {!(message.role === "assistant" && message.emailDraft?.status === "sending") && (
+                  <div className="claude-message-bubble">
+                    {message.role === "assistant"
+                      ? renderAssistantContent(message, onEmailDraftDecision)
+                      : <p>{message.content}</p>}
+                  </div>
+                )}
                 {message.role === "assistant" && (!message.emailDraft || message.emailDraft.status === "sent") && (
                   <CaseMessageActions
                     agentTurnDurationMs={message.agentTurnDurationMs}
@@ -267,6 +272,7 @@ export function CaseConversation({
                 )}
                 {message.role === "assistant" && message.nextAction && !message.emailDraft && (
                   <CaseNextActionCard
+                    messageId={message.id}
                     nextAction={message.nextAction}
                   />
                 )}
@@ -316,6 +322,7 @@ function renderAssistantContent(
 ): React.ReactNode {
   const draft = message.emailDraft;
   if (draft?.status === "sent") return <AssistantMessage content={draft.sentConfirmation || "Your email was sent successfully."} />;
+  if (draft?.status === "sending") return null;
   if (draft) return <>
     {message.content.trim() && <AssistantMessage content={message.content} />}
     <EmailDraftCard draft={draft} messageId={message.id} onDecision={onDecision} />

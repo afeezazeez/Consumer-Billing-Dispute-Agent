@@ -39,16 +39,36 @@ function extractEmailDraft(response: string, allowEmailDraft: boolean): { answer
 
 function parseEmailDraftBlock(block: string): ApprovedCaseEmailDraft {
   const lines = block.trim().split(/\r?\n/);
-  const bodyStart = lines.findIndex((line, index) => index > 1 && line.trim() === "");
-  const headers = lines.slice(0, bodyStart < 0 ? 2 : bodyStart);
-  const evidenceStart = headers.findIndex((line) => /^Supporting evidence:/i.test(line.trim()));
-  const supportingEvidence = evidenceStart < 0 ? [] : headers.slice(evidenceStart + 1).map((line) => line.replace(/^\s*[-•]\s*/, "").trim()).filter(Boolean);
+  const subjectIndex = lines.findIndex((line) => /^Subject:\s*/i.test(line.trim()));
+  const bodyLines = lines.slice(subjectIndex >= 0 ? subjectIndex + 1 : 2);
+  const { body, supportingEvidence } = separateSupportingEvidence(bodyLines);
   return {
-    recipients: headers[0]?.replace(/^To:\s*/i, "").trim() ?? "",
-    subject: headers[1]?.replace(/^Subject:\s*/i, "").trim() ?? "",
+    recipients: lines.find((line) => /^To:\s*/i.test(line.trim()))?.replace(/^\s*To:\s*/i, "").trim() ?? "",
+    subject: lines[subjectIndex]?.replace(/^\s*Subject:\s*/i, "").trim() ?? "",
     supportingEvidence,
-    body: lines.slice(bodyStart < 0 ? 2 : bodyStart + 1).join("\n").trim(),
+    body,
   };
+}
+
+function separateSupportingEvidence(lines: string[]): { body: string; supportingEvidence: string[] } {
+  const headingIndex = lines.findIndex(isSupportingEvidenceHeading);
+  if (headingIndex < 0) return { body: lines.join("\n").trim(), supportingEvidence: [] };
+  const evidenceEnd = findEvidenceEnd(lines, headingIndex + 1);
+  const supportingEvidence = lines.slice(headingIndex + 1, evidenceEnd)
+    .map((line) => line.replace(/^\s*[-•*]\s*/, "").trim()).filter(Boolean);
+  const body = [...lines.slice(0, headingIndex), ...lines.slice(evidenceEnd)].join("\n").trim();
+  return { body, supportingEvidence };
+}
+
+function isSupportingEvidenceHeading(line: string): boolean {
+  const normalized = line.trim().replace(/^\*+|\*+$/g, "").replace(/:$/, "").trim();
+  return /^(?:supporting evidence(?:\s+for you to attach(?:\s+if available)?)?|evidence to attach|case details used)$/i.test(normalized);
+}
+
+function findEvidenceEnd(lines: string[], start: number): number {
+  let index = start;
+  while (index < lines.length && /^\s*[-•*]\s+/.test(lines[index])) index += 1;
+  return index;
 }
 
 function removeInternalMessageIds(response: string): string {

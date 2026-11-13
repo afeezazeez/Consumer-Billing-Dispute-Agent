@@ -1822,81 +1822,230 @@ button, a {
 }
 
 .case-next-action-card {
-  background: #fff;
+  background: linear-gradient(145deg, #fff 0%, var(--dash-primary-soft) 180%);
   border: 1px solid var(--dash-line);
-  border-radius: 16px;
+  border-radius: 18px;
   color: var(--dash-ink);
   display: grid;
-  gap: 14px;
+  gap: 0;
   line-height: 1.55;
   overflow-wrap: anywhere;
-  padding: 16px;
+  padding: 12px 16px;
+  box-shadow: 0 8px 24px rgb(18 38 63 / 4%);
+  transition: background-color 180ms ease, box-shadow 180ms ease;
 }
 
 .case-next-action-card h2 {
   align-items: center;
   display: flex;
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 650;
-  gap: 10px;
+  gap: 0;
   margin: 0;
 }
 
-.case-next-action-card h2 svg {
-  background: var(--dash-primary-soft);
-  border-radius: 8px;
-  color: var(--dash-primary);
-  flex: 0 0 32px;
-  height: 32px;
-  padding: 7px;
-  width: 32px;
+.case-next-action-header {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+  min-height: 46px;
 }
 
-.case-next-action-card dl {
+.case-next-action-heading {
+  align-items: center;
+  display: flex;
+  flex: 1;
+  gap: 11px;
+  min-width: 0;
+}
+
+.case-next-action-card .case-next-action-icon {
+  background: var(--dash-primary-soft);
+  border: 1px solid var(--dash-line);
+  border-radius: 12px;
+  color: var(--dash-primary);
+  flex: 0 0 38px;
+  height: 38px;
+  padding: 8px;
+  width: 38px;
+}
+
+.case-next-action-icon svg,
+.case-next-action-step-icon svg {
+  display: block;
+  height: 100%;
+  width: 100%;
+}
+
+.case-next-action-eyebrow {
+  color: var(--dash-ink-soft);
+  display: block;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .1em;
+  line-height: 1.2;
+  margin-bottom: 3px;
+}
+
+.case-next-action-card .case-next-action-toggle {
+  align-items: center;
+  background: transparent;
+  border: 1px solid var(--dash-line);
+  border-radius: 999px;
+  color: var(--dash-ink-soft);
+  cursor: pointer;
+  display: flex;
+  flex: 0 0 34px;
+  height: 34px;
+  justify-content: center;
+  padding: 0;
+  transition: background 160ms ease, color 160ms ease, border-color 160ms ease;
+  width: 34px;
+}
+
+.case-next-action-card .case-next-action-toggle:hover {
+  background: var(--dash-primary-soft);
+  border-color: var(--dash-primary);
+  color: var(--dash-primary);
+}
+
+.case-next-action-card .case-next-action-chevron {
+  height: 17px;
+  transition: transform 220ms cubic-bezier(.2,.8,.2,1);
+  width: 17px;
+}
+
+.case-next-action-card .case-next-action-chevron.is-collapsed {
+  transform: rotate(-180deg);
+}
+
+.case-next-action-content {
+  display: grid;
+  grid-template-rows: 1fr;
+  opacity: 1;
+  transition: grid-template-rows 240ms cubic-bezier(.2,.8,.2,1), opacity 180ms ease, margin 240ms ease;
+  margin-top: 14px;
+}
+
+.case-next-action-card.is-collapsed .case-next-action-content {
+  grid-template-rows: 0fr;
+  margin-top: 0;
+  opacity: 0;
+}
+
+.case-next-action-inner {
   display: grid;
   gap: 12px;
-  margin: 0;
+  min-height: 0;
+  overflow: hidden;
 }
 
-.case-next-action-card dt {
+.case-next-action-context {
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
+  padding-inline: 2px;
+}
+
+.case-next-action-context > span {
   color: var(--dash-ink-soft);
-  font-size: 13px;
-  font-weight: 600;
+  flex: 0 0 auto;
+  font-size: 12px;
+  font-weight: 650;
 }
 
-.case-next-action-card dd {
-  font-size: 14px;
-  margin: 2px 0 0;
+.case-next-action-context p {
+  color: var(--dash-ink);
+  font-size: 13px;
+  margin: 0;
 }
 
 .case-next-action-step {
   background: var(--dash-primary-soft);
-  border-radius: 10px;
-  padding: 10px 12px;
+  border: 1px solid var(--dash-line);
+  border-radius: 14px;
+  padding: 12px 14px;
 }
 
-.case-handoff-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.case-next-action-step-heading {
+  align-items: center;
+  color: var(--dash-primary);
+  display: flex;
+  font-size: 10px;
+  font-weight: 750;
+  gap: 7px;
+  letter-spacing: .09em;
+  margin-bottom: 5px;
+}
+
+.case-next-action-step-icon {
+  display: block;
+  height: 15px;
+  width: 15px;
+}
+
+.case-next-action-step p {
+  color: var(--dash-ink);
+  font-size: 14px;
+  font-weight: 550;
+  line-height: 1.5;
+  margin: 0;
+}
+
+.case-next-action-preview {
+  color: var(--dash-ink-soft);
+  font-size: 13px;
+  line-height: 1.4;
+  margin: 7px 42px 2px 49px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.case-handoff-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+}
 
 .case-next-action-card button {
   background: #fff;
   border: 1px solid var(--dash-line);
-  border-radius: 8px;
+  border-radius: 10px;
   color: var(--dash-primary);
   cursor: pointer;
-  font-size: 14px;
-  font-weight: 600;
-  justify-self: start;
-  min-height: 36px;
-  padding: 6px 12px;
+  align-items: center;
+  display: inline-flex;
+  font-size: 12px;
+  font-weight: 650;
+  gap: 7px;
+  min-height: 32px;
+  padding: 5px 10px;
+  transition: background 150ms ease, border-color 150ms ease, transform 150ms ease;
 }
 
 .case-next-action-card button:hover {
   background: var(--dash-primary-soft);
+  border-color: var(--dash-primary);
+  transform: translateY(-1px);
+}
+
+.case-next-action-card .case-handoff-actions svg {
+  height: 15px;
+  width: 15px;
 }
 
 .case-next-action-card button:focus-visible {
   outline: 2px solid var(--dash-primary);
   outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .case-next-action-card,
+  .case-next-action-card * {
+    scroll-behavior: auto !important;
+    transition-duration: .01ms !important;
+  }
 }
 
 .claude-agent-thinking {
@@ -2184,6 +2333,11 @@ button, a {
   line-height: 1.7;
   max-width: 90%;
   padding: 4px 0;
+}
+
+.claude-message-row.assistant.has-email-draft .claude-message-bubble {
+  max-width: 100%;
+  width: 100%;
 }
 
 .claude-message-row.assistant {
@@ -3154,9 +3308,13 @@ button, a {
   border: 1px solid var(--dash-line);
   border-radius: 20px;
   color: var(--dash-ink);
-  max-width: min(100%, 1060px);
+  max-width: min(100%, 820px);
   overflow: hidden;
   width: 100%;
+}
+
+.email-draft-card.is-collapsed .email-draft-toolbar {
+  border-bottom: 0;
 }
 
 .email-draft-toolbar {
@@ -3166,6 +3324,14 @@ button, a {
   gap: 8px;
   min-height: 58px;
   padding: 8px 12px 8px 20px;
+}
+
+.email-draft-toolbar > button:last-child svg {
+  transition: transform 160ms ease;
+}
+
+.email-draft-toolbar > button:last-child svg.is-collapsed {
+  transform: rotate(-90deg);
 }
 
 .email-draft-title {
