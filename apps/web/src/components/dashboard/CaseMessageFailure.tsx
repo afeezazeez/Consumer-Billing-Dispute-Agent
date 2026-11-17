@@ -6,11 +6,10 @@ interface CaseMessageFailureProps {
   messageId: string;
   content: string;
   isSending: boolean;
-  isCancelled?: boolean;
   onRetry: (messageId: string, content?: string) => void;
 }
 
-export function CaseMessageFailure({ messageId, content, isSending, isCancelled = false, onRetry }: CaseMessageFailureProps) {
+export function CaseMessageFailure({ messageId, content, isSending, onRetry }: CaseMessageFailureProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [draftContent, setDraftContent] = useState(content);
 
@@ -34,7 +33,7 @@ export function CaseMessageFailure({ messageId, content, isSending, isCancelled 
   return (
     <div className="case-message-failure" role="status">
       <div className="case-message-failure-copy">
-        <p>{isCancelled ? "Generation stopped. Your message is saved." : <>We’re having trouble connecting to our servers.<br />Please try again later.</>}</p>
+        <p>We’re having trouble connecting to our servers.<br />Please try again later.</p>
       </div>
       {isEditing && (
         <textarea

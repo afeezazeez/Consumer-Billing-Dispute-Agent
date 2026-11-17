@@ -35,7 +35,8 @@ function findLatestEmailRequestIndex(messages: CaseMessageRecord[], before: numb
 }
 
 function hasExistingEmailDraft(messages: CaseMessageRecord[], after: number, before: number): boolean {
-  return messages.slice(after + 1, before).some((message) => message.emailDraft !== undefined);
+  return messages.slice(after + 1, before).some((message) =>
+    message.emailDraft !== undefined && message.emailDraft.status !== "cancelled");
 }
 
 function asksEmailWorkflowQuestion(content: string): boolean {
@@ -55,5 +56,5 @@ function findPreviousAssistantIndex(messages: CaseMessageRecord[], before: numbe
 }
 
 function hasExplicitEmailDraftIntent(content: string): boolean {
-  return /\b(?:draft|write|compose|craft|prepare|send)\b.{0,60}\b(?:e-?mail|message)\b|\b(?:e-?mail|message)\b.{0,60}\b(?:draft|write|compose|craft|prepare|send)\b|\bemail\s+(?:them|support|the provider|the merchant)\b/i.test(content);
+  return /\b(?:draft|write|compose|craft|prepare|send)\b.{0,60}\b(?:e-?mail|message)\b|\b(?:e-?mail|message)\b.{0,60}\b(?:draft|write|compose|craft|prepare|send)\b|\bemail\s+(?:them|support|the provider|the merchant)\b|\b(?:resend|recreate|redraft)\b.{0,40}\b(?:it|one|another|email|draft|message)\b|\b(?:draft|email|message)\b.{0,40}\b(?:again|resend|recreate|send again)\b/i.test(content);
 }

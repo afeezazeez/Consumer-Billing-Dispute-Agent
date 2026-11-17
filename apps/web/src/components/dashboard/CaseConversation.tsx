@@ -283,12 +283,11 @@ export function CaseConversation({
                   />
                 )}
                 </article>
-                {message.role === "user" && ["failed", "cancelled"].includes(message.processingStatus) && (
+                {message.role === "user" && message.processingStatus === "failed" && (
                   <article aria-label="Message delivery error" className="claude-message-row assistant is-failed">
                     <CaseMessageFailure
                       content={message.content}
                       isSending={isAgentWorking}
-                      isCancelled={message.processingStatus === "cancelled"}
                       key={`${message.id}-${message.content}-${message.processingStatus}`}
                       messageId={message.id}
                       onRetry={onRetryMessage}
