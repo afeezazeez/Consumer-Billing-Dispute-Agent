@@ -18,7 +18,7 @@ export interface CaseMessageRecord {
   nextAction?: CaseNextAction;
 }
 
-export type CaseMessageProcessingStatus = "pending" | "complete" | "failed";
+export type CaseMessageProcessingStatus = "pending" | "complete" | "failed" | "cancelled";
 
 export interface CaseSummary {
   id: string;
@@ -94,6 +94,8 @@ export interface CaseRepository {
   appendPendingMessage(input: AppendPendingMessage): Promise<CaseConversation | undefined>;
   completeTurn(input: CompleteCaseTurn): Promise<CaseConversation | undefined>;
   prepareFailedMessageRetry(input: UpdateFailedMessage): Promise<CaseConversation | undefined>;
+  cancelPendingTurn(userId: string, caseId: string, messageId: string): Promise<boolean>;
+  isTurnPending(userId: string, caseId: string, messageId: string): Promise<boolean>;
   markMessageFailed(userId: string, caseId: string, messageId: string): Promise<void>;
   updatePendingMessageActivities(userId: string, caseId: string, messageId: string, activities: CaseAgentToolActivity[]): Promise<void>;
   listForUser(userId: string): Promise<CaseSummary[]>;

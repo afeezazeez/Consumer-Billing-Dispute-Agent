@@ -59,7 +59,7 @@ export function ConnectorDisconnectDialog({
           <h2 id={titleId}>Disconnect {connectorName}?</h2>
         </div>
         <p id={descriptionId}>
-          Bill Agent will no longer have permission to send email from {accountEmail || `your ${connectorName} account`}. Saved drafts will remain in your case history.
+          Billz will no longer have permission to send email from {accountEmail || `your ${connectorName} account`}. Saved drafts will remain in your case history.
         </p>
         {error && <p className="connector-disconnect-error" role="alert">{error}</p>}
         <div className="claude-confirm-actions">

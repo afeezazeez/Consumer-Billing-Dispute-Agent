@@ -139,6 +139,26 @@ export function DashboardWorkspace({ caseId: routeCaseId, view = "dashboard", ch
     }
   }, [activeCase]);
 
+  const handleStopGeneration = useCallback(async (messageId: string): Promise<void> => {
+    if (!activeCase) return;
+    try {
+      const result = await requestData<{ case: CaseConversationData }>(
+        `/cases/${activeCase.id}/messages/${messageId}/stop`,
+        { method: "POST" },
+      );
+      setActiveCase(result.case);
+      setCases((current) => upsertCase(current, result.case));
+    } catch {
+      try {
+        const latest = await requestData<{ case: CaseConversationData }>(`/cases/${activeCase.id}`);
+        setActiveCase(latest.case);
+        setCases((current) => upsertCase(current, latest.case));
+      } catch {
+        setError("We couldn’t stop the response. Please try again.");
+      }
+    }
+  }, [activeCase]);
+
   const handleDeleteCase = useCallback(async (caseId: string): Promise<void> => {
     try {
       await requestData(`/cases/${caseId}`, { method: "DELETE" });
@@ -208,7 +228,9 @@ export function DashboardWorkspace({ caseId: routeCaseId, view = "dashboard", ch
   }, [loadWorkspace, router]);
 
   const hasProcessingCase = cases.some((item) => item.isProcessing);
-  const isActiveCaseProcessing = activeCase?.messages.at(-1)?.processingStatus === "pending";
+  const isActiveCaseProcessing = activeCase?.messages.some((message) =>
+    message.role === "user" && message.processingStatus === "pending",
+  ) ?? false;
 
   useEffect(() => {
     if (!hasProcessingCase && !isActiveCaseProcessing) return;
@@ -261,6 +283,7 @@ export function DashboardWorkspace({ caseId: routeCaseId, view = "dashboard", ch
             onEmailDraftDecision={handleEmailDraftDecision}
             onRenameCase={handleRenameCase}
             onRetryMessage={handleRetryMessage}
+            onStopGeneration={handleStopGeneration}
             onSendMessage={handleSendMessage}
           />
         ) : (

@@ -26,6 +26,7 @@ export function createCaseRouter(controller: CaseController, authMiddleware: Aut
   router.post("/:caseId/messages", validateBody(CreateMessageRequestDto), (request, response, next) => controller.addMessage(request, response, next));
   router.post("/:caseId/messages/:messageId/retry/stream", validateBody(RetryCaseMessageRequestDto), (request, response) => controller.retryMessageStream(request, response));
   router.post("/:caseId/messages/:messageId/email-draft/decision", validateBody(DecideCaseEmailDraftRequestDto), (request, response, next) => controller.decideEmailDraft(request, response, next));
+  router.post("/:caseId/messages/:messageId/stop", (request, response, next) => controller.stopMessage(request, response, next));
   router.post("/:caseId/messages/:messageId/retry", validateBody(RetryCaseMessageRequestDto), (request, response, next) => controller.retryMessage(request, response, next));
   router.delete("/:caseId", (request, response, next) => controller.delete(request, response, next));
   router.patch("/:caseId", validateBody(RenameCaseRequestDto), (request, response, next) => controller.rename(request, response, next));

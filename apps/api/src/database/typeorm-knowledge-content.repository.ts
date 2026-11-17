@@ -1,5 +1,5 @@
 import type { DataSource } from "typeorm";
-import type { KnowledgeChunkInput, KnowledgeChunkMatch, KnowledgeContentRepository } from "../knowledge/knowledge-content.repository";
+import type { KnowledgeChunkInput, KnowledgeChunkMatch, KnowledgeContentRepository, KnowledgeSearchCriteria } from "../knowledge/knowledge-content.repository";
 
 export class TypeOrmKnowledgeContentRepository implements KnowledgeContentRepository {
   constructor(private readonly dataSource: DataSource) {}
@@ -45,8 +45,8 @@ export class TypeOrmKnowledgeContentRepository implements KnowledgeContentReposi
     );
   }
 
-  async search(embedding: number[], limit: number, jurisdictionCode?: string): Promise<KnowledgeChunkMatch[]> {
-    const vector = `[${embedding.join(",")}]`;
+  async search(criteria: KnowledgeSearchCriteria): Promise<KnowledgeChunkMatch[]> {
+    const vector = `[${criteria.embedding.join(",")}]`;
     return await this.dataSource.query(
       `SELECT chunks.content, source.title, source.url, source.jurisdiction_code AS "jurisdictionCode",
         source.jurisdiction_scope AS "jurisdictionScope",
@@ -54,9 +54,10 @@ export class TypeOrmKnowledgeContentRepository implements KnowledgeContentReposi
        FROM knowledge_chunks chunks
        JOIN knowledge_source_revisions revision ON revision.id = chunks.revision_id AND revision.status = 'active'
        JOIN knowledge_sources source ON source.active_revision_id = revision.id AND source.enabled = true
-       WHERE source.jurisdiction_code IS NULL OR source.jurisdiction_code = $3
+       WHERE (source.jurisdiction_code IS NULL OR source.jurisdiction_code = $3)
+         AND ($4::text IS NULL OR regexp_replace(lower(source.provider), '[^a-z0-9]', '', 'g') = regexp_replace(lower($4), '[^a-z0-9]', '', 'g') OR source.provider IN ('CFPB', 'Central Bank of Nigeria'))
        ORDER BY chunks.embedding <=> $1::vector LIMIT $2`,
-      [vector, limit, jurisdictionCode ?? ""],
+      [vector, criteria.limit, criteria.jurisdictionCode ?? "", criteria.provider ?? null],
     ) as KnowledgeChunkMatch[];
   }
 }

@@ -54,7 +54,7 @@ export function DashboardEmptyState({
         {isSending && (
           <div aria-live="polite" className="claude-agent-thinking is-welcome-thinking" role="status">
             <span aria-hidden="true" className="claude-agent-spinner" />
-            <span>Bill Agent is reviewing your case…</span>
+            <span>Billz is reviewing your case…</span>
           </div>
         )}
         <CaseComposer

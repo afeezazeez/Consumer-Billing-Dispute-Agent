@@ -28,6 +28,8 @@ import type { AgentTool, AgentToolContext, FunctionAgentTool } from "./tools/age
 import { isStandaloneAcknowledgment, mayCreateEmailDraft } from "./utils/email-draft-intent";
 import { parseAgentReply } from "./utils/parse-agent-reply";
 
+const MAX_MODEL_CALLS_PER_TURN = 4;
+
 export class OpenAiAgent implements CaseIntakeAgent {
   constructor(
     private readonly apiKey: string | undefined,
@@ -41,14 +43,17 @@ export class OpenAiAgent implements CaseIntakeAgent {
   async respond(
     context: CaseIntakeAgentContext,
     onProgress?: CaseAgentProgressHandler,
+    signal?: AbortSignal,
   ): Promise<CaseIntakeAgentResult> {
+    throwIfAborted(signal);
     if (isStandaloneAcknowledgment(getLatestUserMessage(context.messages, context.messageId)?.content)) {
       return createAcknowledgmentResult(context.intake);
     }
     try {
       const progress = createAgentTurnProgress(this.agentTools, onProgress);
-      return await this.runAgentTurn(this.createClient(), context, progress);
+      return await this.runAgentTurn(this.createClient(), context, progress, signal);
     } catch (error) {
+      if (signal?.aborted) throw signal.reason ?? error;
       logAgentTurnFailure(error, context.caseId, context.messageId);
       if (error instanceof ServiceUnavailableException) throw error;
       throw new ServiceUnavailableException("Bill Agent could not complete this turn. Your message is saved; please try again.");
@@ -88,6 +93,7 @@ export class OpenAiAgent implements CaseIntakeAgent {
     client: OpenAI,
     context: CaseIntakeAgentContext,
     progress: AgentTurnProgress,
+    signal?: AbortSignal,
   ): Promise<CaseIntakeAgentResult> {
     let input = createConversationInput(context.messages);
     let intake = context.intake;
@@ -96,18 +102,23 @@ export class OpenAiAgent implements CaseIntakeAgent {
     let result: CaseIntakeAgentResult | undefined;
     const handlers: AgentWorkflowHandlers = {
       requestModel: async () => {
-        const response = await this.requestResponse(client, { input, context, intake, toolChoice: "auto", progress });
+        const response = await this.requestResponse(client, { input, context, intake, toolChoice: "auto", progress, signal });
         calls = readFunctionCalls(response);
         modelOutput = response.output;
         if (calls.length === 0) result = createResult(response.output_text, intake, progress, context);
         return calls.length > 0 ? "execute_tools" : "finish";
       },
-      executeTools: async () => {
+      executeTools: async (remainingCalls) => {
         const execution = await this.executeToolCalls(calls, {
-          messages: context.messages, intake, progress,
+          messages: context.messages, intake, remainingCalls, progress, signal,
         });
         intake = execution.intake;
         input = continueConversation(input, modelOutput, execution.outputs);
+        return execution.callsUsed;
+      },
+      requestFinalResponse: async () => {
+        const response = await this.requestResponse(client, { input, context, intake, toolChoice: "none", progress, signal });
+        result = createResult(response.output_text, intake, progress, context);
       },
       finish: async () => {
         if (!result) throw new Error("Agent workflow finished without a response");
@@ -115,7 +126,7 @@ export class OpenAiAgent implements CaseIntakeAgent {
       getEmailDraft: () => result?.emailDraft,
       sendEmail: (userId, draft) => this.emailConnector.sendEmail(userId, draft),
     };
-    const approvalPending = await runAgentWorkflow(this.checkpointer, context, handlers);
+    const approvalPending = await runAgentWorkflow(this.checkpointer, context, handlers, signal);
     if (!result) throw new Error("Agent workflow finished without a response");
     return { ...result, approvalPending, gmailConnected: context.gmailConnected };
   }
@@ -140,6 +151,7 @@ export class OpenAiAgent implements CaseIntakeAgent {
     callNumber: number,
     startedAt: number,
   ): Promise<Response> {
+    throwIfAborted(request.signal);
     const stream = client.responses.stream({
       model: this.model,
       instructions: createAgentInstructions(request.context, request.intake),
@@ -150,8 +162,11 @@ export class OpenAiAgent implements CaseIntakeAgent {
       max_tool_calls: 1,
       include: ["web_search_call.action.sources"],
       store: false,
-    });
-    for await (const event of stream) handleProgressEvent(event, request.progress);
+    }, { signal: request.signal });
+    for await (const event of stream) {
+      throwIfAborted(request.signal);
+      handleProgressEvent(event, request.progress);
+    }
     const response = await stream.finalResponse();
     logResponseUsage(response, this.model, callNumber, startedAt, "agent_turn");
     collectSources(response, request.progress);
@@ -166,17 +181,22 @@ export class OpenAiAgent implements CaseIntakeAgent {
   ): Promise<ToolExecutionBatch> {
     const outputs: ResponseInputItem[] = [];
     let nextIntake = context.intake;
+    let callsUsed = 0;
     for (const call of calls) {
+      throwIfAborted(context.signal);
       const toolContext = { messages: context.messages, intake: nextIntake };
       const result = await this.executeToolCall(call, {
         ...toolContext,
+        withinLimit: callsUsed < context.remainingCalls,
         progress: context.progress,
       });
+      throwIfAborted(context.signal);
       nextIntake = result.intake;
+      callsUsed += 1;
       outputs.push({ type: "function_call_output", call_id: call.call_id, output: JSON.stringify(result.output) });
     }
 
-    return { outputs, intake: nextIntake };
+    return { outputs, intake: nextIntake, callsUsed };
   }
 
   private async executeToolCall(
@@ -184,13 +204,15 @@ export class OpenAiAgent implements CaseIntakeAgent {
     context: ToolCallContext,
   ): Promise<ToolCallResult> {
     const agentTool = findFunctionTool(this.agentTools, call.name);
-    if (!agentTool) {
+    throwIfAborted(context.signal);
+    if (!context.withinLimit || !agentTool) {
       return { intake: context.intake, output: { success: false, message: "The requested action is unavailable." } };
     }
     if (call.name === "record_case_facts" && context.progress.caseFactsRecorded) {
       return { intake: context.intake, output: { success: false, message: "Case facts were already recorded for this message. Continue without recording them again." } };
     }
     const result = await agentTool.execute(parseArguments(call.arguments), context);
+    throwIfAborted(context.signal);
     if (call.name === "record_case_facts" && result.output.success === true) context.progress.caseFactsRecorded = true;
     for (const source of result.activity?.sources ?? []) addUniqueSource(context.progress.sources, source);
     reportToolActivity(context.progress, call.id ?? call.call_id, call.name, "completed", result.activity?.detail, result.activity?.sources);
@@ -246,6 +268,7 @@ function createApprovalHandlers(emailConnector: EmailConnector): AgentWorkflowHa
   return {
     requestModel: async () => { throw new Error("Approval workflow cannot request a model response"); },
     executeTools: async () => { throw new Error("Approval workflow cannot execute agent tools"); },
+    requestFinalResponse: async () => { throw new Error("Approval workflow cannot generate a response"); },
     finish: async () => undefined,
     getEmailDraft: () => undefined,
     sendEmail: (userId, draft) => emailConnector.sendEmail(userId, draft),
@@ -255,6 +278,7 @@ function createApprovalHandlers(emailConnector: EmailConnector): AgentWorkflowHa
 interface ToolExecutionBatch {
   outputs: ResponseInputItem[];
   intake: CaseIntakeState;
+  callsUsed: number;
 }
 
 class IncompleteOpenAIResponseError extends Error {
@@ -269,6 +293,7 @@ interface FinalResponseRequest {
   context: CaseIntakeAgentContext;
   intake: CaseIntakeState;
   progress: AgentTurnProgress;
+  signal?: AbortSignal;
 }
 
 interface AgentResponseRequest extends FinalResponseRequest {
@@ -278,11 +303,15 @@ interface AgentResponseRequest extends FinalResponseRequest {
 interface ToolExecutionContext {
   messages: CaseMessageRecord[];
   intake: CaseIntakeState;
+  remainingCalls: number;
   progress: AgentTurnProgress;
+  signal?: AbortSignal;
 }
 
 interface ToolCallContext extends AgentToolContext {
+  withinLimit: boolean;
   progress: AgentTurnProgress;
+  signal?: AbortSignal;
 }
 
 interface ToolCallResult {
@@ -331,6 +360,9 @@ function createAgentTurnProgress(
 }
 
 function beginModelCall(progress: AgentTurnProgress): number {
+  if (progress.modelCalls >= MAX_MODEL_CALLS_PER_TURN) {
+    throw new Error("Agent reached the model-call limit for this turn");
+  }
   progress.modelCalls += 1;
   return progress.modelCalls;
 }
@@ -470,6 +502,7 @@ function createUsageLog(
 }
 
 function logResponseFailure(error: unknown, model: string, callNumber: number, startedAt: number): void {
+  if (isAbortError(error)) return;
   console.error(JSON.stringify({
     event: "openai_response_failed",
     model,
@@ -477,6 +510,14 @@ function logResponseFailure(error: unknown, model: string, callNumber: number, s
     durationMs: Date.now() - startedAt,
     ...readProviderErrorDetails(error),
   }));
+}
+
+function throwIfAborted(signal?: AbortSignal): void {
+  if (signal?.aborted) throw signal.reason ?? new DOMException("The agent turn was stopped", "AbortError");
+}
+
+function isAbortError(error: unknown): boolean {
+  return error instanceof Error && error.name === "AbortError";
 }
 
 function getWebSearchActivity(action: ResponseFunctionWebSearch["action"]): WebSearchActivity {
@@ -536,7 +577,7 @@ function createAgentInstructions(context: CaseIntakeAgentContext, intake: CaseIn
     "For provider-specific billing, refund, cancellation, or dispute guidance, use search_billing_guidance first. Use only relevant returned excerpts, respect their jurisdiction labels, and cite returned source URLs as Markdown links. The library withholds country-restricted sources unless the user explicitly states where the card, bank, or account is issued. Before giving jurisdiction-specific deadlines, consumer rights, or regulator-escalation steps, ask which country issued the payment method if it is not explicit. Never infer it from the user's name, language, location, or currency. If no relevant official guidance is available, say so and use web search only for guidance applicable to an explicitly stated jurisdiction. Looking up a provider's official contact channel for an email draft is not jurisdiction-specific guidance and may use web search without inferring the user's jurisdiction.",
     "Use web search for current information when it helps answer the user. Cite retrieved sources; never claim to have searched if you did not.",
     "Format replies in standard Markdown supported by the chat: use **bold** for emphasis, blank lines between paragraphs, and Markdown links like [Wise](https://example.com) for citations. Never output raw HTML or malformed Markdown markers.",
-    createGmailConnectionInstruction(context.gmailConnected),
+    createGmailConnectionInstruction(context),
     createEmailDraftInstruction(context),
     "You may answer a direct general-information request, but keep billing-dispute guidance grounded, avoid legal conclusions, and never promise a recovery or send a message for the user.",
     "When the user has stated a billing goal and you can recommend a concrete next step, put [NEXT_ACTION]{\"goal\":\"user's stated goal\",\"action\":\"one specific next step\"}[/NEXT_ACTION] on its own line before the reply, after CASE_TITLE if present. Do not include NEXT_ACTION in a turn that contains an EMAIL_DRAFT; the draft and its approval controls are the action for that turn. Use valid JSON and plain text. Keep the goal under 180 characters and the action under 600.",
@@ -550,18 +591,20 @@ function createAgentInstructions(context: CaseIntakeAgentContext, intake: CaseIn
   ].join("\n");
 }
 
-function createGmailConnectionInstruction(gmailConnected: boolean): string {
-  if (gmailConnected) {
+function createGmailConnectionInstruction(context: CaseIntakeAgentContext): string {
+  if (context.gmailConnected) {
     return "Verified Gmail connection status for this turn: CONNECTED. This application state is authoritative. Never tell the user to connect or reconnect Gmail or direct them to Connectors. Sending still requires explicit approval of the exact draft.";
   }
-  return "Verified Gmail connection status for this turn: NOT CONNECTED. This application state is authoritative. Only when the latest user message explicitly requests an email, tell them conversationally to connect Gmail from the Connectors page in the sidebar, return to this case, and confirm it is connected. Do not create or imply a draft exists. Connecting Gmail does not send anything.";
+  const emailWorkflowActive = mayCreateEmailDraft(context.messages, context.messageId);
+  if (!emailWorkflowActive) return "Verified Gmail connection status for this turn: NOT CONNECTED. This application state is authoritative. Do not mention Gmail unless the user requests email work.";
+  return "Verified Gmail connection status for this turn: NOT CONNECTED during an active email request. Tell the user conversationally to connect Gmail from the Connectors page, return to this case, and confirm it. Do not search for a recipient or create a draft until connected. Connecting Gmail does not send anything.";
 }
 
 function createEmailDraftInstruction(context: CaseIntakeAgentContext): string {
   const allowed = mayCreateEmailDraft(context.messages, context.messageId);
-  if (!allowed) return "For this user turn, do not create or output an EMAIL_DRAFT. A past request is not permission for this turn. Acknowledgments such as ‘Thanks’ or ‘Thank you’ are conversational only and must not call tools or restart completed email work.";
-  if (!context.gmailConnected) return "The user explicitly requested an email, but Gmail is not connected. Do not search for recipients or create an EMAIL_DRAFT. Ask them to connect Gmail from the Connectors page, then return to this case and confirm it is connected.";
-  return "The latest user message explicitly requests an email draft or immediately confirms Gmail connection after your unresolved connect-Gmail prompt. You may prepare one reviewable draft. Never treat older email requests as current after they were completed, sent, or cancelled. Find the recipient yourself: first use an email address the user explicitly gave in this conversation; otherwise you MUST use web_search to find the provider's official billing/support contact email, searching its official support or contact pages. Use only an exact email address visibly published by the provider; never infer an address or use the connected Gmail address as recipient. If the provider publishes no direct email and offers only a help form/chat, do not create an incomplete EMAIL_DRAFT and do not ask the user to fill the To field. Explain the provider's official contact route conversationally and ask whether they want a message drafted for that channel or have a specific recipient address. Format the draft as [EMAIL_DRAFT], To: ..., Subject: ..., then a blank line. Optionally include a separate 'Supporting evidence for you to attach if available:' section with 1-4 bullets, followed by a blank line. Then include only the actual email body and end with [/EMAIL_DRAFT]. Evidence notes are for the user only; never copy them into the email body or send them. Sending requires explicit approval of that exact draft.";
+  if (!allowed) return "For this user turn, do not create or output an EMAIL_DRAFT. A past request is not permission for unrelated turns. Acknowledgments such as ‘Thanks’ or ‘Thank you’ are conversational only and must not call tools or restart completed email work.";
+  if (!context.gmailConnected) return "An email request is active, but Gmail is not connected. Do not search for recipients or create an EMAIL_DRAFT. Ask them to connect Gmail from the Connectors page, then return to this case and confirm it is connected.";
+  return "The current turn is either an explicit email request or a reply within its still-active clarification/approval conversation. You may now prepare one reviewable draft when the user has provided enough information. Keep gathering only essential missing information; do not treat unrelated later messages as email permission. Do not create a second draft after one exists unless the user explicitly asks for a revision or new email. Find the recipient yourself: first use an email address the user explicitly gave in this conversation; otherwise use web_search to find the provider's official billing/support contact email, searching its official support or contact pages. Use only an exact email address visibly published by the provider; never infer an address or use the connected Gmail address as recipient. If the provider publishes no direct email and offers only a help form/chat, do not create an incomplete EMAIL_DRAFT and do not ask the user to fill the To field. Explain the provider's official contact route conversationally and ask whether they want a message drafted for that channel or have a specific recipient address. Format the draft as [EMAIL_DRAFT], To: ..., Subject: ..., then a blank line. Optionally include a separate 'Supporting evidence for you to attach if available:' section with 1-4 bullets, followed by a blank line. Then include only the actual email body and end with [/EMAIL_DRAFT]. Evidence notes are for the user only; never copy them into the email body or send them. Sending requires explicit approval of that exact draft through the draft controls.";
 }
 
 function readFunctionCalls(response: Response): ResponseFunctionToolCall[] {

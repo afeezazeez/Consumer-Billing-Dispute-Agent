@@ -139,6 +139,18 @@ export class CaseController {
     }
   }
 
+  async stopMessage(request: Request, response: Response, next: NextFunction): Promise<void> {
+    try {
+      const billingCase = await this.caseService.stopAgentTurn(
+        authenticatedUserId(request), readCaseId(request), readMessageId(request),
+      );
+      if (!billingCase) throw new ClientErrorException("Case not found", ResponseStatus.NOT_FOUND);
+      sendSuccessResponse(response, { case: CaseConversationDto.make(billingCase) }, "Agent turn stopped");
+    } catch (error) {
+      next(error);
+    }
+  }
+
   async decideEmailDraft(request: Request, response: Response, next: NextFunction): Promise<void> {
     try {
       const payload = request.body as DecideCaseEmailDraftRequestDto;

@@ -1633,6 +1633,15 @@ button, a {
   background: var(--dash-primary-hover);
 }
 
+.claude-composer-stop-btn {
+  background: var(--dash-ink);
+  color: #ffffff;
+}
+
+.claude-composer-stop-btn:hover {
+  background: #26354b;
+}
+
 .claude-composer-send-btn:disabled {
   background: #e2e8f0;
   color: #94a3b8;
@@ -1642,6 +1651,11 @@ button, a {
 .claude-composer-send-btn svg {
   height: 16px;
   width: 16px;
+}
+
+.claude-composer-send-btn:focus-visible {
+  outline: 2px solid var(--dash-primary);
+  outline-offset: 3px;
 }
 
 .claude-spinner-dot {

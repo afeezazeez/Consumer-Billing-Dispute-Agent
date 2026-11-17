@@ -45,7 +45,7 @@ export interface CaseAgentToolActivity {
 export type CaseAgentProgressHandler = (activity: CaseAgentToolActivity) => void;
 
 export interface CaseIntakeAgent {
-  respond(context: CaseIntakeAgentContext, onProgress?: CaseAgentProgressHandler): Promise<CaseIntakeAgentResult>;
+  respond(context: CaseIntakeAgentContext, onProgress?: CaseAgentProgressHandler, signal?: AbortSignal): Promise<CaseIntakeAgentResult>;
   resumeEmailApproval(userId: string, caseId: string, messageId: string, decision: EmailApprovalDecision): Promise<string | undefined>;
 }
 import type { CaseNextAction } from "./case-next-action";

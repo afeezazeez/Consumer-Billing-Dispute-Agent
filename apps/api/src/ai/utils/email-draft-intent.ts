@@ -13,31 +13,45 @@ export function isStandaloneAcknowledgment(content?: string): boolean {
 export function mayCreateEmailDraft(messages: CaseMessageRecord[], latestMessageId: string): boolean {
   const latestIndex = messages.findIndex((message) => message.id === latestMessageId && message.role === "user");
   if (latestIndex < 0) return false;
+  if (isStandaloneAcknowledgment(messages[latestIndex].content)) return false;
   if (hasExplicitEmailDraftIntent(messages[latestIndex].content)) return true;
-  return isImmediateGmailConnectionFollowUp(messages, latestIndex);
+  const requestIndex = findLatestEmailRequestIndex(messages, latestIndex);
+  if (requestIndex < 0 || hasExistingEmailDraft(messages, requestIndex, latestIndex)) return false;
+  return isActiveEmailWorkflowReply(messages, latestIndex, requestIndex);
 }
 
-function isImmediateGmailConnectionFollowUp(messages: CaseMessageRecord[], latestIndex: number): boolean {
-  const latestMessage = messages[latestIndex].content;
-  if (!/\b(?:gmail|it|that)\b.{0,20}\bconnected\b/i.test(latestMessage)) return false;
+function isActiveEmailWorkflowReply(messages: CaseMessageRecord[], latestIndex: number, requestIndex: number): boolean {
   const previousAssistantIndex = findPreviousAssistantIndex(messages, latestIndex);
-  if (previousAssistantIndex < 0 || !asksToConnectGmail(messages[previousAssistantIndex].content)) return false;
-  const previousUserIndex = findPreviousUserIndex(messages, previousAssistantIndex);
-  return previousUserIndex >= 0 && hasExplicitEmailDraftIntent(messages[previousUserIndex].content);
+  if (previousAssistantIndex <= requestIndex) return false;
+  const prompt = messages[previousAssistantIndex].content;
+  return asksEmailWorkflowQuestion(prompt) || isEmailApprovalStep(prompt);
+}
+
+function findLatestEmailRequestIndex(messages: CaseMessageRecord[], before: number): number {
+  for (let index = before - 1; index >= 0; index -= 1) {
+    if (messages[index].role === "user" && hasExplicitEmailDraftIntent(messages[index].content)) return index;
+  }
+  return -1;
+}
+
+function hasExistingEmailDraft(messages: CaseMessageRecord[], after: number, before: number): boolean {
+  return messages.slice(after + 1, before).some((message) => message.emailDraft !== undefined);
+}
+
+function asksEmailWorkflowQuestion(content: string): boolean {
+  const refersToEmail = /\b(?:email|gmail|recipient|support address|draft|send|refund request)\b/i.test(content);
+  const asksForReply = /\?|\b(?:what|which|would|should|please|confirm|tell me)\b/i.test(content);
+  return refersToEmail && asksForReply;
+}
+
+function isEmailApprovalStep(content: string): boolean {
+  return /\b(?:exact email|email draft|draft email)\b/i.test(content) &&
+    /\b(?:approval|approve|review|send)\b/i.test(content);
 }
 
 function findPreviousAssistantIndex(messages: CaseMessageRecord[], before: number): number {
   for (let index = before - 1; index >= 0; index -= 1) if (messages[index].role === "assistant") return index;
   return -1;
-}
-
-function findPreviousUserIndex(messages: CaseMessageRecord[], before: number): number {
-  for (let index = before - 1; index >= 0; index -= 1) if (messages[index].role === "user") return index;
-  return -1;
-}
-
-function asksToConnectGmail(content: string): boolean {
-  return /connect gmail/i.test(content) && /return to this case|tell me.{0,30}connected/i.test(content);
 }
 
 function hasExplicitEmailDraftIntent(content: string): boolean {

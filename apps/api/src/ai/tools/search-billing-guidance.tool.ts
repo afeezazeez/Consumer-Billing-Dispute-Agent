@@ -20,7 +20,8 @@ export class SearchBillingGuidanceTool implements FunctionAgentTool {
       return { intake: context.intake, output: { success: false, message: "Search query was invalid." } };
     }
     const jurisdictionCode = extractExplicitJurisdiction(context.messages);
-    const matches = await this.knowledgeRetrievalService.search(query.trim(), jurisdictionCode);
+    const provider = context.intake.facts.provider?.value;
+    const matches = await this.knowledgeRetrievalService.search(query.trim(), jurisdictionCode, provider);
     const sources = uniqueSources(matches.map(({ title, url }) => ({ title, url })));
     return {
       intake: context.intake,

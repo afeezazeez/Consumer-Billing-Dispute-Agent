@@ -9,14 +9,17 @@ export class AgentTurnProcessor {
     private readonly userRepository: UserRepository,
     private readonly clearWorkflowCheckpoint: (caseId: string, messageId: string) => Promise<void>,
   ) {}
-  async process(job: AgentTurnQueueJob): Promise<void> {
+  async process(job: AgentTurnQueueJob, signal?: AbortSignal): Promise<void> {
     const billingCase = await this.caseService.findCase(job.userId, job.caseId);
     const message = billingCase?.messages.find((item) => item.id === job.messageId);
     if (!message || message.role !== "user") return;
     if (message.processingStatus !== "pending") return this.clearCompletedTurn(message.processingStatus, job);
-    const user = await this.userRepository.findById(job.userId);
-    const completedCase = await this.caseService.processAgentTurn(job, user?.displayName.split(/\s+/)[0]);
-    if (!hasPendingEmailApproval(completedCase, job.messageId)) {
+    try {
+      const user = await this.userRepository.findById(job.userId);
+      const completedCase = await this.caseService.processAgentTurn(job, user?.displayName.split(/\s+/)[0], signal);
+      if (!hasPendingEmailApproval(completedCase, job.messageId)) await this.clearWorkflowCheckpoint(job.caseId, job.messageId);
+    } catch (error) {
+      if (!signal?.aborted && !isAbortError(error)) throw error;
       await this.clearWorkflowCheckpoint(job.caseId, job.messageId);
     }
   }
@@ -25,8 +28,12 @@ export class AgentTurnProcessor {
   }
 
   private async clearCompletedTurn(status: CaseMessageRecord["processingStatus"], job: AgentTurnQueueJob): Promise<void> {
-    if (status === "complete") await this.clearWorkflowCheckpoint(job.caseId, job.messageId);
+    if (status === "complete" || status === "cancelled") await this.clearWorkflowCheckpoint(job.caseId, job.messageId);
   }
+}
+
+function isAbortError(error: unknown): boolean {
+  return error instanceof Error && error.name === "AbortError";
 }
 
 function hasPendingEmailApproval(billingCase: Awaited<ReturnType<CaseService["processAgentTurn"]>>, messageId: string): boolean {

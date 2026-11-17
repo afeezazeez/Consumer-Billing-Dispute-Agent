@@ -25,6 +25,7 @@ import { AddKnowledgeSourceJurisdictions1710000000018 } from "./migrations/17100
 import { gmailConnectorSchema } from "./entities/gmail-connector.entity";
 import { CreateGmailConnectors1710000000019 } from "./migrations/1710000000019-CreateGmailConnectors";
 import { AddAgentTurnDurationToCaseMessages1710000000020 } from "./migrations/1710000000020-AddAgentTurnDurationToCaseMessages";
+import { AllowCancelledCaseTurns1710000000021 } from "./migrations/1710000000021-AllowCancelledCaseTurns";
 
 export function createDataSource(database: PostgresConfig): DataSource {
   return new DataSource({
@@ -56,6 +57,7 @@ export function createDataSource(database: PostgresConfig): DataSource {
       AddKnowledgeSourceJurisdictions1710000000018,
       CreateGmailConnectors1710000000019,
       AddAgentTurnDurationToCaseMessages1710000000020,
+      AllowCancelledCaseTurns1710000000021,
     ],
     synchronize: false,
   });

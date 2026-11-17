@@ -40,6 +40,27 @@ export class TypeOrmCaseRepository implements CaseRepository {
     return this.dataSource.transaction((manager) => this.resetFailedMessage(manager, input));
   }
 
+  async cancelPendingTurn(userId: string, caseId: string, messageId: string): Promise<boolean> {
+    const rows = await this.dataSource.query(
+      `UPDATE case_messages AS messages SET processing_status = 'cancelled'
+       FROM billing_cases AS cases WHERE messages.id = $1 AND messages.case_id = $2
+       AND messages.role = 'user' AND messages.processing_status = 'pending'
+       AND cases.id = messages.case_id AND cases.user_id = $3 RETURNING messages.id`,
+      [messageId, caseId, userId],
+    );
+    return rows.length > 0;
+  }
+
+  async isTurnPending(userId: string, caseId: string, messageId: string): Promise<boolean> {
+    const rows = await this.dataSource.query(
+      `SELECT 1 FROM case_messages AS messages JOIN billing_cases AS cases ON cases.id = messages.case_id
+       WHERE messages.id = $1 AND messages.case_id = $2 AND cases.user_id = $3
+       AND messages.role = 'user' AND messages.processing_status = 'pending' LIMIT 1`,
+      [messageId, caseId, userId],
+    );
+    return rows.length > 0;
+  }
+
   async markMessageFailed(userId: string, caseId: string, messageId: string): Promise<void> {
     await this.dataSource.query(
       `UPDATE case_messages AS messages SET processing_status = 'failed'
@@ -206,7 +227,7 @@ export class TypeOrmCaseRepository implements CaseRepository {
     const messageUpdate: Partial<CaseMessageEntity> = { processingStatus: "pending" };
     if (input.content) messageUpdate.content = input.content;
     const result = await manager.getRepository(CaseMessageEntity).update(
-      { id: input.messageId, caseId: input.caseId, role: "user", processingStatus: "failed" },
+      { id: input.messageId, caseId: input.caseId, role: "user", processingStatus: In(["failed", "cancelled"]) },
       messageUpdate,
     );
     if (!result.affected) return undefined;

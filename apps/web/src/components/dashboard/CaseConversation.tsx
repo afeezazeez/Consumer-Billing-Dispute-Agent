@@ -32,6 +32,7 @@ interface CaseConversationProps {
   error: string;
   liveToolActivities: CaseAgentToolActivity[];
   onSendMessage: (message: string, upload?: CaseUpload) => Promise<boolean>;
+  onStopGeneration: (messageId: string) => void;
   onRetryMessage: (messageId: string, content?: string) => void;
   onDeleteCase: (caseId: string) => void;
   onRenameCase: (caseId: string, title: string) => Promise<boolean>;
@@ -44,6 +45,7 @@ export function CaseConversation({
   error,
   liveToolActivities,
   onSendMessage,
+  onStopGeneration,
   onRetryMessage,
   onDeleteCase,
   onRenameCase,
@@ -57,10 +59,14 @@ export function CaseConversation({
   const [isRenaming, setIsRenaming] = useState(false);
   const [draftTitle, setDraftTitle] = useState(billingCase.title);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const isAgentWorking = useMemo(
-    () => isSending || billingCase.messages.at(-1)?.processingStatus === "pending",
-    [billingCase.messages, isSending],
+  const pendingUserMessage = useMemo(
+    () => [...billingCase.messages].reverse().find((message) => message.role === "user" && message.processingStatus === "pending"),
+    [billingCase.messages],
   );
+  const isAgentWorking = isSending || Boolean(pendingUserMessage);
+  const handleStopGeneration = useCallback(() => {
+    if (pendingUserMessage) onStopGeneration(pendingUserMessage.id);
+  }, [onStopGeneration, pendingUserMessage]);
 
   const handleToggleMenu = useCallback(() => setIsMenuOpen((curr) => !curr), []);
 
@@ -277,11 +283,12 @@ export function CaseConversation({
                   />
                 )}
                 </article>
-                {message.role === "user" && message.processingStatus === "failed" && (
+                {message.role === "user" && ["failed", "cancelled"].includes(message.processingStatus) && (
                   <article aria-label="Message delivery error" className="claude-message-row assistant is-failed">
                     <CaseMessageFailure
                       content={message.content}
                       isSending={isAgentWorking}
+                      isCancelled={message.processingStatus === "cancelled"}
                       key={`${message.id}-${message.content}-${message.processingStatus}`}
                       messageId={message.id}
                       onRetry={onRetryMessage}
@@ -307,6 +314,7 @@ export function CaseConversation({
           <CaseComposer
             error={error}
             isSending={isAgentWorking}
+            onStopGeneration={handleStopGeneration}
             onSendMessage={handleSend}
             variant="conversation"
           />

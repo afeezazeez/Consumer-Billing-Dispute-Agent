@@ -8,7 +8,7 @@ interface SiteHeaderProps {
 export function SiteHeader({ initialHref = "/login" }: SiteHeaderProps) {
   return (
     <header className="landing-header">
-      <Link className="landing-brand" href="/" aria-label="Billzz home">
+      <Link className="landing-brand" href="/" aria-label="Billz home">
         Bill<span>zz</span>
       </Link>
 

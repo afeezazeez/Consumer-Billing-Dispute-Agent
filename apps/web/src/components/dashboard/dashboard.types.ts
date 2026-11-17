@@ -32,7 +32,7 @@ export interface CaseMessage {
   role: "user" | "assistant";
   content: string;
   createdAt: string;
-  processingStatus: "pending" | "complete" | "failed";
+  processingStatus: "pending" | "complete" | "failed" | "cancelled";
   agentTurnDurationMs?: number;
   sources: CaseAgentSource[];
   toolActivities: CaseAgentToolActivity[];

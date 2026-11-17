@@ -116,7 +116,7 @@ function ConnectorsPageHeader({ searchTerm, onSearch }: { searchTerm: string; on
   return (
     <header className="connectors-page-header">
       <h1>Connectors</h1>
-      <p>Connect services Bill Agent can use when you ask it to take an action.</p>
+      <p>Connect services Billz can use when you ask it to take an action.</p>
       <label className="connectors-search">
         <SearchIcon />
         <input aria-label="Search connectors" onChange={onSearch} placeholder="Search connectors" value={searchTerm} />

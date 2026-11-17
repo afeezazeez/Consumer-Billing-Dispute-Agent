@@ -133,7 +133,7 @@ export function CaseListItem({
         </span>
       )}
       {isWorking && (
-        <span aria-label="Bill Agent is working" className="claude-case-working" role="status">
+        <span aria-label="Billz is working" className="claude-case-working" role="status">
           <span aria-hidden="true" className="claude-agent-spinner" />
         </span>
       )}

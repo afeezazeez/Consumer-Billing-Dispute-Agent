@@ -47,8 +47,8 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
 
       {/* Header */}
       <header className="modern-site-header">
-        <Link className="modern-brand" href="/" aria-label="Billzz home">
-          Billzz
+        <Link className="modern-brand" href="/" aria-label="Billz home">
+          Billz
         </Link>
         <nav className="modern-nav" aria-label="Navigation">
           <Link className="modern-nav-link modern-login-nav-link" href="/">
@@ -112,7 +112,7 @@ export default async function LoginPage({ searchParams }: LoginPageProps) {
       <footer className="modern-footer">
         <div className="modern-footer-container">
           <Link className="modern-footer-brand" href="/">
-            Billzz
+            Billz
           </Link>
           <p className="modern-footer-tagline">
             Evidence organized. Next steps for you to decide.

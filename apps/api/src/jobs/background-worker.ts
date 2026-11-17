@@ -66,8 +66,27 @@ export class BackgroundWorker {
       throw new DelayedError();
     }
     const heartbeat = setInterval(() => void this.caseTurnLockRepository.heartbeat(job.data.caseId, owner).catch(() => undefined), 20_000);
-    try { await this.agentTurnProcessor.process(job.data); }
-    finally { clearInterval(heartbeat); await this.caseTurnLockRepository.release(job.data.caseId, owner); }
+    const cancellation = this.monitorTurnCancellation(job.data);
+    try { await this.agentTurnProcessor.process(job.data, cancellation.controller.signal); }
+    finally {
+      clearInterval(heartbeat);
+      cancellation.stop();
+      await this.caseTurnLockRepository.release(job.data.caseId, owner);
+    }
+  }
+
+  private monitorTurnCancellation(job: Extract<BackgroundJob, { type: "agent-turn" }>): { controller: AbortController; stop: () => void } {
+    const controller = new AbortController();
+    let checking = false;
+    const interval = setInterval(() => {
+      if (checking || controller.signal.aborted) return;
+      checking = true;
+      void this.caseServices.caseService.isAgentTurnPending(job.userId, job.caseId, job.messageId)
+        .then((pending) => { if (!pending) controller.abort(); })
+        .catch(() => undefined)
+        .finally(() => { checking = false; });
+    }, 500);
+    return { controller, stop: () => clearInterval(interval) };
   }
   private async handleFinalFailure(job: Job<BackgroundJob> | undefined): Promise<void> {
     if (!job || job.data.type !== "agent-turn" || job.attemptsMade < Number(job.opts.attempts ?? 1)) return;

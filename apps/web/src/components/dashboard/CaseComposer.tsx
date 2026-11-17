@@ -23,6 +23,7 @@ const MAX_MESSAGE_LENGTH = 2000;
 
 interface CaseComposerProps {
   isSending: boolean;
+  onStopGeneration?: () => void;
   error: string;
   onSendMessage: (message: string, upload?: CaseUpload) => Promise<boolean>;
   variant?: "conversation" | "welcome";
@@ -31,6 +32,7 @@ interface CaseComposerProps {
 
 export function CaseComposer({
   isSending,
+  onStopGeneration,
   error,
   onSendMessage,
   variant = "conversation",
@@ -248,24 +250,38 @@ export function CaseComposer({
                     <path d="M5.5 11.5a6.5 6.5 0 0 0 13 0M12 18v3m-4 0h8" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
                   </svg>
                 </button>
-                <button
-                  aria-label={isUploading ? "Uploading attachments" : isSending ? "Sending message" : "Send message"}
-                  className="claude-composer-send-btn"
-                  disabled={!message.trim() || message.length > MAX_MESSAGE_LENGTH || isSending || isUploading || hasUnreadyAttachments}
-                  type="submit"
-                >
-                  {isSending || isUploading ? (
-                    <span className="claude-spinner-dot" />
-                  ) : (
-                    <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
-                      <path
-                        fillRule="evenodd"
-                        d="M10 17a.75.75 0 0 1-.75-.75V5.612L5.29 9.77a.75.75 0 0 1-1.08-1.04l5.25-5.5a.75.75 0 0 1 1.08 0l5.25 5.5a.75.75 0 1 1-1.08 1.04l-3.96-4.158V16.25A.75.75 0 0 1 10 17Z"
-                        clipRule="evenodd"
-                      />
+                {isSending && variant === "conversation" && onStopGeneration ? (
+                  <button
+                    aria-label="Stop generating"
+                    className="claude-composer-send-btn claude-composer-stop-btn"
+                    onClick={onStopGeneration}
+                    title="Stop generating"
+                    type="button"
+                  >
+                    <svg aria-hidden="true" viewBox="0 0 20 20" fill="currentColor">
+                      <rect x="5" y="5" width="10" height="10" rx="1.5" />
                     </svg>
-                  )}
-                </button>
+                  </button>
+                ) : (
+                  <button
+                    aria-label={isUploading ? "Uploading attachments" : isSending ? "Sending message" : "Send message"}
+                    className="claude-composer-send-btn"
+                    disabled={!message.trim() || message.length > MAX_MESSAGE_LENGTH || isSending || isUploading || hasUnreadyAttachments}
+                    type="submit"
+                  >
+                    {isSending || isUploading ? (
+                      <span className="claude-spinner-dot" />
+                    ) : (
+                      <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                        <path
+                          fillRule="evenodd"
+                          d="M10 17a.75.75 0 0 1-.75-.75V5.612L5.29 9.77a.75.75 0 0 1-1.08-1.04l5.25-5.5a.75.75 0 0 1 1.08 0l5.25 5.5a.75.75 0 1 1-1.08 1.04l-3.96-4.158V16.25A.75.75 0 0 1 10 17Z"
+                          clipRule="evenodd"
+                        />
+                      </svg>
+                    )}
+                  </button>
+                )}
               </div>
             </div>
           )}

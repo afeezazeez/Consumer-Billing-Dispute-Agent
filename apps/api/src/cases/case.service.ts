@@ -82,7 +82,7 @@ export class CaseService {
     input: CreateCaseInput,
   ): Promise<CaseConversation> {
     const message = billingCase.messages.find((item) => item.id === input.messageId);
-    if (!message || message.processingStatus !== "failed") return billingCase;
+    if (!message || !["failed", "cancelled"].includes(message.processingStatus)) return billingCase;
     return (await this.retryFailedMessage(userId, {
       caseId: billingCase.id,
       messageId: message.id,
@@ -108,7 +108,7 @@ export class CaseService {
 
   async retryFailedMessage(userId: string, input: RetryCaseMessageInput): Promise<CaseConversation | undefined> {
     const billingCase = await this.caseRepository.findForUser(userId, input.caseId);
-    if (!hasFailedUserMessage(billingCase, input.messageId)) return undefined;
+    if (!hasRetryableUserMessage(billingCase, input.messageId)) return undefined;
     const retryCase = await this.caseRepository.prepareFailedMessageRetry({
       userId,
       caseId: input.caseId,
@@ -119,13 +119,26 @@ export class CaseService {
     return retryCase;
   }
 
-  async processAgentTurn(job: AgentTurnQueueJob, userFirstName?: string): Promise<CaseConversation> {
+  async stopAgentTurn(userId: string, caseId: string, messageId: string): Promise<CaseConversation | undefined> {
+    if (!(await this.caseRepository.cancelPendingTurn(userId, caseId, messageId))) {
+      throw new ClientErrorException("This response has already finished or cannot be stopped.", ResponseStatus.CONFLICT);
+    }
+    return this.caseRepository.findForUser(userId, caseId);
+  }
+
+  isAgentTurnPending(userId: string, caseId: string, messageId: string): Promise<boolean> {
+    return this.caseRepository.isTurnPending(userId, caseId, messageId);
+  }
+
+  async processAgentTurn(job: AgentTurnQueueJob, userFirstName?: string, signal?: AbortSignal): Promise<CaseConversation> {
+    throwIfAborted(signal);
     const startedAt = Date.now();
     const billingCase = await this.caseRepository.findForUser(job.userId, job.caseId);
     if (!billingCase) throw new Error("Case disappeared while processing the message");
     const userMessage = billingCase.messages.find((message) => message.id === job.messageId);
     if (!userMessage) throw new Error("Message disappeared while processing the case");
     await this.readTurnDocuments(job, userMessage, billingCase.messages);
+    throwIfAborted(signal);
     const isOpeningTurn = billingCase.messages[0]?.id === job.messageId
       && !billingCase.messages.some((message) => message.role === "assistant");
     let activities = userMessage.toolActivities ?? [];
@@ -141,11 +154,13 @@ export class CaseService {
       userFirstName,
       generateCaseTitle: isOpeningTurn,
     }, (activity) => {
+      throwIfAborted(signal);
       activities = upsertActivity(activities, activity);
       const snapshot = [...activities];
       activityWrites = activityWrites.then(() =>
         this.caseRepository.updatePendingMessageActivities(job.userId, job.caseId, job.messageId, snapshot));
-    });
+    }, signal);
+    throwIfAborted(signal);
     await activityWrites;
     const assistantMessage = createAssistantMessage(result, userMessage.createdAt, Date.now() - startedAt);
     const completedCase = await this.caseRepository.completeTurn({
@@ -157,7 +172,12 @@ export class CaseService {
       intake: result.intake,
       nextAction: result.nextAction,
     });
-    if (!completedCase) throw new Error("Unable to save the agent response");
+    if (!completedCase) {
+      if (!(await this.caseRepository.isTurnPending(job.userId, job.caseId, job.messageId))) {
+        throw new DOMException("The agent turn was stopped", "AbortError");
+      }
+      throw new Error("Unable to save the agent response");
+    }
     return completedCase;
   }
 
@@ -345,12 +365,13 @@ function upsertActivity(activities: CaseAgentToolActivity[], activity: CaseAgent
   return activities.map((item) => item.id === activity.id ? activity : item);
 }
 
-function hasFailedUserMessage(
-  billingCase: CaseConversation | undefined,
-  messageId: string,
-): boolean {
-  return Boolean(billingCase?.messages.some((message) =>
-    message.id === messageId && message.role === "user" && message.processingStatus === "failed"));
+function hasRetryableUserMessage(billingCase: CaseConversation | undefined, messageId: string): boolean {
+  return Boolean(billingCase?.messages.some((message) => message.id === messageId
+    && message.role === "user" && ["failed", "cancelled"].includes(message.processingStatus)));
+}
+
+function throwIfAborted(signal?: AbortSignal): void {
+  if (signal?.aborted) throw signal.reason ?? new DOMException("The agent turn was stopped", "AbortError");
 }
 
 function createTitle(message: string): string {

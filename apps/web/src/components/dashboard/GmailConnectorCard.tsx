@@ -97,9 +97,9 @@ function ConnectorAction({ connected, configured, isLoading, onConnect, onDiscon
 function GmailConnectorDetails({ detailsRef }: { detailsRef: RefObject<HTMLElement | null> }) {
   return (
     <aside className="connector-details" id="gmail-connector-details" ref={detailsRef}>
-      <p><strong>Access:</strong> send email on your behalf. Bill Agent cannot read your inbox.</p>
-      <p><strong>Your data:</strong> email drafts are saved in the relevant Bill Agent case history.</p>
-      <p><strong>Google testing:</strong> Google may show an “app isn’t verified” warning. Choose Advanced → Go to Bill Agent to continue. Bill Agent is safe to use.</p>
+      <p><strong>Access:</strong> send email on your behalf. Billz cannot read your inbox.</p>
+      <p><strong>Your data:</strong> email drafts are saved in the relevant Billz case history.</p>
+      <p><strong>Google testing:</strong> Google may show an “app isn’t verified” warning. Choose Advanced → Go to Billz to continue. Billz is safe to use.</p>
     </aside>
   );
 }

@@ -8,9 +8,16 @@ export interface KnowledgeChunkMatch {
   similarity: number;
 }
 
+export interface KnowledgeSearchCriteria {
+  embedding: number[];
+  limit: number;
+  jurisdictionCode?: string;
+  provider?: string;
+}
+
 export interface KnowledgeContentRepository {
   saveRevision(sourceKey: string, contentHash: string, etag: string | undefined, lastModified: string | undefined, chunks: KnowledgeChunkInput[]): Promise<void>;
   markChecked(sourceKey: string, etag?: string, lastModified?: string): Promise<void>;
   markFailure(sourceKey: string, errorCode: string): Promise<void>;
-  search(embedding: number[], limit: number, jurisdictionCode?: string): Promise<KnowledgeChunkMatch[]>;
+  search(criteria: KnowledgeSearchCriteria): Promise<KnowledgeChunkMatch[]>;
 }

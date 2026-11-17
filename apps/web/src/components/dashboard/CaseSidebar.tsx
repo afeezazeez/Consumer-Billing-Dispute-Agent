@@ -120,7 +120,7 @@ export function CaseSidebar({
               <SidebarToggleIcon />
             </button>
             <Link className="claude-brand" href="/">
-              <span className="claude-brand-text">Bill Agent</span>
+              <span className="claude-brand-text">Billz</span>
             </Link>
           </div>
 
